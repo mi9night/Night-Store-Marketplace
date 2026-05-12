@@ -1,5 +1,4 @@
 {
-  "sessionUserId": "u1",
   "marketStats": {
     "totalAccounts": 0,
     "currency": "₽"
@@ -7,10 +6,10 @@
   "users": [
     {
       "id": "u1",
-      "username": "zxc_midnight",
-      "email": "zxc@user.nightstore",
+      "username": "night_owner",
+      "email": "owner@user.nightstore",
       "emailVerified": true,
-      "avatar": "https://api.dicebear.com/7.x/notionists/svg?seed=zxc_midnight&backgroundColor=1a1624",
+      "avatar": "https://api.dicebear.com/7.x/notionists/svg?seed=night_owner&backgroundColor=1a1624",
       "balanceRub": 1,
       "depositRub": 0,
       "registration": "11 фев 2023",
@@ -95,10 +94,10 @@
     },
     {
       "id": "u5",
-      "username": "zxc1midnight",
-      "email": "zxc1@user.nightstore",
+      "username": "forum_demo",
+      "email": "demo@user.nightstore",
       "emailVerified": true,
-      "avatar": "https://api.dicebear.com/7.x/notionists/svg?seed=zxc1midnight&backgroundColor=1a1624",
+      "avatar": "https://api.dicebear.com/7.x/notionists/svg?seed=forum_demo&backgroundColor=1a1624",
       "balanceRub": 0,
       "depositRub": 0,
       "registration": "5 мая 2025",

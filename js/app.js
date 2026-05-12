@@ -330,6 +330,7 @@
 
   function mergeSessionFromStorage(data) {
     data._sessionGuest = false;
+    delete data.sessionUserId;
     try {
       var raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return;
@@ -748,9 +749,9 @@
 
   function sessionUser(data) {
     if (data._sessionGuest) return null;
+    if (!data.sessionUserId) return null;
     var u = userById(data, data.sessionUserId);
-    if (u) return u;
-    return (data.users || [])[0];
+    return u || null;
   }
 
   function paintGuestAuthDropdown() {
@@ -4125,7 +4126,8 @@
     if (page === "verify-email") {
       var uv = sessionUser(data);
       if (!uv || data._sessionGuest) {
-        window.location.href = "login.html";
+        window.location.href =
+          "register.html?next=" + encodeURIComponent(location.pathname + location.search + location.hash);
         return false;
       }
       if (uv.emailVerified) {
@@ -4140,7 +4142,7 @@
     var u = sessionUser(data);
     if (!u || data._sessionGuest) {
       window.location.href =
-        "login.html?next=" + encodeURIComponent(location.pathname + location.search + location.hash);
+        "register.html?next=" + encodeURIComponent(location.pathname + location.search + location.hash);
       return false;
     }
     if (!u.emailVerified) {
