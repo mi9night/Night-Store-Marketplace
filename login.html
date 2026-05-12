@@ -24,7 +24,7 @@
     <main class="auth-main">
       <div class="auth-card">
         <h1 class="auth-card__title">Войдите в аккаунт</h1>
-        <p class="auth-card__sub">Логин или e-mail и пароль, либо одноразовый код на почту.</p>
+        <p class="auth-card__sub">Логин или e-mail, пароль и код из письма (сначала вход с паролем — придёт код, затем повторный вход с кодом).</p>
 
         <div class="auth-tabs" role="tablist">
           <button type="button" class="auth-tab is-active" data-login-tab="pass">Пароль</button>
@@ -37,6 +37,9 @@
             <input class="auth-input" id="loginId" name="login" type="text" placeholder="Введите логин или E-mail" required />
             <label class="auth-label" for="loginPassword">Пароль</label>
             <input class="auth-input" id="loginPassword" name="password" type="password" placeholder="Введите пароль" required />
+            <label class="auth-label" for="login2faCode">Код из письма</label>
+            <input class="auth-input" id="login2faCode" inputmode="numeric" maxlength="8" placeholder="Сначала нажмите «Вход» с паролем — покажем код (демо)" autocomplete="one-time-code" />
+            <p class="auth-hint" id="loginLinkHint" hidden></p>
             <div class="auth-row auth-row--between">
               <label class="auth-check"><input type="checkbox" name="remember" checked /> Запомнить меня</label>
             </div>
@@ -48,6 +51,8 @@
           <form id="loginFormCode" class="auth-form" autocomplete="on">
             <label class="auth-label" for="loginCodeEmail">E-mail</label>
             <input class="auth-input" id="loginCodeEmail" type="email" placeholder="Укажите почту аккаунта" required />
+            <label class="auth-label" for="loginCodePassword">Пароль</label>
+            <input class="auth-input" id="loginCodePassword" type="password" placeholder="Пароль этого аккаунта" autocomplete="current-password" />
             <button type="button" class="btn-secondary auth-send" id="loginSendCodeBtn">Выслать код</button>
             <label class="auth-label" for="loginCodeVal">Код из письма</label>
             <input class="auth-input" id="loginCodeVal" inputmode="numeric" maxlength="8" placeholder="6 цифр" autocomplete="one-time-code" />

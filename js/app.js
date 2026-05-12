@@ -704,6 +704,9 @@
   var PUBLIC_NID_MIN = 10000001;
   var PUBLIC_NID_MAX = 99999999;
   var PENDING_LINK_PRIMARY_KEY = "nightstore_pending_link_primary_v1";
+  var ANCHOR_PUBLIC_NID_EMAIL = "akknomet1@gmail.com";
+  var USER_STATS_MOD_KEY = "nightstore_mod_user_stats_v1";
+  var FORUM_TROPHY_PTS_KEY = "nightstore_forum_trophy_pts_v1";
 
   function loadPublicNumericIdMap() {
     try {
@@ -750,7 +753,103 @@
     return false;
   }
 
+  function syncNumericMapToRegisteredUsers(map) {
+    var arr = loadRegisteredUsersRaw();
+    var touched = false;
+    arr.forEach(function (r) {
+      if (r && r.id && map[r.id] != null && Number(r.numericId) !== Number(map[r.id])) {
+        r.numericId = Number(map[r.id]);
+        touched = true;
+      }
+    });
+    if (touched) saveRegisteredUsersRaw(arr);
+  }
+
+  /** Публичные ID: якорь akknomet1@gmail.com = 10000001, остальные по порядку id. */
+  function applyAnchorSequentialNumericIds(data) {
+    var users = data.users || [];
+    var anchor = users.find(function (u) {
+      return u && String(u.email || "").toLowerCase() === ANCHOR_PUBLIC_NID_EMAIL;
+    });
+    if (!anchor || !anchor.id) return false;
+    var others = users
+      .filter(function (u) {
+        return u && u.id && u.id !== anchor.id;
+      })
+      .slice()
+      .sort(function (a, b) {
+        return String(a.id).localeCompare(String(b.id));
+      });
+    var newMap = {};
+    var seq = PUBLIC_NID_MIN;
+    newMap[anchor.id] = seq++;
+    others.forEach(function (u) {
+      newMap[u.id] = seq++;
+    });
+    users.forEach(function (u) {
+      if (!u || !u.id) return;
+      if (newMap[u.id] != null) u.numericId = Number(newMap[u.id]);
+    });
+    savePublicNumericIdMap(newMap);
+    savePublicNumericIdNext(seq);
+    syncNumericMapToRegisteredUsers(newMap);
+    return true;
+  }
+
+  function loadModUserStatsAll() {
+    try {
+      var o = JSON.parse(localStorage.getItem(USER_STATS_MOD_KEY) || "{}");
+      return o && typeof o === "object" ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveModUserStatsAll(obj) {
+    try {
+      localStorage.setItem(USER_STATS_MOD_KEY, JSON.stringify(obj || {}));
+    } catch (e) {
+      window.alert("Не удалось сохранить правки статистики.");
+    }
+  }
+
+  function getProfileStatForUser(u, key) {
+    if (!u) return 0;
+    var patch = loadModUserStatsAll()[u.username];
+    if (patch && patch[key] != null && isFinite(Number(patch[key]))) return Math.max(0, Number(patch[key]));
+    if (key === "reputation") return u.reputation != null ? Number(u.reputation) : Number(u.likes) || 0;
+    return Math.max(0, Number(u[key]) || 0);
+  }
+
+  function getForumTrophyPts(username) {
+    try {
+      var o = JSON.parse(localStorage.getItem(FORUM_TROPHY_PTS_KEY) || "{}");
+      return Math.max(0, Number(o[String(username || "")] || 0));
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function bumpForumTrophyPts(username, delta) {
+    var u = String(username || "").trim();
+    if (!u || !delta) return;
+    var o = {};
+    try {
+      o = JSON.parse(localStorage.getItem(FORUM_TROPHY_PTS_KEY) || "{}");
+    } catch (e) {
+      o = {};
+    }
+    if (!o || typeof o !== "object") o = {};
+    o[u] = Math.max(0, Number(o[u] || 0) + Number(delta));
+    try {
+      localStorage.setItem(FORUM_TROPHY_PTS_KEY, JSON.stringify(o));
+    } catch (e) {
+      /* quota */
+    }
+  }
+
   function ensureUsersHaveStablePublicNumericIds(data) {
+    if (applyAnchorSequentialNumericIds(data)) return;
     var map = loadPublicNumericIdMap();
     var changed = false;
     var users = data.users || [];
@@ -796,15 +895,7 @@
       if (maxUsed >= PUBLIC_NID_MIN) savePublicNumericIdNext(maxUsed + 1);
       else savePublicNumericIdNext(seq);
       savePublicNumericIdMap(map);
-      var arr = loadRegisteredUsersRaw();
-      var touched = false;
-      arr.forEach(function (r) {
-        if (r && r.id && map[r.id] != null && Number(r.numericId) !== Number(map[r.id])) {
-          r.numericId = Number(map[r.id]);
-          touched = true;
-        }
-      });
-      if (touched) saveRegisteredUsersRaw(arr);
+      syncNumericMapToRegisteredUsers(map);
     }
   }
 
@@ -856,9 +947,18 @@
       '<button type="button" class="btn-secondary" data-ns-link-existing>Привязать существующий</button>' +
       "</div>" +
       '<div class="ns-modal__panel" data-ns-link-panel hidden>' +
-      '<label class="ns-modal__label" for="nsLinkLoginInput">Логин пользователя</label>' +
-      '<input type="text" id="nsLinkLoginInput" class="ns-modal__input" autocomplete="username" />' +
+      '<p class="ns-modal__text ns-modal__text--small">Подтвердите доступ к уже существующему аккаунту: почта, пароль и код из письма. Для входа только через Firebase используйте кнопку ниже.</p>' +
+      '<label class="ns-modal__label" for="nsLinkEmailInput">E-mail аккаунта</label>' +
+      '<input type="email" id="nsLinkEmailInput" class="ns-modal__input" autocomplete="username" />' +
+      '<label class="ns-modal__label" for="nsLinkPasswordInput">Пароль</label>' +
+      '<input type="password" id="nsLinkPasswordInput" class="ns-modal__input" autocomplete="current-password" />' +
+      '<label class="ns-modal__label" for="nsLinkCodeInput">Код из письма</label>' +
+      '<input type="text" id="nsLinkCodeInput" class="ns-modal__input" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="После «Выслать код»" />' +
+      '<div class="ns-modal__row">' +
+      '<button type="button" class="btn-secondary" data-ns-link-send-code>Выслать код</button>' +
       '<button type="button" class="btn-primary ns-modal__submit" data-ns-link-submit>Привязать</button>' +
+      "</div>" +
+      '<button type="button" class="btn-secondary ns-modal__link-firebase" data-ns-link-firebase-login>Войти для привязки (Firebase)</button>' +
       "</div>" +
       "</div>";
     document.body.appendChild(overlay);
@@ -881,16 +981,59 @@
       var panel = overlay.querySelector("[data-ns-link-panel]");
       if (panel) panel.hidden = false;
     });
-    overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
-      var inp = document.getElementById("nsLinkLoginInput");
-      var log = inp ? String(inp.value || "").trim() : "";
-      if (!log) {
-        window.alert("Введите логин.");
+    function readLinkForm() {
+      var emEl = document.getElementById("nsLinkEmailInput");
+      var pwEl = document.getElementById("nsLinkPasswordInput");
+      var cdEl = document.getElementById("nsLinkCodeInput");
+      return {
+        email: emEl ? String(emEl.value || "").trim().toLowerCase() : "",
+        password: pwEl ? pwEl.value : "",
+        code: cdEl ? String(cdEl.value || "").trim() : "",
+      };
+    }
+    overlay.querySelector("[data-ns-link-send-code]").addEventListener("click", function () {
+      var f = readLinkForm();
+      if (!f.email || f.email.indexOf("@") === -1) {
+        window.alert("Введите корректный e-mail.");
         return;
       }
-      var target = findUserByLoginOrEmail(data, log);
+      var target = (data.users || []).find(function (x) {
+        return x && String(x.email || "").toLowerCase() === f.email;
+      });
       if (!target || target.id === primaryUser.id) {
-        window.alert("Пользователь не найден или это ваш текущий аккаунт.");
+        window.alert("Аккаунт не найден или это ваш текущий профиль.");
+        return;
+      }
+      if (target.firebaseUid && !checkUserPassword(target, f.password)) {
+        window.alert("Для этого аккаунта пароль задаётся через Firebase. Нажмите «Войти для привязки (Firebase)».");
+        return;
+      }
+      if (!target.firebaseUid && !checkUserPassword(target, f.password)) {
+        window.alert("Неверный пароль.");
+        return;
+      }
+      var c = storeEmailCode(f.email, "link_verify");
+      window.alert("Код для привязки: " + c + " (действует 15 мин.)");
+    });
+    overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
+      var f = readLinkForm();
+      if (!f.email || f.email.indexOf("@") === -1) {
+        window.alert("Введите корректный e-mail.");
+        return;
+      }
+      var target = (data.users || []).find(function (x) {
+        return x && String(x.email || "").toLowerCase() === f.email;
+      });
+      if (!target || target.id === primaryUser.id) {
+        window.alert("Аккаунт не найден или это ваш текущий профиль.");
+        return;
+      }
+      if (!checkUserPassword(target, f.password)) {
+        window.alert("Неверный пароль или аккаунт только через Firebase — используйте «Войти для привязки (Firebase)».");
+        return;
+      }
+      if (!verifyEmailCode(f.email, f.code, "link_verify")) {
+        window.alert("Неверный или просроченный код. Нажмите «Выслать код» после проверки пароля.");
         return;
       }
       if (loadLinkedAccountIds(primaryUser.id).length >= 1) {
@@ -901,7 +1044,20 @@
       saveLinkedAccountIds(primaryUser.id, [target.id]);
       paintUserMegaMenu(data);
       close();
+      window.alert("Аккаунт привязан.");
     });
+    var fbLinkBtn = overlay.querySelector("[data-ns-link-firebase-login]");
+    if (fbLinkBtn) {
+      fbLinkBtn.addEventListener("click", function () {
+        try {
+          sessionStorage.setItem(PENDING_LINK_PRIMARY_KEY, primaryUser.id);
+        } catch (e) {
+          window.alert("Не удалось сохранить контекст привязки.");
+          return;
+        }
+        window.location.href = "login.html?link=1";
+      });
+    }
   }
 
   function loadWallEmojiRecent() {
@@ -1097,13 +1253,11 @@
       { href: "help.html", label: "FAQ", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
       { href: "#", label: "Язык: EN", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M12 3a17 17 0 010 18" },
     ];
-    if (mod) {
-      grid.push({
-        href: "moderation.html",
-        label: "Модерация",
-        icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
-      });
-    }
+    var modStrip = mod
+      ? '<a class="user-mega__mod-strip" href="moderation.html">' +
+        iconSvg("M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z", 22) +
+        "<span>Модерация</span></a>"
+      : "";
     var gridHtml = grid
       .map(function (g) {
         return (
@@ -1132,11 +1286,9 @@
             escapeHtml(String(lu.messages > 99 ? "99+" : lu.messages)) +
             "</span>"
           : "") +
-        '</span><div class="user-mega__second-main"><div class="user-mega__second-name"><a class="user-mega__second-name-link" href="profile.html?user=' +
-        encodeURIComponent(lu.username) +
-        '" onclick="event.stopPropagation()">' +
+        '</span><div class="user-mega__second-main"><div class="user-mega__second-name">' +
         escapeHtml(lu.username) +
-        '</a></div><div class="user-mega__second-bal">' +
+        '</div><div class="user-mega__second-bal">' +
         formatRubForViewer(data, u.username, lu.balanceRub || 0, {}) +
         " <span class=\"user-mega__bal-sep\">/</span> " +
         formatRubForViewer(data, u.username, lu.depositRub || 0, {}) +
@@ -1164,9 +1316,11 @@
       fxFoot +
       '</div><div class="user-mega__bal-actions"><button type="button" class="user-mega__bal-btn user-mega__bal-btn--plus">Пополнить</button><button type="button" class="user-mega__bal-btn">Вывести</button><button type="button" class="user-mega__bal-btn">Перевести</button></div></div><div class="user-mega__grid">' +
       gridHtml +
-      '</div><div class="user-mega__accounts">' +
+      "</div>" +
+      modStrip +
+      '<div class="user-mega__accounts">' +
       secondHtml +
-      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="help.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
+      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
       iconSvg("M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1", 20) +
       "</button></div>";
 
@@ -1249,10 +1403,11 @@
       sw.addEventListener("click", function (e) {
         e.stopPropagation();
         var id = sw.getAttribute("data-switch-user");
-        if (id && userById(data, id)) {
-          writeSession(id);
-          window.location.reload();
-        }
+        var cur = data.sessionUserId;
+        if (!id || !cur || !userById(data, id) || id === cur) return;
+        saveLinkedAccountIds(id, [cur]);
+        writeSession(id);
+        window.location.reload();
       });
     }
     var ad = panel.querySelector("[data-add-linked]");
@@ -1365,16 +1520,33 @@
     }
   }
 
+  function isAnchoredAdminUser(u) {
+    return !!(u && String(u.email || "").toLowerCase() === ANCHOR_PUBLIC_NID_EMAIL);
+  }
+
+  function stripAdminExceptAnchorEmail(data) {
+    (data.users || []).forEach(function (u) {
+      if (!u) return;
+      if (isAnchoredAdminUser(u)) {
+        u.isModerator = true;
+        u.isOwner = true;
+      } else {
+        u.isModerator = false;
+        u.isOwner = false;
+      }
+    });
+  }
+
   function userIsModerator(data, u) {
-    return !!(u && (u.isModerator === true || u.role === "moderator"));
+    return isAnchoredAdminUser(u);
   }
 
   function userIsOwner(data, u) {
-    return !!(u && u.isOwner === true);
+    return isAnchoredAdminUser(u);
   }
 
   function canModerate(data, u) {
-    return userIsModerator(data, u) || userIsOwner(data, u);
+    return isAnchoredAdminUser(u);
   }
 
   function loadModTickets() {
@@ -1417,7 +1589,7 @@
     var title = String(opts.title || "Обращение в модерацию");
     var link = opts.link || "#";
     var mods = (data.users || []).filter(function (u) {
-      return userIsModerator(data, u) || userIsOwner(data, u);
+      return canModerate(data, u);
     });
     if (!mods.length) {
       window.alert("Модераторы не настроены в данных сайта.");
@@ -2304,6 +2476,7 @@
       normalizeThread(row);
       arr.unshift(row);
       saveProfileThreads(username, arr);
+      bumpForumTrophyPts(username, 3);
       input.value = "";
       if (bodyEl) bodyEl.value = "";
       threadPendingImages.length = 0;
@@ -3686,7 +3859,6 @@
 
     var statsEl = document.getElementById("profileStatsRow");
     if (statsEl) {
-      var rep = u.reputation != null ? Number(u.reputation) : Number(u.likes) || 0;
       function statTile(label, val) {
         return (
           '<div class="profile-stats__item"><span class="profile-stats__val">' +
@@ -3697,13 +3869,19 @@
         );
       }
       statsEl.innerHTML =
-        statTile("Репутация", rep) +
-        statTile("Лайки", u.likes) +
-        statTile("Сообщения", u.messages) +
-        statTile("Кубки", u.trophies) +
-        statTile("Розыгрыши", u.giveaways) +
-        statTile("Подписки", u.subscriptions) +
-        statTile("Подписчики", u.followers);
+        statTile("Репутация", getProfileStatForUser(u, "reputation")) +
+        statTile("Лайки", getProfileStatForUser(u, "likes")) +
+        statTile("Сообщения", getProfileStatForUser(u, "messages")) +
+        statTile("Розыгрыши", getProfileStatForUser(u, "giveaways")) +
+        statTile("Подписки", getProfileStatForUser(u, "subscriptions")) +
+        statTile("Подписчики", getProfileStatForUser(u, "followers"));
+    }
+
+    var ftEl = document.getElementById("profileForumTrophies");
+    if (ftEl) {
+      ftEl.textContent =
+        "Кубки за активность на форуме: " + formatIntRu(getForumTrophyPts(u.username)) + " (новая тема и сообщения в темах).";
+      ftEl.hidden = false;
     }
 
     var ut = document.getElementById("user-topics");
@@ -4219,6 +4397,7 @@
             ts: Date.now(),
           });
         });
+        bumpForumTrophyPts(me.username, 1);
         replyTa.value = "";
         topicReplyImages.length = 0;
         paintTopicReplyPreviews();
@@ -4290,6 +4469,8 @@
       return;
     }
 
+    var modStatsFormWired = false;
+
     function paint() {
       var tickets = loadModTickets();
       var ownerBlock = "";
@@ -4297,10 +4478,90 @@
         ownerBlock =
           '<section class="sidebar-card mod-grant-card"><h2 class="mod-h2">Права модераторов</h2><p class="mod-hint">Пометка «модератор» сохраняется в этом браузере (localStorage). Владельца нельзя снять с прав.</p><div id="modGrantRoot" class="mod-grant-list"></div></section>';
       }
+      var userOpts = (data.users || [])
+        .filter(function (u) {
+          return u && u.username;
+        })
+        .map(function (u) {
+          return '<option value="' + escapeHtml(u.username) + '">' + escapeHtml(u.username) + "</option>";
+        })
+        .join("");
+      var statFields = ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"]
+        .map(function (k) {
+          var lab =
+            k === "reputation"
+              ? "Репутация"
+              : k === "likes"
+                ? "Лайки"
+                : k === "messages"
+                  ? "Сообщения"
+                  : k === "giveaways"
+                    ? "Розыгрыши"
+                    : k === "subscriptions"
+                      ? "Подписки"
+                      : "Подписчики";
+          return (
+            '<div class="mod-stats-field"><label for="modStat_' +
+            k +
+            '">' +
+            escapeHtml(lab) +
+            '</label><input type="number" min="0" step="1" id="modStat_' +
+            k +
+            '" class="mod-stats-input" /></div>'
+          );
+        })
+        .join("");
+      var statsSection =
+        '<section class="sidebar-card mod-stats-card"><h2 class="mod-h2">Статистика профиля</h2><p class="mod-hint">Полоска на профиле (без кубков форума). Кубки считаются от тем и ответов автоматически.</p>' +
+        '<label class="mod-stats-label" for="modStatsUserSel">Пользователь</label><select id="modStatsUserSel" class="mod-stats-select">' +
+        userOpts +
+        "</select>" +
+        '<div class="mod-stats-grid">' +
+        statFields +
+        '</div><button type="button" class="btn-primary" id="modStatsSave">Сохранить</button></section>';
+
       root.innerHTML =
         '<div class="mod-page-head"><h1>Модерация</h1><p class="mod-sub">Жалобы пользователей и ответы поддержки</p></div>' +
+        statsSection +
         ownerBlock +
         '<section id="modTicketsRoot" class="mod-tickets"></section>';
+
+      function refillModStatsForm() {
+        var sel = document.getElementById("modStatsUserSel");
+        var un = sel ? sel.value : "";
+        var uu = (data.users || []).find(function (x) {
+          return x.username === un;
+        });
+        if (!uu) return;
+        ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"].forEach(function (k) {
+          var inp = document.getElementById("modStat_" + k);
+          if (inp) inp.value = String(Math.round(getProfileStatForUser(uu, k)));
+        });
+      }
+      if (!modStatsFormWired) {
+        modStatsFormWired = true;
+        root.addEventListener("change", function (e) {
+          if (e.target && e.target.id === "modStatsUserSel") refillModStatsForm();
+        });
+        root.addEventListener("click", function (e) {
+          if (!e.target || e.target.id !== "modStatsSave") return;
+          var sel = document.getElementById("modStatsUserSel");
+          var un = sel ? sel.value : "";
+          if (!un) return;
+          var all = loadModUserStatsAll();
+          all[un] = all[un] || {};
+          ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"].forEach(function (k) {
+            var inp = document.getElementById("modStat_" + k);
+            if (!inp) return;
+            var n = Math.max(0, Math.floor(Number(inp.value)));
+            if (!isFinite(n)) return;
+            all[un][k] = n;
+          });
+          saveModUserStatsAll(all);
+          window.alert("Сохранено.");
+        });
+      }
+      refillModStatsForm();
 
       var grant = document.getElementById("modGrantRoot");
       if (grant && userIsOwner(data, me)) {
@@ -4340,107 +4601,107 @@
       if (!tr) return;
       if (!tickets.length) {
         tr.innerHTML = '<p class="mod-empty">Обращений пока нет.</p>';
-        return;
-      }
-      tr.innerHTML = tickets
-        .map(function (t) {
-          var st = t.status === "resolved" ? "Решено" : "Открыто";
-          var reps = (t.replies || [])
-            .map(function (r) {
-              return (
-                '<div class="mod-reply"><strong>' +
-                escapeHtml(r.author || "") +
-                "</strong> · " +
-                escapeHtml(formatNotifTime(r.ts || 0)) +
-                '<div class="mod-reply__body">' +
-                escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
-                "</div></div>"
-              );
-            })
-            .join("");
-          return (
-            '<article class="sidebar-card mod-ticket" data-mod-ticket-id="' +
-            escapeHtml(t.id) +
-            '">' +
-            '<div class="mod-ticket__head"><span class="mod-ticket__status">' +
-            escapeHtml(st) +
-            '</span><span class="mod-ticket__kind">' +
-            escapeHtml(t.kind || "") +
-            "</span></div>" +
-            '<h3 class="mod-ticket__title">' +
-            escapeHtml(t.title || "") +
-            "</h3>" +
-            '<div class="mod-ticket__detail">' +
-            escapeHtml(t.detail || "").replace(/\n/g, "<br/>") +
-            "</div>" +
-            '<p class="mod-ticket__link"><a href="' +
-            escapeHtml(t.link || "#") +
-            '">Открыть ссылку</a></p>' +
-            '<div class="mod-ticket__replies">' +
-            (reps || '<p class="mod-empty">Ответов пока нет.</p>') +
-            "</div>" +
-            (t.status === "resolved"
-              ? ""
-              : '<div class="mod-ticket__actions">' +
-                '<label class="sr-only" for="modta-' +
-                escapeHtml(t.id) +
-                '">Ответ</label>' +
-                '<textarea id="modta-' +
-                escapeHtml(t.id) +
-                '" class="mod-ticket__ta" rows="3" maxlength="4000" placeholder="Ответ пользователю или внутренняя заметка…"></textarea>' +
-                '<div class="mod-ticket__btns">' +
-                '<button type="button" class="btn-primary" data-mod-reply="' +
-                escapeHtml(t.id) +
-                '">Отправить ответ</button>' +
-                '<button type="button" class="btn-secondary" data-mod-resolve="' +
-                escapeHtml(t.id) +
-                '">Пометить решённым</button>' +
-                "</div></div>") +
-            "</article>"
-          );
-        })
-        .join("");
+      } else {
+        tr.innerHTML = tickets
+          .map(function (t) {
+            var st = t.status === "resolved" ? "Решено" : "Открыто";
+            var reps = (t.replies || [])
+              .map(function (r) {
+                return (
+                  '<div class="mod-reply"><strong>' +
+                  escapeHtml(r.author || "") +
+                  "</strong> · " +
+                  escapeHtml(formatNotifTime(r.ts || 0)) +
+                  '<div class="mod-reply__body">' +
+                  escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
+                  "</div></div>"
+                );
+              })
+              .join("");
+            return (
+              '<article class="sidebar-card mod-ticket" data-mod-ticket-id="' +
+              escapeHtml(t.id) +
+              '">' +
+              '<div class="mod-ticket__head"><span class="mod-ticket__status">' +
+              escapeHtml(st) +
+              '</span><span class="mod-ticket__kind">' +
+              escapeHtml(t.kind || "") +
+              "</span></div>" +
+              '<h3 class="mod-ticket__title">' +
+              escapeHtml(t.title || "") +
+              "</h3>" +
+              '<div class="mod-ticket__detail">' +
+              escapeHtml(t.detail || "").replace(/\n/g, "<br/>") +
+              "</div>" +
+              '<p class="mod-ticket__link"><a href="' +
+              escapeHtml(t.link || "#") +
+              '">Открыть ссылку</a></p>' +
+              '<div class="mod-ticket__replies">' +
+              (reps || '<p class="mod-empty">Ответов пока нет.</p>') +
+              "</div>" +
+              (t.status === "resolved"
+                ? ""
+                : '<div class="mod-ticket__actions">' +
+                  '<label class="sr-only" for="modta-' +
+                  escapeHtml(t.id) +
+                  '">Ответ</label>' +
+                  '<textarea id="modta-' +
+                  escapeHtml(t.id) +
+                  '" class="mod-ticket__ta" rows="3" maxlength="4000" placeholder="Ответ пользователю или внутренняя заметка…"></textarea>' +
+                  '<div class="mod-ticket__btns">' +
+                  '<button type="button" class="btn-primary" data-mod-reply="' +
+                  escapeHtml(t.id) +
+                  '">Отправить ответ</button>' +
+                  '<button type="button" class="btn-secondary" data-mod-resolve="' +
+                  escapeHtml(t.id) +
+                  '">Пометить решённым</button>' +
+                  "</div></div>") +
+              "</article>"
+            );
+          })
+          .join("");
 
-      tr.querySelectorAll("[data-mod-reply]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var id = btn.getAttribute("data-mod-reply");
-          if (!id) return;
-          var taEl = document.getElementById("modta-" + id);
-          var body = taEl ? taEl.value.trim() : "";
-          if (!body) {
-            if (taEl) taEl.focus();
-            return;
-          }
-          var list = loadModTickets();
-          var t = list.find(function (x) {
-            return x.id === id;
+        tr.querySelectorAll("[data-mod-reply]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var id = btn.getAttribute("data-mod-reply");
+            if (!id) return;
+            var taEl = document.getElementById("modta-" + id);
+            var body = taEl ? taEl.value.trim() : "";
+            if (!body) {
+              if (taEl) taEl.focus();
+              return;
+            }
+            var list = loadModTickets();
+            var t = list.find(function (x) {
+              return x.id === id;
+            });
+            if (!t) return;
+            if (!t.replies) t.replies = [];
+            t.replies.push({
+              author: me.username,
+              body: body,
+              ts: Date.now(),
+            });
+            saveModTickets(list);
+            if (taEl) taEl.value = "";
+            paint();
           });
-          if (!t) return;
-          if (!t.replies) t.replies = [];
-          t.replies.push({
-            author: me.username,
-            body: body,
-            ts: Date.now(),
-          });
-          saveModTickets(list);
-          if (taEl) taEl.value = "";
-          paint();
         });
-      });
-      tr.querySelectorAll("[data-mod-resolve]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var id = btn.getAttribute("data-mod-resolve");
-          if (!id) return;
-          var list = loadModTickets();
-          var t = list.find(function (x) {
-            return x.id === id;
+        tr.querySelectorAll("[data-mod-resolve]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var id = btn.getAttribute("data-mod-resolve");
+            if (!id) return;
+            var list = loadModTickets();
+            var t = list.find(function (x) {
+              return x.id === id;
+            });
+            if (!t) return;
+            t.status = "resolved";
+            saveModTickets(list);
+            paint();
           });
-          if (!t) return;
-          t.status = "resolved";
-          saveModTickets(list);
-          paint();
         });
-      });
+      }
     }
 
     paint();
@@ -4462,7 +4723,7 @@
       return true;
     }
     if (page === "help") return true;
-    var gated = { forum: 1, market: 1, profile: 1, topic: 1, notifications: 1, moderation: 1 };
+    var gated = { forum: 1, market: 1, profile: 1, topic: 1, notifications: 1, moderation: 1, settings: 1 };
     if (!gated[page]) return true;
     var u = sessionUser(data);
     if (!u || data._sessionGuest) {
@@ -4495,6 +4756,18 @@
     var tabs = document.querySelectorAll("[data-login-tab]");
     var tabPanels = document.querySelectorAll("[data-login-panel]");
     var auth = window.NSFirebaseAuth;
+    var linkMode = false;
+    try {
+      linkMode = new URLSearchParams(location.search).get("link") === "1";
+    } catch (errLm) {
+      linkMode = false;
+    }
+    var linkHint = document.getElementById("loginLinkHint");
+    if (linkHint && linkMode) {
+      linkHint.hidden = false;
+      linkHint.textContent =
+        "Режим привязки второго аккаунта: войдите с паролем и кодом из письма. После входа аккаунт будет привязан к основному.";
+    }
     var tabBar = document.querySelector(".auth-card .auth-tabs") || document.querySelector(".auth-tabs");
     if (auth) {
       if (tabBar) {
@@ -4508,7 +4781,7 @@
       });
       var sub = document.querySelector(".auth-card__sub");
       if (sub) {
-        sub.textContent = "Логин или e-mail и пароль.";
+        sub.textContent = "Логин или e-mail, пароль и код из письма (два шага).";
       }
     }
     tabs.forEach(function (t) {
@@ -4529,8 +4802,10 @@
         e.preventDefault();
         var login = document.getElementById("loginId");
         var pass = document.getElementById("loginPassword");
+        var codeInp = document.getElementById("login2faCode");
         var passVal = pass ? pass.value : "";
         var loginVal = login ? login.value : "";
+        var codeVal = codeInp ? String(codeInp.value || "").trim() : "";
         var next = new URLSearchParams(location.search).get("next");
         function goAfterLogin(u) {
           writeSession(u.id);
@@ -4544,12 +4819,30 @@
             window.location.href = "index.html";
           }
         }
+        function finishWithEmailCode(emailKey, userObj) {
+          var ek = String(emailKey || "").toLowerCase();
+          if (!codeVal) {
+            var c0 = storeEmailCode(ek, "login_pass");
+            window.alert(
+              "Код для входа: " +
+                c0 +
+                " (действует 15 мин). Введите его в поле «Код из письма» и снова нажмите «Вход»."
+            );
+            return;
+          }
+          if (!verifyEmailCode(ek, codeVal, "login_pass")) {
+            window.alert("Неверный или просроченный код.");
+            return;
+          }
+          goAfterLogin(userObj);
+        }
         if (auth) {
           var emailFb = resolveEmailForFirebaseLogin(data, loginVal);
           if (!emailFb) {
             window.alert("Укажите e-mail или логин аккаунта, привязанный к почте.");
             return;
           }
+          var emailLowerForCode = String(emailFb).toLowerCase();
           auth
             .signInWithEmailAndPassword(emailFb, passVal)
             .then(function () {
@@ -4557,14 +4850,43 @@
               var u = sessionUser(data);
               if (!u) {
                 window.alert("Не удалось восстановить профиль после входа.");
+                auth.signOut().catch(function () {});
+                return;
+              }
+              if (!codeVal) {
+                var c1 = storeEmailCode(emailLowerForCode, "login_pass");
+                return auth
+                  .signOut()
+                  .catch(function () {})
+                  .finally(function () {
+                    try {
+                      syncFirebaseSessionIntoData(data);
+                    } catch (eSync) {
+                      /* ignore */
+                    }
+                    window.alert(
+                      "Код для входа: " +
+                        c1 +
+                        " (действует 15 мин). Введите его и снова нажмите «Вход»."
+                    );
+                  });
+              }
+              if (!verifyEmailCode(emailLowerForCode, codeVal, "login_pass")) {
+                window.alert("Неверный или просроченный код.");
+                auth.signOut().catch(function () {});
                 return;
               }
               goAfterLogin(u);
             })
             .catch(function (err) {
-              var u = findUserByLoginOrEmail(data, loginVal);
-              if (u && checkUserPassword(u, passVal)) {
-                goAfterLogin(u);
+              var uLocal = findUserByLoginOrEmail(data, loginVal);
+              if (uLocal && checkUserPassword(uLocal, passVal)) {
+                var ekLoc = String(uLocal.email || "").toLowerCase();
+                if (!ekLoc || ekLoc.indexOf("@") === -1) {
+                  window.alert("У аккаунта нет почты для кода.");
+                  return;
+                }
+                finishWithEmailCode(ekLoc, uLocal);
                 return;
               }
               window.alert(firebaseAuthErrorRu(err));
@@ -4576,18 +4898,25 @@
           window.alert("Неверный логин или пароль.");
           return;
         }
-        goAfterLogin(u);
+        var emKey = String(u.email || "").toLowerCase();
+        if (!emKey || emKey.indexOf("@") === -1) {
+          window.alert("У аккаунта нет почты для кода.");
+          return;
+        }
+        finishWithEmailCode(emKey, u);
       });
     }
     var sendC = document.getElementById("loginSendCodeBtn");
     if (sendC) {
       sendC.addEventListener("click", function () {
         if (auth) {
-          window.alert("Вход по коду из письма недоступен при использовании Firebase. Войдите по паролю.");
+          window.alert("При Firebase используйте вкладку «Пароль»: там же код после первого нажатия «Вход».");
           return;
         }
         var em = document.getElementById("loginCodeEmail");
+        var pwdEl = document.getElementById("loginCodePassword");
         var email = em ? String(em.value || "").trim().toLowerCase() : "";
+        var pwd = pwdEl ? pwdEl.value : "";
         if (!email || email.indexOf("@") === -1) {
           window.alert("Введите корректный e-mail.");
           return;
@@ -4599,7 +4928,11 @@
           window.alert("Пользователь с таким e-mail не найден.");
           return;
         }
-        var c = storeEmailCode(email, "login");
+        if (!checkUserPassword(u, pwd)) {
+          window.alert("Сначала укажите верный пароль для этой почты.");
+          return;
+        }
+        var c = storeEmailCode(email, "login_pass");
         window.alert("Код для входа: " + c + " (действует 15 мин.)");
       });
     }
@@ -4607,22 +4940,28 @@
       formC.addEventListener("submit", function (e) {
         e.preventDefault();
         if (auth) {
-          window.alert("Вход по коду из письма недоступен при использовании Firebase.");
+          window.alert("При Firebase используйте форму с паролем на первой вкладке.");
           return;
         }
         var em = document.getElementById("loginCodeEmail");
-        var codeInp = document.getElementById("loginCodeVal");
+        var pwdEl = document.getElementById("loginCodePassword");
+        var codeInp2 = document.getElementById("loginCodeVal");
         var email = em ? String(em.value || "").trim().toLowerCase() : "";
-        var code = codeInp ? String(codeInp.value || "").trim() : "";
-        if (!verifyEmailCode(email, code, "login")) {
-          window.alert("Неверный или просроченный код.");
-          return;
-        }
+        var pwd = pwdEl ? pwdEl.value : "";
+        var code = codeInp2 ? String(codeInp2.value || "").trim() : "";
         var u = (data.users || []).find(function (x) {
           return String(x.email || "").toLowerCase() === email;
         });
         if (!u) {
           window.alert("Пользователь не найден.");
+          return;
+        }
+        if (!checkUserPassword(u, pwd)) {
+          window.alert("Неверный пароль.");
+          return;
+        }
+        if (!verifyEmailCode(email, code, "login_pass")) {
+          window.alert("Неверный или просроченный код.");
           return;
         }
         writeSession(u.id);
@@ -4838,6 +5177,110 @@
     }
   }
 
+  function initHeaderUniversalSearch(data) {
+    if (document.body.dataset.nsHeaderSearch === "1") return;
+    document.body.dataset.nsHeaderSearch = "1";
+    document.querySelectorAll(".header-search").forEach(function (wrap) {
+      var inp = wrap.querySelector('input[type="search"], input:not([type])');
+      if (!inp || inp.dataset.nsSearch === "1") return;
+      inp.dataset.nsSearch = "1";
+      if (!inp.placeholder || String(inp.placeholder).trim() === "Поиск..." || String(inp.placeholder).trim() === "Поиск…") {
+        inp.placeholder = "Люди и товары…";
+      }
+      if (!wrap.style.position) wrap.style.position = "relative";
+      var panel = document.createElement("div");
+      panel.className = "header-search-dd";
+      panel.hidden = true;
+      wrap.appendChild(panel);
+      var tmo = null;
+      function run(q) {
+        q = String(q || "").trim().toLowerCase();
+        if (q.length < 1) {
+          panel.hidden = true;
+          panel.innerHTML = "";
+          return;
+        }
+        var users = (data.users || [])
+          .filter(function (u) {
+            if (!u || !u.username) return false;
+            var em = String(u.email || "").toLowerCase();
+            return (
+              u.username.toLowerCase().indexOf(q) !== -1 ||
+              em.indexOf(q) !== -1 ||
+              String(u.numericId || "").indexOf(q) !== -1
+            );
+          })
+          .slice(0, 8);
+        var prods = (data.products || [])
+          .filter(function (p) {
+            if (!p) return false;
+            var t = String(p.title || p.name || p.label || "").toLowerCase();
+            var sid = String(p.steamId || p.steam_id || p.id || "").toLowerCase();
+            return t.indexOf(q) !== -1 || sid.indexOf(q) !== -1;
+          })
+          .slice(0, 8);
+        var rows = [];
+        users.forEach(function (u) {
+          rows.push(
+            '<a class="header-search-dd__row header-search-dd__row--user" href="profile.html?user=' +
+              encodeURIComponent(u.username) +
+              '"><span class="header-search-dd__badge">Профиль</span><span>' +
+              escapeHtml(u.username) +
+              "</span></a>"
+          );
+        });
+        prods.forEach(function (p) {
+          var title = escapeHtml(String(p.title || p.name || p.label || "Товар"));
+          rows.push(
+            '<a class="header-search-dd__row header-search-dd__row--lot" href="market.html"><span class="header-search-dd__badge">Маркет</span><span>' +
+              title +
+              "</span></a>"
+          );
+        });
+        if (!rows.length) {
+          panel.innerHTML = '<div class="header-search-dd__empty">Ничего не найдено</div>';
+        } else {
+          panel.innerHTML = rows.join("");
+        }
+        panel.hidden = false;
+      }
+      inp.addEventListener("input", function () {
+        clearTimeout(tmo);
+        tmo = setTimeout(function () {
+          run(inp.value);
+        }, 200);
+      });
+      inp.addEventListener("focus", function () {
+        run(inp.value);
+      });
+      document.addEventListener("click", function (e) {
+        if (!wrap.contains(e.target)) panel.hidden = true;
+      });
+    });
+  }
+
+  function initSettingsPage(data) {
+    var nav = document.querySelector("[data-settings-nav]");
+    if (!nav) return;
+    var panels = document.querySelectorAll("[data-settings-panel]");
+    function show(id) {
+      nav.querySelectorAll(".settings-nav__btn").forEach(function (b) {
+        b.classList.toggle("is-active", (b.getAttribute("data-settings-tab") || "") === id);
+      });
+      panels.forEach(function (p) {
+        p.hidden = (p.getAttribute("data-settings-panel") || "") !== id;
+      });
+    }
+    nav.querySelectorAll(".settings-nav__btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-settings-tab");
+        if (id) show(id);
+      });
+    });
+    var first = nav.querySelector(".settings-nav__btn.is-active");
+    show(first ? first.getAttribute("data-settings-tab") : "personal");
+  }
+
   function initHelp() {
     var el = document.querySelector(".js-help-intro");
     if (el) {
@@ -4872,12 +5315,14 @@
       })
       .then(function (data) {
         mergeLocalUserPrefs(data);
+        stripAdminExceptAnchorEmail(data);
         ensureUsersHaveStablePublicNumericIds(data);
         ensureFxRatesMerged(data, function () {
           if (!gateSiteAccess(data, page)) return;
           applySessionUser(data);
           if (page !== "login" && page !== "register" && page !== "verify-email") {
             initNotificationCenter(data);
+            initHeaderUniversalSearch(data);
           }
           if (page === "login") initLoginPage(data);
           else if (page === "register") initRegisterPage(data);
@@ -4888,6 +5333,7 @@
           else if (page === "topic") initTopic(data);
           else if (page === "notifications") initNotificationsSettings();
           else if (page === "moderation") initModeration(data);
+          else if (page === "settings") initSettingsPage(data);
           if (page === "help") initHelp();
         });
       })

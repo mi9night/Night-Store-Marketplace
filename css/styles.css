@@ -720,6 +720,26 @@ img {
   font-weight: 700;
 }
 
+.ns-modal__text--small {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.ns-modal__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.ns-modal__link-firebase {
+  width: 100%;
+  margin-top: 0.65rem;
+}
+
 .ns-modal__text {
   margin: 0 0 16px;
   font-size: 0.9rem;
@@ -760,6 +780,220 @@ img {
 
 .ns-modal__submit {
   width: 100%;
+}
+
+.user-mega__mod-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(199, 181, 255, 0.35);
+  background: rgba(199, 181, 255, 0.08);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.user-mega__mod-strip:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.user-mega__mod-strip svg {
+  flex-shrink: 0;
+}
+
+.header-search-dd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  z-index: 50;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  max-height: 320px;
+  overflow: auto;
+}
+
+.header-search-dd__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-search-dd__row:last-child {
+  border-bottom: none;
+}
+
+.header-search-dd__row:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.header-search-dd__badge {
+  flex: 0 0 auto;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.header-search-dd__empty {
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.profile-forum-trophies {
+  margin: -8px 0 16px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.layout-settings {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout-settings {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-sidebar {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 12px 10px;
+}
+
+.settings-nav-group {
+  margin-bottom: 18px;
+}
+
+.settings-nav-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-nav-group__title {
+  margin: 0 0 8px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.settings-nav__btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.settings-nav__btn:hover {
+  background: var(--surface);
+}
+
+.settings-nav__btn.is-active {
+  background: rgba(199, 181, 255, 0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+.settings-panel__h1 {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+}
+
+.settings-panel__muted {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.settings-panel__muted a {
+  color: var(--accent);
+}
+
+.mod-stats-card {
+  margin-bottom: 16px;
+}
+
+.mod-stats-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.mod-stats-select {
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.mod-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.mod-stats-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.mod-stats-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .profile-sidebar .profile-avatar-wrap {
@@ -4522,18 +4756,6 @@ a.user-mega__name.user-mega__profile-link:hover {
 .user-mega__second-name {
   font-weight: 600;
   font-size: 0.9rem;
-}
-
-.user-mega__second-name-link {
-  color: inherit;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.user-mega__second-name-link:hover {
-  color: var(--accent);
-  text-decoration: underline;
 }
 
 .user-mega__second-bal {
