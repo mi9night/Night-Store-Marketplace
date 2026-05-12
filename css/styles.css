@@ -594,10 +594,18 @@ img {
 
 .profile-main {
   min-width: 0;
+  width: 100%;
 }
 
 .profile-main-card {
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.layout-profile .tabs {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 960px) {
@@ -1202,11 +1210,15 @@ img {
 }
 
 .profile-wall-wrap {
-  max-width: min(100%, 680px);
+  width: 100%;
+  max-width: none;
   margin-top: 4px;
+  box-sizing: border-box;
 }
 
 .profile-wall-card {
+  width: 100%;
+  box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
