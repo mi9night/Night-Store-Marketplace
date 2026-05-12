@@ -78,7 +78,8 @@
         </div>
       </aside>
 
-      <div class="sidebar-card" style="margin:0">
+      <div class="profile-main">
+        <div class="profile-main-card">
         <div class="profile-name-row">
           <h1 class="profile-h1 profile-h1--linked"><a class="profile-title-link js-profile-h1" href="profile.html">…</a></h1>
           <span class="profile-mod-badge" id="profileModBadge" hidden title="Модератор Night Store" aria-label="Модератор">
@@ -92,6 +93,15 @@
           <div class="info-item"><span class="info-item__label">ID</span><span class="info-item__value js-nid">—</span></div>
           <div class="info-item"><span class="info-item__label">Пол</span><span class="info-item__value js-gender">—</span></div>
           <div class="info-item"><span class="info-item__label">День рождения</span><span class="info-item__value js-bday">—</span></div>
+        </div>
+        <div class="profile-stats-rail" aria-label="Статистика профиля">
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-sym">0</strong> симпатий</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-likes">0</strong> лайков</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-msg">0</strong> сообщений</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-troph">0</strong> трофеев</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-give">0</strong> розыгрышей</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-sub">0</strong> подписок</span>
+          <span class="profile-stats-rail__item"><strong class="js-profile-stat-follow">0</strong> подписчиков</span>
         </div>
         <p style="margin:0 0 16px;font-size:0.9rem">
           <a class="js-profile-threads-link" href="profile.html">Темы от <span class="js-profile-links-user">…</span></a> · <a href="market.html">Аккаунты на маркете</a>
@@ -121,7 +131,8 @@
           <button type="button" class="tab" role="tab">Лента</button>
           <button type="button" class="tab" role="tab">Недавние сообщения</button>
           <button type="button" class="tab" role="tab">Споры</button>
-          <button type="button" class="tab" role="tab">Предупреждения</button>
+          <button type="button" class="tab" role="tab">История блокировок</button>
+          <a href="moderation.html" class="tab tab--link" role="tab" id="profileModTab" hidden>Модерация</a>
         </div>
 
         <div class="profile-wall-wrap">
@@ -292,6 +303,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
     </main>
 

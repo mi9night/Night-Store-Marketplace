@@ -598,6 +598,108 @@ img {
   }
 }
 
+.profile-main {
+  min-width: 0;
+}
+
+.profile-main-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px 22px;
+}
+
+.profile-stats-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 14px 0 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.profile-stats-rail__item strong {
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.tabs .tab.tab--link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ns-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 6, 14, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ns-modal-card {
+  position: relative;
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 22px 18px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.ns-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ns-modal-close:hover {
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.ns-modal-title {
+  margin: 0 28px 10px 0;
+  font-size: 1.2rem;
+}
+
+.ns-modal-text {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.ns-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ns-modal-actions .btn-primary,
+.ns-modal-actions .btn-secondary {
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+}
+
 .profile-sidebar .profile-avatar-wrap {
   width: 100%;
   aspect-ratio: 1 / 1;
