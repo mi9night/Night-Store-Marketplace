@@ -2,6 +2,13 @@
  * Конфиг веб-приложения Firebase (Console → Project settings → Your apps).
  * Analytics в проекте не подключён — используется compat Auth через js/firebase-init.js.
  */
+/**
+ * URL для отправки кодов на почту (POST JSON: { email, purpose, code }).
+ * Реализуйте на Cloudflare Worker / своём бэкенде (Resend, SendGrid и т.д.).
+ * Пустая строка — код не показывается на сайте; отладка только с ?debugCodes=1 в URL.
+ */
+window.NIGHTSTORE_EMAIL_CODE_WEBHOOK = "";
+
 window.__NIGHTSTORE_FIREBASE_CONFIG__ = {
   apiKey: "AIzaSyBQJ5R8Nlc1CivtxCXk-qFH5N2CG8MdqoY",
   authDomain: "night-store-401e8.firebaseapp.com",

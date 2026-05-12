@@ -310,6 +310,7 @@
   }
 
   function mergeRegisteredUsersIntoData(data) {
+    purgeRemovedRegisteredUsers();
     var list = loadRegisteredUsersRaw();
     if (!data.users) data.users = [];
     list.forEach(function (rec) {
@@ -346,7 +347,7 @@
         return;
       }
       if (o && o.sessionUserId && (data.users || []).some(function (x) {
-        return x.id === o.sessionUserId;
+        return String(x.id == null ? "" : x.id) === String(o.sessionUserId == null ? "" : o.sessionUserId);
       })) {
         data.sessionUserId = o.sessionUserId;
       }
@@ -414,6 +415,57 @@
     }
   }
 
+  function emailCodeDebugVisible() {
+    try {
+      return new URLSearchParams(location.search).get("debugCodes") === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function deliverEmailCodeToInbox(email, purpose, code) {
+    var em = String(email || "").trim();
+    var hook = typeof window !== "undefined" ? String(window.NIGHTSTORE_EMAIL_CODE_WEBHOOK || "").trim() : "";
+    if (hook) {
+      return fetch(hook, {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: em.toLowerCase(),
+          purpose: String(purpose || ""),
+          code: String(code || ""),
+        }),
+      }).then(function (r) {
+        if (!r.ok) throw new Error("bad");
+        window.alert("Код отправлен на " + em + ". Проверьте почту и папку «Спам».");
+      });
+    }
+    if (emailCodeDebugVisible()) {
+      window.alert("DEBUG: код для " + em + ": " + code);
+      return Promise.resolve();
+    }
+    window.alert(
+      "Отправка кода на почту не настроена. В js/firebase-config.js задайте window.NIGHTSTORE_EMAIL_CODE_WEBHOOK (POST JSON: email, purpose, code). Для локальной отладки откройте страницу с ?debugCodes=1."
+    );
+    return Promise.reject(new Error("no_webhook"));
+  }
+
+  /** Логины, не показываемые в модерации и удаляемые из сохранённых регистраций. */
+  var MOD_PURGED_USERNAMES = { lunar: true };
+
+  function isModPurgedUsername(username) {
+    return !!(username && MOD_PURGED_USERNAMES[String(username).toLowerCase()]);
+  }
+
+  function purgeRemovedRegisteredUsers() {
+    var list = loadRegisteredUsersRaw();
+    var next = list.filter(function (r) {
+      return r && r.username && !isModPurgedUsername(r.username);
+    });
+    if (next.length !== list.length) saveRegisteredUsersRaw(next);
+  }
+
   function loadLinkedAccountIds(primaryUserId) {
     try {
       var m = JSON.parse(localStorage.getItem(LINKED_ACCOUNTS_KEY) || "{}");
@@ -432,7 +484,9 @@
       m = {};
     }
     if (!m || typeof m !== "object") m = {};
-    m[String(primaryUserId)] = ids.slice(0, 1);
+    m[String(primaryUserId)] = ids.slice(0, 1).map(function (x) {
+      return String(x == null ? "" : x);
+    });
     try {
       localStorage.setItem(LINKED_ACCOUNTS_KEY, JSON.stringify(m));
     } catch (e) {
@@ -736,6 +790,10 @@
   var ANCHOR_PUBLIC_NID_EMAIL = "akknomet1@gmail.com";
   var USER_STATS_MOD_KEY = "nightstore_mod_user_stats_v1";
   var FORUM_TROPHY_PTS_KEY = "nightstore_forum_trophy_pts_v1";
+  var SUPPORT_THREADS_KEY = "nightstore_support_threads_v1";
+  var PRODUCT_ADMIN_CODES_KEY = "nightstore_product_admin_codes_v1";
+  var PRODUCT_MOD_NOTES_KEY = "nightstore_product_mod_notes_v1";
+  var BANNED_USERNAMES_KEY = "nightstore_banned_usernames_v1";
 
   function loadPublicNumericIdMap() {
     try {
@@ -1042,7 +1100,7 @@
         return;
       }
       var c = storeEmailCode(f.email, "link_verify");
-      window.alert("Код для привязки: " + c + " (действует 15 мин.)");
+      deliverEmailCodeToInbox(f.email, "link_verify", c).catch(function () {});
     });
     overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
       var f = readLinkForm();
@@ -1137,8 +1195,9 @@
   }
 
   function userById(data, id) {
+    var sid = String(id == null ? "" : id);
     return (data.users || []).find(function (u) {
-      return u.id === id;
+      return String(u.id == null ? "" : u.id) === sid;
     });
   }
 
@@ -1303,6 +1362,14 @@
       secondHtml =
         '<button type="button" class="user-mega__second" data-switch-user="' +
         escapeHtml(lu.id) +
+        '" title="' +
+        escapeHtml(
+          "Войти в @" +
+            lu.username +
+            " — текущий аккаунт окажется в этой строке для обратного переключения"
+        ) +
+        '" aria-label="' +
+        escapeHtml("Войти в связанный аккаунт @" + lu.username) +
         '"><span class="user-mega__second-avwrap"><img src="' +
         escapeHtml(lu.avatar) +
         '" alt="" width="40" height="40" loading="lazy"/>' +
@@ -1345,7 +1412,7 @@
       modStrip +
       '<div class="user-mega__accounts">' +
       secondHtml +
-      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
+      '</div><div class="user-mega__foot"><a class="user-mega__support" href="support.html">Поддержка</a><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
       iconSvg("M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1", 20) +
       "</button></div>";
 
@@ -1423,18 +1490,29 @@
         }
       });
     }
-    var sw = panel.querySelector("[data-switch-user]");
-    if (sw) {
-      sw.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var id = sw.getAttribute("data-switch-user");
-        var cur = data.sessionUserId;
-        if (!id || !cur || !userById(data, id) || id === cur) return;
-        saveLinkedAccountIds(id, [cur]);
-        writeSession(id);
-        window.location.reload();
-      });
+    if (panel._nightstoreSwitchLinked) {
+      panel.removeEventListener("click", panel._nightstoreSwitchLinked);
+      panel._nightstoreSwitchLinked = null;
     }
+    function onSwitchLinked(e) {
+      var hit = e.target && e.target.closest ? e.target.closest("[data-switch-user]") : null;
+      if (!hit || !panel.contains(hit)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var id = String(hit.getAttribute("data-switch-user") || "").trim();
+      var cur = data.sessionUserId != null ? String(data.sessionUserId) : "";
+      if (!id || !cur) return;
+      if (id === cur) return;
+      if (!userById(data, id)) {
+        window.alert("Аккаунт не найден. Обновите страницу.");
+        return;
+      }
+      saveLinkedAccountIds(id, [cur]);
+      writeSession(id);
+      window.location.reload();
+    }
+    panel._nightstoreSwitchLinked = onSwitchLinked;
+    panel.addEventListener("click", onSwitchLinked);
     var ad = panel.querySelector("[data-add-linked]");
     if (ad) {
       ad.addEventListener("click", function (e) {
@@ -1564,7 +1642,24 @@
   function loadModTickets() {
     try {
       var a = JSON.parse(localStorage.getItem(MOD_TICKETS_KEY) || "[]");
-      return Array.isArray(a) ? a : [];
+      if (!Array.isArray(a)) return [];
+      var maxPn = 0;
+      a.forEach(function (t) {
+        if (!t) return;
+        var n = Number(t.publicNo);
+        if (isFinite(n) && n > maxPn) maxPn = n;
+      });
+      var touched = false;
+      a.forEach(function (t) {
+        if (!t) return;
+        if (t.publicNo == null || !isFinite(Number(t.publicNo)) || Number(t.publicNo) <= 0) {
+          maxPn++;
+          t.publicNo = maxPn;
+          touched = true;
+        }
+      });
+      if (touched) saveModTickets(a);
+      return a;
     } catch (e) {
       return [];
     }
@@ -1580,8 +1675,16 @@
 
   function enqueueModerationTicket(row) {
     var list = loadModTickets();
+    var maxPn = 0;
+    list.forEach(function (t) {
+      if (!t) return;
+      var n = Number(t.publicNo);
+      if (isFinite(n) && n > maxPn) maxPn = n;
+    });
+    var publicNo = row.publicNo != null && isFinite(Number(row.publicNo)) ? Number(row.publicNo) : maxPn + 1;
     list.unshift({
       id: row.id || "t_" + Date.now(),
+      publicNo: publicNo,
       ts: row.ts || Date.now(),
       title: String(row.title || ""),
       detail: String(row.detail || ""),
@@ -1632,6 +1735,95 @@
       });
     });
     updateNotifyBadge(data);
+  }
+
+  function loadSupportThreads() {
+    try {
+      var a = JSON.parse(localStorage.getItem(SUPPORT_THREADS_KEY) || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveSupportThreads(arr) {
+    try {
+      localStorage.setItem(SUPPORT_THREADS_KEY, JSON.stringify(arr.slice(0, 200)));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function loadProductAdminCodes() {
+    try {
+      var o = JSON.parse(localStorage.getItem(PRODUCT_ADMIN_CODES_KEY) || "{}");
+      return o && typeof o === "object" ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProductAdminCodes(obj) {
+    try {
+      localStorage.setItem(PRODUCT_ADMIN_CODES_KEY, JSON.stringify(obj || {}));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function ensureProductAdminCode(productId) {
+    var pid = String(productId || "");
+    if (!pid) return "";
+    var m = loadProductAdminCodes();
+    if (m[pid] && String(m[pid]).length >= 6) return String(m[pid]);
+    var code = randomDigitsCode(8);
+    m[pid] = code;
+    saveProductAdminCodes(m);
+    return code;
+  }
+
+  function loadProductModNotes() {
+    try {
+      var o = JSON.parse(localStorage.getItem(PRODUCT_MOD_NOTES_KEY) || "{}");
+      return o && typeof o === "object" ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProductModNotes(obj) {
+    try {
+      localStorage.setItem(PRODUCT_MOD_NOTES_KEY, JSON.stringify(obj || {}));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function loadBannedUsernamesSet() {
+    try {
+      var a = JSON.parse(localStorage.getItem(BANNED_USERNAMES_KEY) || "[]");
+      if (!Array.isArray(a)) return {};
+      var o = {};
+      a.forEach(function (x) {
+        if (x) o[String(x).toLowerCase()] = 1;
+      });
+      return o;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveBannedUsernamesFromSet(set) {
+    try {
+      var keys = Object.keys(set || {});
+      localStorage.setItem(BANNED_USERNAMES_KEY, JSON.stringify(keys));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function isUserBanned(username) {
+    return !!loadBannedUsernamesSet()[String(username || "").toLowerCase()];
   }
 
   function attachAvatarFallback(img, seed) {
@@ -2947,8 +3139,8 @@
       }
       if (emptyEl) emptyEl.hidden = true;
       listEl.hidden = false;
-      var isMod = canModerate(data, session);
-      var isWallOwner = session.username === profileUser.username;
+      var isMod = session ? canModerate(data, session) : false;
+      var viewerName = session && session.username ? String(session.username) : "";
       listEl.innerHTML = rows
         .map(function (p) {
           var imgs = renderDataImagesHtml(p.images, "wall-post-img");
@@ -2956,9 +3148,9 @@
             ? '<div class="wall-post-card__body">' + formatWallPostHtml(p.body) + "</div>"
             : "";
           var gallery = imgs ? '<div class="wall-post-card__gallery">' + imgs + "</div>" : "";
-          var pollBlock = wallPollBlockHtml(p, session.username, wallPollReopenId);
+          var pollBlock = wallPollBlockHtml(p, viewerName, wallPollReopenId);
           var avSrc = escapeHtml(avatarForUsername(data, p.author));
-          var v = p.voteByUser && p.voteByUser[session.username];
+          var v = viewerName && p.voteByUser && p.voteByUser[viewerName];
           var nComm = wallVisibleCommentCount(p);
           var commentsHtml = (p.comments || [])
             .filter(function (c) {
@@ -2967,9 +3159,8 @@
             .map(function (c) {
               var cav = escapeHtml(avatarForUsername(data, c.author));
               var canDelC =
-                session.username === c.author ||
-                isWallOwner ||
-                isMod;
+                isMod ||
+                (!!viewerName && viewerName === String(c.author || ""));
               var delBtn = canDelC
                 ? '<button type="button" class="wall-comment__del" data-wall-comment-del data-wall-post="' +
                   String(p.id) +
@@ -3639,16 +3830,11 @@
               (pstD.comments || []).find(function (c) {
                 return Number(c.id) === cidD;
               });
-            if (
-              !cmD ||
-              !(
-                session.username === cmD.author ||
-                session.username === profileUser.username ||
-                canModerate(data, session)
-              )
-            ) {
-              return;
-            }
+            if (!session || !cmD) return;
+            var mayModDel = canModerate(data, session);
+            var isCommentAuthor =
+              String(session.username || "") === String((cmD && cmD.author) || "");
+            if (!(isCommentAuthor || mayModDel)) return;
             if (!window.confirm("Удалить этот комментарий?")) return;
             updateWallPost(profileUser.username, postIdD, function (pp) {
               (pp.comments || []).forEach(function (c) {
@@ -3906,9 +4092,8 @@
 
     var ftEl = document.getElementById("profileForumTrophies");
     if (ftEl) {
-      ftEl.textContent =
-        "Кубки за активность на форуме: " + formatIntRu(getForumTrophyPts(u.username)) + " (новая тема и сообщения в темах).";
-      ftEl.hidden = false;
+      ftEl.hidden = true;
+      ftEl.textContent = "";
     }
 
     var ut = document.getElementById("user-topics");
@@ -4168,9 +4353,7 @@
               var gal = rimgs ? '<div class="topic-reply-card__gallery">' + rimgs + "</div>" : "";
               var rid = r.ts != null ? r.ts : 0;
               var canDel =
-                me.username === r.author ||
-                me.username === owner.username ||
-                canModerate(data, me);
+                (me && me.username === r.author) || (me && canModerate(data, me));
               var act =
                 '<div class="topic-reply-card__actions">' +
                 '<button type="button" class="topic-reply__btn" data-topic-reply-report data-rid="' +
@@ -4288,16 +4471,10 @@
           var repD = (thD.replies || []).find(function (r) {
             return r && Number(r.ts) === ridD;
           });
-          if (
-            !repD ||
-            !(
-              me.username === repD.author ||
-              me.username === owner.username ||
-              canModerate(data, me)
-            )
-          ) {
-            return;
-          }
+          if (!me || !repD) return;
+          var mayModDelR = canModerate(data, me);
+          var isReplyAuthor = String(me.username || "") === String((repD && repD.author) || "");
+          if (!(isReplyAuthor || mayModDelR)) return;
           if (!window.confirm("Удалить этот ответ?")) return;
           updateProfileThread(owner.username, ts, function (x) {
             x.replies = (x.replies || []).filter(function (r) {
@@ -4496,89 +4673,551 @@
       return;
     }
 
-    var modStatsFormWired = false;
+    function usersForModPanels() {
+      return (data.users || []).filter(function (u) {
+        return u && u.username && !isModPurgedUsername(u.username);
+      });
+    }
+
+    var supportSelId = root.getAttribute("data-mod-support-sel") || "";
+    var prodSelId = root.getAttribute("data-mod-prod-sel") || "";
 
     function paint() {
-      var tickets = loadModTickets();
-      var ownerBlock = "";
-      if (userIsOwner(data, me)) {
-        ownerBlock =
-          '<section class="sidebar-card mod-grant-card"><h2 class="mod-h2">Права модераторов</h2><p class="mod-hint">Пометка «модератор» сохраняется в этом браузере (localStorage). Владельца нельзя снять с прав.</p><div id="modGrantRoot" class="mod-grant-list"></div></section>';
+      var tab = root.getAttribute("data-mod-tab") || "complaints";
+      var complaintsQ = root.getAttribute("data-mod-cq") || "";
+      var supportQ = root.getAttribute("data-mod-sq") || "";
+      var prodQ = root.getAttribute("data-mod-pq") || "";
+
+      var tabs =
+        '<div class="mod-cat-tabs" role="tablist">' +
+        '<button type="button" class="mod-cat-tab' +
+        (tab === "complaints" ? " is-active" : "") +
+        '" data-mod-cat-tab="complaints">1. Жалобы</button>' +
+        '<button type="button" class="mod-cat-tab' +
+        (tab === "support" ? " is-active" : "") +
+        '" data-mod-cat-tab="support">2. Поддержка</button>' +
+        '<button type="button" class="mod-cat-tab' +
+        (tab === "profiles" ? " is-active" : "") +
+        '" data-mod-cat-tab="profiles">3. Профили</button>' +
+        '<button type="button" class="mod-cat-tab' +
+        (tab === "products" ? " is-active" : "") +
+        '" data-mod-cat-tab="products">4. Товары</button>' +
+        "</div>";
+
+      var body = "";
+      if (tab === "complaints") {
+        var tickets = loadModTickets();
+        var qlow = String(complaintsQ || "").trim().toLowerCase();
+        var filtered = tickets.filter(function (t) {
+          if (!qlow) return true;
+          var pn = String(t.publicNo != null ? t.publicNo : "");
+          var blob = (pn + " " + (t.title || "") + " " + (t.detail || "") + " " + (t.reporter || "")).toLowerCase();
+          return blob.indexOf(qlow) !== -1;
+        });
+        var listHtml =
+          !filtered.length
+            ? '<p class="mod-empty">Нет жалоб по запросу.</p>'
+            : filtered
+                .map(function (t) {
+                  var st = t.status === "resolved" ? "Решено" : "Открыто";
+                  var reps = (t.replies || [])
+                    .map(function (r) {
+                      return (
+                        '<div class="mod-reply"><strong>' +
+                        escapeHtml(r.author || "") +
+                        "</strong> · " +
+                        escapeHtml(formatNotifTime(r.ts || 0)) +
+                        '<div class="mod-reply__body">' +
+                        escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
+                        "</div></div>"
+                      );
+                    })
+                    .join("");
+                  return (
+                    '<article class="sidebar-card mod-ticket" data-mod-ticket-id="' +
+                    escapeHtml(t.id) +
+                    '">' +
+                    '<div class="mod-ticket__head"><span class="mod-ticket__no">№' +
+                    escapeHtml(String(t.publicNo != null ? t.publicNo : "—")) +
+                    '</span><span class="mod-ticket__status">' +
+                    escapeHtml(st) +
+                    '</span><span class="mod-ticket__kind">' +
+                    escapeHtml(t.kind || "") +
+                    "</span></div>" +
+                    '<h3 class="mod-ticket__title">' +
+                    escapeHtml(t.title || "") +
+                    "</h3>" +
+                    '<div class="mod-ticket__detail">' +
+                    escapeHtml(t.detail || "").replace(/\n/g, "<br/>") +
+                    "</div>" +
+                    '<p class="mod-ticket__link"><a href="' +
+                    escapeHtml(t.link || "#") +
+                    '">Открыть ссылку</a></p>' +
+                    '<div class="mod-ticket__replies">' +
+                    (reps || '<p class="mod-empty">Ответов пока нет.</p>') +
+                    "</div>" +
+                    (t.status === "resolved"
+                      ? ""
+                      : '<div class="mod-ticket__actions">' +
+                        '<label class="sr-only" for="modta-' +
+                        escapeHtml(t.id) +
+                        '">Ответ</label>' +
+                        '<textarea id="modta-' +
+                        escapeHtml(t.id) +
+                        '" class="mod-ticket__ta" rows="3" maxlength="4000" placeholder="Ответ пользователю…"></textarea>' +
+                        '<div class="mod-ticket__btns">' +
+                        '<button type="button" class="btn-primary" data-mod-reply="' +
+                        escapeHtml(t.id) +
+                        '">Отправить ответ</button>' +
+                        '<button type="button" class="btn-secondary" data-mod-resolve="' +
+                        escapeHtml(t.id) +
+                        '">Пометить решённым</button>' +
+                        "</div></div>") +
+                    "</article>"
+                  );
+                })
+                .join("");
+        body =
+          '<div class="mod-panel mod-panel--complaints">' +
+          '<label class="mod-search-label" for="modComplaintsSearch">Поиск по номеру, теме или тексту</label>' +
+          '<input type="search" id="modComplaintsSearch" class="mod-search-input" placeholder="Например: №10001 или ключевое слово" value="' +
+          escapeHtml(complaintsQ) +
+          '" />' +
+          '<div id="modTicketsRoot" class="mod-tickets">' +
+          listHtml +
+          "</div></div>";
+      } else if (tab === "support") {
+        var threads = loadSupportThreads();
+        var sq = String(supportQ || "").trim().toLowerCase();
+        var tFiltered = threads.filter(function (th) {
+          if (!sq) return true;
+          var blob = (
+            (th.subject || "") +
+            " " +
+            (th.username || "") +
+            " " +
+            (th.id || "") +
+            " " +
+            String(th.status || "")
+          ).toLowerCase();
+          return blob.indexOf(sq) !== -1;
+        });
+        tFiltered.sort(function (a, b) {
+          return (Number(b.updated) || 0) - (Number(a.updated) || 0);
+        });
+        var leftRows = tFiltered
+          .map(function (th) {
+            var active = th.id === supportSelId ? " is-active" : "";
+            var st = th.status === "resolved" ? "Решено" : th.status === "closed" ? "Закрыто" : "Открыто";
+            return (
+              '<button type="button" class="mod-sup-row' +
+              active +
+              '" data-mod-sup-pick="' +
+              escapeHtml(th.id) +
+              '"><span class="mod-sup-row__name">' +
+              escapeHtml(th.username || "—") +
+              '</span><span class="mod-sup-row__sub">' +
+              escapeHtml((th.subject || "Без темы").slice(0, 48)) +
+              '</span><span class="mod-sup-row__st">' +
+              escapeHtml(st) +
+              "</span></button>"
+            );
+          })
+          .join("");
+        var sel = threads.find(function (x) {
+          return x.id === supportSelId;
+        });
+        var rightHtml = "";
+        if (!sel) {
+          rightHtml = '<div class="mod-support-empty">Выберите обращение для просмотра</div>';
+        } else {
+          var msgs = (sel.messages || [])
+            .map(function (m) {
+              var who = m.role === "staff" ? "Поддержка" : escapeHtml(m.author || "Пользователь");
+              return (
+                '<div class="mod-sup-msg mod-sup-msg--' +
+                escapeHtml(m.role || "user") +
+                '"><div class="mod-sup-msg__meta">' +
+                who +
+                " · " +
+                escapeHtml(formatNotifTime(m.ts || 0)) +
+                '</div><div class="mod-sup-msg__body">' +
+                escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
+                "</div></div>"
+              );
+            })
+            .join("");
+          var st2 = sel.status === "resolved" ? "Решено" : sel.status === "closed" ? "Закрыто" : "Открыто";
+          rightHtml =
+            '<div class="mod-sup-chat">' +
+            '<div class="mod-sup-chat__head"><strong>' +
+            escapeHtml(sel.subject || "Обращение") +
+            '</strong> <span class="mod-sup-chat__badge">' +
+            escapeHtml(st2) +
+            "</span></div>" +
+            '<div class="mod-sup-chat__msgs">' +
+            (msgs || '<p class="mod-empty">Сообщений пока нет.</p>') +
+            "</div>" +
+            (sel.status === "closed"
+              ? ""
+              : '<div class="mod-sup-chat__composer">' +
+                '<textarea id="modSupTa" rows="3" maxlength="4000" placeholder="Ответ от поддержки…"></textarea>' +
+                '<div class="mod-sup-chat__btns">' +
+                '<button type="button" class="btn-primary" data-mod-sup-send>Отправить</button>' +
+                '<button type="button" class="btn-secondary" data-mod-sup-resolve>Пометить решённым</button>' +
+                '<button type="button" class="btn-secondary" data-mod-sup-close>Закрыть</button>' +
+                "</div></div>") +
+            "</div>";
+        }
+        body =
+          '<div class="mod-panel mod-panel--support">' +
+          '<div class="mod-support-toolbar">' +
+          '<input type="search" id="modSupportSearch" class="mod-search-input" placeholder="Поиск по обращениям…" value="' +
+          escapeHtml(supportQ) +
+          '" />' +
+          '<span class="mod-support-toolbar__hint">Только «Все» — список обращений</span></div>' +
+          '<div class="mod-support-shell">' +
+          '<aside class="mod-support-sidebar"><div class="mod-support-list">' +
+          (leftRows || '<p class="mod-empty">Обращений нет.</p>') +
+          "</div></aside>" +
+          '<section class="mod-support-main" id="modSupportMain">' +
+          rightHtml +
+          "</section></div></div>";
+      } else if (tab === "profiles") {
+        var profQ = root.getAttribute("data-mod-prof-q") || "";
+        var ulist = usersForModPanels();
+        var qpl = String(profQ || "").trim().toLowerCase();
+        var sugg = ulist
+          .filter(function (u) {
+            return !qpl || String(u.username).toLowerCase().indexOf(qpl) !== -1;
+          })
+          .slice(0, 12)
+          .map(function (u) {
+            return (
+              '<button type="button" class="mod-prof-sugg" data-mod-prof-pick="' +
+              escapeHtml(u.username) +
+              '"><img src="' +
+              escapeHtml(u.avatar) +
+              '" alt="" width="28" height="28"/>' +
+              escapeHtml(u.username) +
+              "</button>"
+            );
+          })
+          .join("");
+        var pun = root.getAttribute("data-mod-prof-user") || "";
+        var pu = ulist.find(function (x) {
+          return x.username === pun;
+        });
+        var statKeys = ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"];
+        var statFields = statKeys
+          .map(function (k) {
+            var lab =
+              k === "reputation"
+                ? "Репутация"
+                : k === "likes"
+                  ? "Лайки"
+                  : k === "messages"
+                    ? "Сообщения"
+                    : k === "giveaways"
+                      ? "Розыгрыши"
+                      : k === "subscriptions"
+                        ? "Подписки"
+                        : "Подписчики";
+            var val = pu ? String(Math.round(getProfileStatForUser(pu, k))) : "";
+            return (
+              '<div class="mod-stats-field"><label for="modProf_' +
+              k +
+              '">' +
+              escapeHtml(lab) +
+              '</label><input type="number" min="0" step="1" id="modProf_' +
+              k +
+              '" class="mod-stats-input" value="' +
+              escapeHtml(val) +
+              '" /></div>'
+            );
+          })
+          .join("");
+        var modGrantLine =
+          userIsOwner(data, me) && pu && pu.username !== me.username && !userIsOwner(data, pu)
+            ? '<label class="mod-prof-ban"><input type="checkbox" data-mod-prof-mod ' +
+              (userIsModerator(data, pu) ? " checked" : "") +
+              " /> Модератор</label>"
+            : "";
+        body =
+          '<div class="mod-panel mod-panel--profiles">' +
+          '<div class="mod-prof-search">' +
+          '<label for="modProfSearch">Поиск пользователя</label>' +
+          '<input type="search" id="modProfSearch" class="mod-search-input" placeholder="Ник…" value="' +
+          escapeHtml(profQ) +
+          '" />' +
+          '<div class="mod-prof-sugg-wrap" id="modProfSugg">' +
+          (sugg || '<p class="mod-empty">Нет совпадений</p>') +
+          "</div></div>" +
+          '<div class="mod-prof-detail" id="modProfDetail">' +
+          (pu
+            ? '<div class="mod-prof-card">' +
+              '<img src="' +
+              escapeHtml(pu.avatar) +
+              '" alt="" width="64" height="64" class="mod-prof-card__av"/>' +
+              '<div><div class="mod-prof-card__name">@' +
+              escapeHtml(pu.username) +
+              '</div><div class="mod-prof-card__nid">Публичный ID: ' +
+              escapeHtml(String(pu.numericId || "—")) +
+              '</div><a class="mod-prof-card__link" href="profile.html?user=' +
+              encodeURIComponent(pu.username) +
+              '">Открыть профиль</a></div></div>' +
+              '<div class="mod-stats-grid">' +
+              statFields +
+              "</div>" +
+              modGrantLine +
+              '<div class="mod-prof-actions">' +
+              '<button type="button" class="btn-primary" data-mod-prof-save>Сохранить статистику</button>' +
+              '<button type="button" class="btn-secondary" data-mod-prof-ban>' +
+              (pu && isUserBanned(pu.username) ? "Снять бан" : "Бан") +
+              "</button>" +
+              (userIsOwner(data, me) && pu && !/^u\d+$/i.test(String(pu.id || ""))
+                ? '<button type="button" class="btn-secondary mod-btn-danger" data-mod-prof-del>Удалить с платформы</button>'
+                : "") +
+              "</div>" +
+              '<p class="mod-hint">Удаление доступно только для аккаунтов из регистрации в этом браузере (не демо из JSON).</p>'
+            : '<p class="mod-empty">Выберите пользователя выше.</p>') +
+          "</div></div>";
+      } else {
+        var products = (data.products || []).slice();
+        var pq = String(prodQ || "").trim().toLowerCase();
+        var pFiltered = products.filter(function (p) {
+          if (!pq) return true;
+          var sec = ensureProductAdminCode(p.id);
+          var blob = ((p.title || "") + " " + (p.id || "") + " " + sec).toLowerCase();
+          return blob.indexOf(pq) !== -1;
+        });
+        var notesMap = loadProductModNotes();
+        var leftP = pFiltered
+          .map(function (p) {
+            var sec = ensureProductAdminCode(p.id);
+            var act = p.id === prodSelId ? " is-active" : "";
+            return (
+              '<button type="button" class="mod-prod-row' +
+              act +
+              '" data-mod-prod-pick="' +
+              escapeHtml(p.id) +
+              '"><span class="mod-prod-row__t">' +
+              escapeHtml(p.title || p.id) +
+              '</span><span class="mod-prod-row__c">' +
+              escapeHtml(sec) +
+              "</span></button>"
+            );
+          })
+          .join("");
+        var pp = products.find(function (x) {
+          return x.id === prodSelId;
+        });
+        var pright = "";
+        if (!pp) {
+          pright = '<div class="mod-support-empty">Выберите товар или введите поиск</div>';
+        } else {
+          var sec2 = ensureProductAdminCode(pp.id);
+          var arr = notesMap[pp.id];
+          if (!Array.isArray(arr)) arr = [];
+          var nhtml = arr
+            .map(function (m) {
+              return (
+                '<div class="mod-sup-msg mod-sup-msg--staff"><div class="mod-sup-msg__meta">' +
+                escapeHtml(m.author || "") +
+                " · " +
+                escapeHtml(formatNotifTime(m.ts || 0)) +
+                '</div><div class="mod-sup-msg__body">' +
+                escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
+                "</div></div>"
+              );
+            })
+            .join("");
+          pright =
+            '<div class="mod-sup-chat">' +
+            '<div class="mod-sup-chat__head"><strong>' +
+            escapeHtml(pp.title || pp.id) +
+            '</strong> <span class="mod-prod-secret">Код: ' +
+            escapeHtml(sec2) +
+            "</span></div>" +
+            '<div class="mod-sup-chat__msgs">' +
+            (nhtml || '<p class="mod-empty">Заметок пока нет.</p>') +
+            "</div>" +
+            '<div class="mod-sup-chat__composer">' +
+            '<textarea id="modProdTa" rows="3" maxlength="4000" placeholder="Внутренняя заметка по товару…"></textarea>' +
+            '<button type="button" class="btn-primary" data-mod-prod-note>Добавить заметку</button>' +
+            "</div></div>";
+        }
+        body =
+          '<div class="mod-panel mod-panel--products">' +
+          '<input type="search" id="modProdSearch" class="mod-search-input" placeholder="Название или секретный код…" value="' +
+          escapeHtml(prodQ) +
+          '" />' +
+          '<div class="mod-support-shell">' +
+          '<aside class="mod-support-sidebar"><div class="mod-support-list">' +
+          (leftP || '<p class="mod-empty">Товаров нет в каталоге.</p>') +
+          "</div></aside>" +
+          '<section class="mod-support-main" id="modProdMain">' +
+          pright +
+          "</section></div></div>";
       }
-      var userOpts = (data.users || [])
-        .filter(function (u) {
-          return u && u.username;
-        })
-        .map(function (u) {
-          return '<option value="' + escapeHtml(u.username) + '">' + escapeHtml(u.username) + "</option>";
-        })
-        .join("");
-      var statFields = ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"]
-        .map(function (k) {
-          var lab =
-            k === "reputation"
-              ? "Репутация"
-              : k === "likes"
-                ? "Лайки"
-                : k === "messages"
-                  ? "Сообщения"
-                  : k === "giveaways"
-                    ? "Розыгрыши"
-                    : k === "subscriptions"
-                      ? "Подписки"
-                      : "Подписчики";
-          return (
-            '<div class="mod-stats-field"><label for="modStat_' +
-            k +
-            '">' +
-            escapeHtml(lab) +
-            '</label><input type="number" min="0" step="1" id="modStat_' +
-            k +
-            '" class="mod-stats-input" /></div>'
-          );
-        })
-        .join("");
-      var statsSection =
-        '<section class="sidebar-card mod-stats-card"><h2 class="mod-h2">Статистика профиля</h2><p class="mod-hint">Полоска на профиле (без кубков форума). Кубки считаются от тем и ответов автоматически.</p>' +
-        '<label class="mod-stats-label" for="modStatsUserSel">Пользователь</label><select id="modStatsUserSel" class="mod-stats-select">' +
-        userOpts +
-        "</select>" +
-        '<div class="mod-stats-grid">' +
-        statFields +
-        '</div><button type="button" class="btn-primary" id="modStatsSave">Сохранить</button></section>';
 
       root.innerHTML =
-        '<div class="mod-page-head"><h1>Модерация</h1><p class="mod-sub">Жалобы пользователей и ответы поддержки</p></div>' +
-        statsSection +
-        ownerBlock +
-        '<section id="modTicketsRoot" class="mod-tickets"></section>';
+        '<div class="mod-page-head"><h1>Модерация</h1><p class="mod-sub">Жалобы, поддержка, профили и товары</p></div>' +
+        tabs +
+        '<div id="modTabBody" class="mod-tab-body">' +
+        body +
+        "</div>";
 
-      function refillModStatsForm() {
-        var sel = document.getElementById("modStatsUserSel");
-        var un = sel ? sel.value : "";
-        var uu = (data.users || []).find(function (x) {
-          return x.username === un;
+      root.querySelectorAll("[data-mod-cat-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          root.setAttribute("data-mod-tab", btn.getAttribute("data-mod-cat-tab") || "complaints");
+          paint();
         });
-        if (!uu) return;
-        ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"].forEach(function (k) {
-          var inp = document.getElementById("modStat_" + k);
-          if (inp) inp.value = String(Math.round(getProfileStatForUser(uu, k)));
+      });
+
+      var csi = root.querySelector("#modComplaintsSearch");
+      if (csi) {
+        csi.addEventListener("input", function () {
+          root.setAttribute("data-mod-cq", csi.value);
+          paint();
         });
       }
-      if (!modStatsFormWired) {
-        modStatsFormWired = true;
-        root.addEventListener("change", function (e) {
-          if (e.target && e.target.id === "modStatsUserSel") refillModStatsForm();
+
+      var ssi = root.querySelector("#modSupportSearch");
+      if (ssi) {
+        ssi.addEventListener("input", function () {
+          root.setAttribute("data-mod-sq", ssi.value);
+          paint();
         });
-        root.addEventListener("click", function (e) {
-          if (!e.target || e.target.id !== "modStatsSave") return;
-          var sel = document.getElementById("modStatsUserSel");
-          var un = sel ? sel.value : "";
+      }
+
+      root.querySelectorAll("[data-mod-sup-pick]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          supportSelId = b.getAttribute("data-mod-sup-pick") || "";
+          root.setAttribute("data-mod-support-sel", supportSelId);
+          paint();
+        });
+      });
+
+      var supSend = root.querySelector("[data-mod-sup-send]");
+      if (supSend) {
+        supSend.addEventListener("click", function () {
+          var ta = document.getElementById("modSupTa");
+          var txt = ta ? ta.value.trim() : "";
+          if (!txt || !supportSelId) return;
+          var list = loadSupportThreads();
+          var th = list.find(function (x) {
+            return x.id === supportSelId;
+          });
+          if (!th) return;
+          if (!th.messages) th.messages = [];
+          th.messages.push({ role: "staff", author: me.username, body: txt, ts: Date.now() });
+          th.updated = Date.now();
+          saveSupportThreads(list);
+          if (ta) ta.value = "";
+          paint();
+        });
+      }
+      root.querySelectorAll("[data-mod-sup-resolve]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var list = loadSupportThreads();
+          var th = list.find(function (x) {
+            return x.id === supportSelId;
+          });
+          if (!th) return;
+          th.status = "resolved";
+          th.updated = Date.now();
+          saveSupportThreads(list);
+          if (th.username) {
+            pushNotification(th.username, {
+              id: "sup_res_" + th.id + "_" + Date.now(),
+              tab: "support",
+              read: false,
+              ts: Date.now(),
+              title: "Поддержка: обращение решено",
+              link: "support.html",
+              kind: "support",
+              detail: th.subject || "",
+            });
+            updateNotifyBadge(data);
+          }
+          paint();
+        });
+      });
+      root.querySelectorAll("[data-mod-sup-close]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var list = loadSupportThreads();
+          var th = list.find(function (x) {
+            return x.id === supportSelId;
+          });
+          if (!th) return;
+          th.status = "closed";
+          th.updated = Date.now();
+          saveSupportThreads(list);
+          paint();
+        });
+      });
+
+      var psi = root.querySelector("#modProfSearch");
+      if (psi) {
+        psi.addEventListener("input", function () {
+          root.setAttribute("data-mod-prof-q", psi.value);
+          var qpl = String(psi.value || "").trim().toLowerCase();
+          var ulist = usersForModPanels();
+          var sugg = ulist
+            .filter(function (u) {
+              return !qpl || String(u.username).toLowerCase().indexOf(qpl) !== -1;
+            })
+            .slice(0, 12)
+            .map(function (u) {
+              return (
+                '<button type="button" class="mod-prof-sugg" data-mod-prof-pick="' +
+                escapeHtml(u.username) +
+                '"><img src="' +
+                escapeHtml(u.avatar) +
+                '" alt="" width="28" height="28"/>' +
+                escapeHtml(u.username) +
+                "</button>"
+              );
+            })
+            .join("");
+          var wrap = root.querySelector("#modProfSugg");
+          if (wrap) wrap.innerHTML = sugg || '<p class="mod-empty">Нет совпадений</p>';
+          root.querySelectorAll("#modProfSugg [data-mod-prof-pick]").forEach(function (b) {
+            b.addEventListener("click", function () {
+              root.setAttribute("data-mod-prof-user", b.getAttribute("data-mod-prof-pick") || "");
+              paint();
+            });
+          });
+        });
+      }
+      root.querySelectorAll("[data-mod-prof-pick]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          root.setAttribute("data-mod-prof-user", b.getAttribute("data-mod-prof-pick") || "");
+          paint();
+        });
+      });
+      var pmod = root.querySelector("[data-mod-prof-mod]");
+      if (pmod) {
+        pmod.addEventListener("change", function () {
+          var un = root.getAttribute("data-mod-prof-user");
+          if (!un) return;
+          saveLocalUserPref(un, { isModerator: !!pmod.checked });
+          var uu = (data.users || []).find(function (x) {
+            return x.username === un;
+          });
+          if (uu && !uu.isOwner) uu.isModerator = !!pmod.checked;
+        });
+      }
+      var psave = root.querySelector("[data-mod-prof-save]");
+      if (psave) {
+        psave.addEventListener("click", function () {
+          var un = root.getAttribute("data-mod-prof-user");
           if (!un) return;
           var all = loadModUserStatsAll();
           all[un] = all[un] || {};
           ["reputation", "likes", "messages", "giveaways", "subscriptions", "followers"].forEach(function (k) {
-            var inp = document.getElementById("modStat_" + k);
+            var inp = document.getElementById("modProf_" + k);
             if (!inp) return;
             var n = Math.max(0, Math.floor(Number(inp.value)));
             if (!isFinite(n)) return;
@@ -4588,106 +5227,75 @@
           window.alert("Сохранено.");
         });
       }
-      refillModStatsForm();
-
-      var grant = document.getElementById("modGrantRoot");
-      if (grant && userIsOwner(data, me)) {
-        grant.innerHTML = (data.users || [])
-          .filter(function (u) {
-            return u && u.username && u.username !== me.username && !u.isOwner;
-          })
-          .map(function (u) {
-            var on = userIsModerator(data, u) ? " checked" : "";
-            return (
-              '<label class="mod-grant-row"><input type="checkbox" data-mod-grant="' +
-              escapeHtml(u.username) +
-              '"' +
-              on +
-              ' /> <a class="mod-grant-user" href="profile.html?user=' +
-              encodeURIComponent(u.username) +
-              '">@' +
-              escapeHtml(u.username) +
-              "</a></label>"
-            );
-          })
-          .join("");
-        grant.querySelectorAll("input[data-mod-grant]").forEach(function (inp) {
-          inp.addEventListener("change", function () {
-            var un = inp.getAttribute("data-mod-grant");
-            if (!un) return;
-            saveLocalUserPref(un, { isModerator: !!inp.checked });
-            var uu = (data.users || []).find(function (x) {
-              return x.username === un;
-            });
-            if (uu && !uu.isOwner) uu.isModerator = !!inp.checked;
+      var pban = root.querySelector("[data-mod-prof-ban]");
+      if (pban) {
+        pban.addEventListener("click", function () {
+          var un = root.getAttribute("data-mod-prof-user");
+          if (!un) return;
+          var set = loadBannedUsernamesSet();
+          var k = String(un).toLowerCase();
+          var now = !!set[k];
+          if (now) delete set[k];
+          else set[k] = 1;
+          saveBannedUsernamesFromSet(set);
+          window.alert(now ? "Бан снят." : "Пользователь заблокирован.");
+          paint();
+        });
+      }
+      var pdel = root.querySelector("[data-mod-prof-del]");
+      if (pdel) {
+        pdel.addEventListener("click", function () {
+          var un = root.getAttribute("data-mod-prof-user");
+          if (!un || !confirm("Удалить аккаунт «" + un + "» из регистрации на этом устройстве?")) return;
+          var uu = (data.users || []).find(function (x) {
+            return x.username === un;
           });
+          if (!uu || !uu.id) return;
+          var arr = loadRegisteredUsersRaw().filter(function (r) {
+            return !r || r.id !== uu.id;
+          });
+          saveRegisteredUsersRaw(arr);
+          var ix = (data.users || []).findIndex(function (x) {
+            return x.id === uu.id;
+          });
+          if (ix !== -1) data.users.splice(ix, 1);
+          root.removeAttribute("data-mod-prof-user");
+          window.alert("Удалено. Обновите страницу форума.");
+          paint();
         });
       }
 
-      var tr = document.getElementById("modTicketsRoot");
-      if (!tr) return;
-      if (!tickets.length) {
-        tr.innerHTML = '<p class="mod-empty">Обращений пока нет.</p>';
-      } else {
-        tr.innerHTML = tickets
-          .map(function (t) {
-            var st = t.status === "resolved" ? "Решено" : "Открыто";
-            var reps = (t.replies || [])
-              .map(function (r) {
-                return (
-                  '<div class="mod-reply"><strong>' +
-                  escapeHtml(r.author || "") +
-                  "</strong> · " +
-                  escapeHtml(formatNotifTime(r.ts || 0)) +
-                  '<div class="mod-reply__body">' +
-                  escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
-                  "</div></div>"
-                );
-              })
-              .join("");
-            return (
-              '<article class="sidebar-card mod-ticket" data-mod-ticket-id="' +
-              escapeHtml(t.id) +
-              '">' +
-              '<div class="mod-ticket__head"><span class="mod-ticket__status">' +
-              escapeHtml(st) +
-              '</span><span class="mod-ticket__kind">' +
-              escapeHtml(t.kind || "") +
-              "</span></div>" +
-              '<h3 class="mod-ticket__title">' +
-              escapeHtml(t.title || "") +
-              "</h3>" +
-              '<div class="mod-ticket__detail">' +
-              escapeHtml(t.detail || "").replace(/\n/g, "<br/>") +
-              "</div>" +
-              '<p class="mod-ticket__link"><a href="' +
-              escapeHtml(t.link || "#") +
-              '">Открыть ссылку</a></p>' +
-              '<div class="mod-ticket__replies">' +
-              (reps || '<p class="mod-empty">Ответов пока нет.</p>') +
-              "</div>" +
-              (t.status === "resolved"
-                ? ""
-                : '<div class="mod-ticket__actions">' +
-                  '<label class="sr-only" for="modta-' +
-                  escapeHtml(t.id) +
-                  '">Ответ</label>' +
-                  '<textarea id="modta-' +
-                  escapeHtml(t.id) +
-                  '" class="mod-ticket__ta" rows="3" maxlength="4000" placeholder="Ответ пользователю или внутренняя заметка…"></textarea>' +
-                  '<div class="mod-ticket__btns">' +
-                  '<button type="button" class="btn-primary" data-mod-reply="' +
-                  escapeHtml(t.id) +
-                  '">Отправить ответ</button>' +
-                  '<button type="button" class="btn-secondary" data-mod-resolve="' +
-                  escapeHtml(t.id) +
-                  '">Пометить решённым</button>' +
-                  "</div></div>") +
-              "</article>"
-            );
-          })
-          .join("");
+      var prs = root.querySelector("#modProdSearch");
+      if (prs) {
+        prs.addEventListener("input", function () {
+          root.setAttribute("data-mod-pq", prs.value);
+          paint();
+        });
+      }
+      root.querySelectorAll("[data-mod-prod-pick]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          prodSelId = b.getAttribute("data-mod-prod-pick") || "";
+          root.setAttribute("data-mod-prod-sel", prodSelId);
+          paint();
+        });
+      });
+      var pnote = root.querySelector("[data-mod-prod-note]");
+      if (pnote) {
+        pnote.addEventListener("click", function () {
+          var ta = document.getElementById("modProdTa");
+          var txt = ta ? ta.value.trim() : "";
+          if (!txt || !prodSelId) return;
+          var nm = loadProductModNotes();
+          if (!nm[prodSelId]) nm[prodSelId] = [];
+          nm[prodSelId].push({ author: me.username, body: txt, ts: Date.now() });
+          saveProductModNotes(nm);
+          if (ta) ta.value = "";
+          paint();
+        });
+      }
 
+      var tr = root.querySelector("#modTicketsRoot");
+      if (tr) {
         tr.querySelectorAll("[data-mod-reply]").forEach(function (btn) {
           btn.addEventListener("click", function () {
             var id = btn.getAttribute("data-mod-reply");
@@ -4734,6 +5342,153 @@
     paint();
   }
 
+  function initSupportPage(data) {
+    var root = document.getElementById("supportPageRoot");
+    if (!root) return;
+    var me = sessionUser(data);
+    if (!me || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите, чтобы писать в поддержку.</p>';
+      return;
+    }
+    var selId = root.getAttribute("data-sup-sel") || "";
+
+    function paintSup() {
+      var threads = loadSupportThreads().filter(function (th) {
+        return th && (th.userId === me.id || th.username === me.username);
+      });
+      threads.sort(function (a, b) {
+        return (Number(b.updated) || 0) - (Number(a.updated) || 0);
+      });
+      var left = threads
+        .map(function (th) {
+          var act = th.id === selId ? " is-active" : "";
+          var st = th.status === "resolved" ? "Решено" : th.status === "closed" ? "Закрыто" : "Открыто";
+          return (
+            '<button type="button" class="mod-sup-row' +
+            act +
+            '" data-sup-pick="' +
+            escapeHtml(th.id) +
+            '"><span class="mod-sup-row__name">' +
+            escapeHtml(th.subject || "Обращение") +
+            '</span><span class="mod-sup-row__st">' +
+            escapeHtml(st) +
+            "</span></button>"
+          );
+        })
+        .join("");
+      var th0 = threads.find(function (x) {
+        return x.id === selId;
+      });
+      var right = "";
+      if (!th0) {
+        right =
+          '<div class="mod-support-empty">Выберите обращение слева или создайте новое.</div>' +
+          '<div class="mod-sup-new"><h3 class="mod-h2">Новое обращение</h3>' +
+          '<input type="text" id="supNewSub" class="mod-search-input" maxlength="120" placeholder="Тема" />' +
+          '<textarea id="supNewBody" rows="4" maxlength="4000" placeholder="Сообщение…"></textarea>' +
+          '<button type="button" class="btn-primary" id="supNewBtn">Отправить</button></div>';
+      } else {
+        var msgs = (th0.messages || [])
+          .map(function (m) {
+            var who = m.role === "staff" ? "Поддержка" : "Вы";
+            return (
+              '<div class="mod-sup-msg mod-sup-msg--' +
+              escapeHtml(m.role || "user") +
+              '"><div class="mod-sup-msg__meta">' +
+              escapeHtml(who) +
+              " · " +
+              escapeHtml(formatNotifTime(m.ts || 0)) +
+              '</div><div class="mod-sup-msg__body">' +
+              escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
+              "</div></div>"
+            );
+          })
+          .join("");
+        var st2 = th0.status === "resolved" ? "Решено" : th0.status === "closed" ? "Закрыто" : "Открыто";
+        right =
+          '<div class="mod-sup-chat"><div class="mod-sup-chat__head"><strong>' +
+          escapeHtml(th0.subject || "Обращение") +
+          '</strong> <span class="mod-sup-chat__badge">' +
+          escapeHtml(st2) +
+          "</span></div>" +
+          '<div class="mod-sup-chat__msgs">' +
+          (msgs || '<p class="mod-empty">Пока нет сообщений.</p>') +
+          "</div>" +
+          (th0.status === "closed"
+            ? ""
+            : '<div class="mod-sup-chat__composer"><textarea id="supUserTa" rows="3" maxlength="4000" placeholder="Дополнить обращение…"></textarea>' +
+              '<button type="button" class="btn-primary" data-sup-user-send>Отправить</button></div>') +
+          "</div>";
+      }
+      root.innerHTML =
+        '<div class="mod-support-toolbar"><h1 class="mod-page-head" style="margin:0">Поддержка</h1></div>' +
+        '<div class="mod-support-shell">' +
+        '<aside class="mod-support-sidebar"><div class="mod-support-list">' +
+        (left || '<p class="mod-empty">Обращений пока нет.</p>') +
+        "</div></aside>" +
+        '<section class="mod-support-main">' +
+        right +
+        "</section></div>";
+
+      root.querySelectorAll("[data-sup-pick]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          selId = b.getAttribute("data-sup-pick") || "";
+          root.setAttribute("data-sup-sel", selId);
+          paintSup();
+        });
+      });
+      var nb = document.getElementById("supNewBtn");
+      if (nb) {
+        nb.addEventListener("click", function () {
+          var s = document.getElementById("supNewSub");
+          var t = document.getElementById("supNewBody");
+          var sub = s ? s.value.trim() : "";
+          var body = t ? t.value.trim() : "";
+          if (!sub || !body) {
+            window.alert("Укажите тему и текст.");
+            return;
+          }
+          var all = loadSupportThreads();
+          var id = "sup_" + Date.now();
+          all.unshift({
+            id: id,
+            userId: me.id,
+            username: me.username,
+            subject: sub,
+            status: "open",
+            created: Date.now(),
+            updated: Date.now(),
+            messages: [{ role: "user", author: me.username, body: body, ts: Date.now() }],
+          });
+          saveSupportThreads(all);
+          selId = id;
+          root.setAttribute("data-sup-sel", selId);
+          paintSup();
+        });
+      }
+      var us = root.querySelector("[data-sup-user-send]");
+      if (us) {
+        us.addEventListener("click", function () {
+          var ta = document.getElementById("supUserTa");
+          var txt = ta ? ta.value.trim() : "";
+          if (!txt || !selId) return;
+          var all = loadSupportThreads();
+          var th = all.find(function (x) {
+            return x.id === selId;
+          });
+          if (!th || th.status === "closed") return;
+          if (!th.messages) th.messages = [];
+          th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now() });
+          th.updated = Date.now();
+          saveSupportThreads(all);
+          paintSup();
+        });
+      }
+    }
+
+    paintSup();
+  }
+
   function gateSiteAccess(data, page) {
     if (page === "login" || page === "register") return true;
     if (page === "verify-email") {
@@ -4750,7 +5505,7 @@
       return true;
     }
     if (page === "help") return true;
-    var gated = { forum: 1, market: 1, profile: 1, topic: 1, notifications: 1, moderation: 1, settings: 1 };
+    var gated = { forum: 1, market: 1, profile: 1, topic: 1, notifications: 1, moderation: 1, settings: 1, support: 1 };
     if (!gated[page]) return true;
     var u = sessionUser(data);
     if (!u || data._sessionGuest) {
@@ -4760,6 +5515,10 @@
     }
     if (!u.emailVerified) {
       window.location.href = "verify-email.html";
+      return false;
+    }
+    if (isUserBanned(u.username)) {
+      window.location.href = "help.html";
       return false;
     }
     return true;
@@ -4850,11 +5609,7 @@
           var ek = String(emailKey || "").toLowerCase();
           if (!codeVal) {
             var c0 = storeEmailCode(ek, "login_pass");
-            window.alert(
-              "Код для входа: " +
-                c0 +
-                " (действует 15 мин). Введите его в поле «Код из письма» и снова нажмите «Вход»."
-            );
+            deliverEmailCodeToInbox(ek, "login_pass", c0).catch(function () {});
             return;
           }
           if (!verifyEmailCode(ek, codeVal, "login_pass")) {
@@ -4891,11 +5646,7 @@
                     } catch (eSync) {
                       /* ignore */
                     }
-                    window.alert(
-                      "Код для входа: " +
-                        c1 +
-                        " (действует 15 мин). Введите его и снова нажмите «Вход»."
-                    );
+                    deliverEmailCodeToInbox(emailLowerForCode, "login_pass", c1).catch(function () {});
                   });
               }
               if (!verifyEmailCode(emailLowerForCode, codeVal, "login_pass")) {
@@ -4960,7 +5711,7 @@
           return;
         }
         var c = storeEmailCode(email, "login_pass");
-        window.alert("Код для входа: " + c + " (действует 15 мин.)");
+        deliverEmailCodeToInbox(email, "login_pass", c).catch(function () {});
       });
     }
     if (formC) {
@@ -5126,8 +5877,11 @@
       });
       saveRegisteredUsersRaw(arr);
       writeSession(id);
-      window.alert("Аккаунт создан. Подтвердите почту. Код: " + code + " (15 мин.)");
-      window.location.href = "verify-email.html";
+      deliverEmailCodeToInbox(email, "verify", code)
+        .catch(function () {})
+        .finally(function () {
+          window.location.href = "verify-email.html";
+        });
     });
   }
 
@@ -5167,7 +5921,7 @@
           return;
         }
         var c = storeEmailCode(u.email, "verify");
-        window.alert("Новый код подтверждения: " + c);
+        deliverEmailCodeToInbox(u.email, "verify", c).catch(function () {});
       });
     }
     if (form) {
@@ -5359,6 +6113,7 @@
           else if (page === "topic") initTopic(data);
           else if (page === "notifications") initNotificationsSettings();
           else if (page === "moderation") initModeration(data);
+          else if (page === "support") initSupportPage(data);
           else if (page === "settings") initSettingsPage(data);
           if (page === "help") initHelp();
         });

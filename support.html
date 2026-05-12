@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Поддержка — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="support">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="btn-back" href="index.html">← На форум</a>
+        <a class="brand" href="index.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <div class="header-actions">
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="support.html">Поддержка</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <span>Поддержка</span></nav>
+    <main class="mod-page support-user-page" id="supportPageRoot"></main>
+    <footer class="site-footer">Night Store · поддержка</footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
