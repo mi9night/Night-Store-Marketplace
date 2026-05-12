@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Тема — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="topic" class="page-topic-forum">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <nav class="nav-main" aria-label="Основное меню">
+          <a href="market.html">Маркет</a>
+          <a href="help.html">Статьи</a>
+          <a href="help.html">Гарант</a>
+          <a href="help.html">Соц. сети</a>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="nav-more-btn" data-dropdown-toggle aria-expanded="false">Другое ▾</button>
+            <div class="dropdown-panel">
+              <a href="help.html">FAQ</a>
+              <a href="profile.html">Профиль</a>
+            </div>
+          </div>
+        </nav>
+        <div class="header-search">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" placeholder="Поиск..." />
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-btn" aria-label="Сообщения"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="market.html">Маркет</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="breadcrumbs breadcrumbs--forum" aria-label="Навигация">
+      <a href="index.html">Форум</a> / <a href="index.html" class="breadcrumb-accent">Темы</a> /
+      <a href="profile.html" class="js-topic-bc-profile breadcrumb-accent"><span class="js-topic-bc-user">…</span></a> /
+      <span class="breadcrumb-current js-topic-bc-title">Тема</span>
+    </nav>
+
+    <main class="topic-page">
+      <div id="topicMissing" class="topic-missing" hidden>
+        <p>Тема не найдена или была удалена.</p>
+        <a class="btn-secondary" href="index.html" style="display:inline-block;width:auto;padding:10px 18px;margin-top:12px">На форум</a>
+      </div>
+
+      <div id="topicContent" hidden>
+        <h1 class="topic-page__title" id="topicPageTitle">…</h1>
+        <p class="topic-page__meta" id="topicPageMeta"></p>
+
+        <div class="topic-toolbar" id="topicToolbar">
+          <div class="topic-toolbar__left" id="topicSettingsOwner" hidden>
+            <div class="topic-settings-wrap" data-topic-settings>
+              <button type="button" class="topic-toolbar__textbtn" id="topicSettingsBtn" data-topic-settings-toggle aria-expanded="false" aria-haspopup="true">
+                <svg class="icon-settings-gear topic-toolbar__settings-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Настройки темы
+              </button>
+              <div class="topic-settings-panel" id="topicSettingsPanel" role="menu">
+                <button type="button" class="topic-settings-panel__btn" id="topicToggleCloseBtn" role="menuitem">Закрыть тему</button>
+                <button type="button" class="topic-settings-panel__btn topic-settings-panel__btn--danger" id="topicDeleteBtn" role="menuitem">Удалить тему</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="topic-toolbar__textbtn" id="topicReportBtn" title="Пожаловаться на тему">Пожаловаться</button>
+          <button type="button" class="topic-toolbar__subscribe" id="topicSubscribeBtn" aria-pressed="false">
+            <span aria-hidden="true">🔖</span> <span id="topicSubscribeLabel">Подписаться на тему</span>
+          </button>
+        </div>
+
+        <p id="topicClosedHint" class="topic-closed-hint" hidden>В этой теме закрыты комментарии.</p>
+
+        <article class="topic-op sidebar-card" style="margin-bottom:16px">
+          <div class="topic-op__head">
+            <img id="topicAuthorAvatar" class="topic-op__avatar" src="" alt="" width="56" height="56" loading="lazy" />
+            <div>
+              <a href="#" id="topicAuthorLink" class="topic-op__author"><strong id="topicAuthorName">…</strong></a><span class="topic-op__online" title="Онлайн" aria-hidden="true"></span>
+              <span class="topic-op__badge">Автор</span>
+            </div>
+          </div>
+          <div class="topic-op__body" id="topicPageBody"></div>
+          <div class="topic-op__images" id="topicPageImages" hidden></div>
+          <div class="topic-op__foot">
+            <span id="topicPageDate" class="topic-op__date"></span>
+          </div>
+        </article>
+
+        <div class="topic-votes sidebar-card" style="margin-bottom:16px;padding:14px 16px">
+          <span class="topic-votes__label">Оценка темы</span>
+          <div class="topic-votes__row">
+            <button type="button" class="topic-vote-btn topic-vote-btn--up" id="topicBtnLike" aria-pressed="false">
+              <span class="topic-vote-btn__icon" aria-hidden="true">👍</span>
+              <span id="topicCountLikes">0</span>
+            </button>
+            <button type="button" class="topic-vote-btn topic-vote-btn--down" id="topicBtnDislike" aria-pressed="false">
+              <span class="topic-vote-btn__icon" aria-hidden="true">👎</span>
+              <span id="topicCountDislikes">0</span>
+            </button>
+          </div>
+        </div>
+
+        <section class="topic-replies">
+          <h2 class="section-title">Ответы</h2>
+          <div id="topicRepliesList"></div>
+        </section>
+
+        <div class="topic-reply-box sidebar-card" id="topicReplyBox" style="margin-top:16px;padding:16px">
+          <h3 class="new-thread-card__title" style="margin-top:0">Ваш ответ</h3>
+          <label class="sr-only" for="topicReplyInput">Текст ответа</label>
+          <textarea id="topicReplyInput" class="new-thread-input" style="min-height:120px;margin-top:0" placeholder="Напишите ответ…"></textarea>
+          <div class="thread-attach-row" style="margin-top:8px">
+            <input type="file" id="topicReplyImagesInput" accept="image/*" multiple hidden />
+            <button type="button" class="btn-secondary" id="topicReplyImagesBtn" style="width:auto;padding:8px 14px">Фото</button>
+            <span class="thread-attach-hint">до 3 фото</span>
+          </div>
+          <div id="topicReplyImagesPreview" class="attach-preview" hidden></div>
+          <button type="button" class="btn-primary" id="topicReplySubmit" style="margin-top:10px;width:auto;padding:10px 20px">Отправить ответ</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">Night Store · тема</footer>
+  </div>
+  <button type="button" class="fab-chat" aria-label="Чат"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

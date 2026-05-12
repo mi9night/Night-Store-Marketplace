@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Вход — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="login" class="auth-body">
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      <a class="auth-back" href="index.html">← На форум</a>
+      <a class="brand brand--auth" href="index.html">
+        <img src="assets/logo.svg" width="32" height="32" alt="" />
+        <span>Night <strong>Store</strong></span>
+      </a>
+      <a class="auth-toplink" href="register.html">Создать аккаунт</a>
+    </header>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <h1 class="auth-card__title">Войдите в аккаунт</h1>
+        <p class="auth-card__sub">Логин или e-mail и пароль, либо одноразовый код на почту.</p>
+
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab is-active" data-login-tab="pass">Пароль</button>
+          <button type="button" class="auth-tab" data-login-tab="code">Код из письма</button>
+        </div>
+
+        <div class="auth-panel" data-login-panel="pass">
+          <form id="loginFormPass" class="auth-form" autocomplete="on">
+            <label class="auth-label" for="loginId">Логин или e-mail</label>
+            <input class="auth-input" id="loginId" name="login" type="text" placeholder="Введите логин или E-mail" required />
+            <label class="auth-label" for="loginPassword">Пароль</label>
+            <input class="auth-input" id="loginPassword" name="password" type="password" placeholder="Введите пароль" required />
+            <div class="auth-row auth-row--between">
+              <label class="auth-check"><input type="checkbox" name="remember" checked /> Запомнить меня</label>
+            </div>
+            <button type="submit" class="btn-primary auth-submit">Вход</button>
+          </form>
+        </div>
+
+        <div class="auth-panel" data-login-panel="code" hidden>
+          <form id="loginFormCode" class="auth-form" autocomplete="on">
+            <label class="auth-label" for="loginCodeEmail">E-mail</label>
+            <input class="auth-input" id="loginCodeEmail" type="email" placeholder="Укажите почту аккаунта" required />
+            <button type="button" class="btn-secondary auth-send" id="loginSendCodeBtn">Выслать код</button>
+            <label class="auth-label" for="loginCodeVal">Код из письма</label>
+            <input class="auth-input" id="loginCodeVal" inputmode="numeric" maxlength="8" placeholder="6 цифр" autocomplete="one-time-code" />
+            <button type="submit" class="btn-primary auth-submit">Войти по коду</button>
+          </form>
+        </div>
+
+        <p class="auth-switch">Нет аккаунта? <a href="register.html">Регистрация</a></p>
+      </div>
+    </main>
+
+    <footer class="auth-footer-plate" aria-label="Информация о сервисе">
+      <div class="auth-footer-plate__inner">
+        <div class="auth-footer-col">
+          <div class="auth-footer-brand"><img src="assets/logo.svg" width="28" height="28" alt="" /> Night <strong>Store</strong></div>
+          <p class="auth-footer-tag">Безопасная торговая площадка и форум: сделки, гарант, маркет.</p>
+          <p class="auth-footer-mail">
+            <a href="https://t.me/nightstore_support" target="_blank" rel="noopener noreferrer">@nightstore_support</a>
+          </p>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Способы оплаты</h2>
+          <p class="auth-footer-icons" aria-hidden="true">💳 · SBP · Crypto · Steam · ₽</p>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Информация</h2>
+          <a href="help.html">О сервисе</a>
+          <a href="help.html">Правила и гарантии</a>
+          <a href="help.html">Советы и гайды</a>
+          <a href="market.html">Маркет</a>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Соц. сети</h2>
+          <a href="help.html">Telegram</a>
+          <a href="help.html">Discord</a>
+          <a href="help.html">YouTube</a>
+        </div>
+      </div>
+      <div class="auth-footer-links">
+        <a href="index.html">Night Store</a>
+        <span aria-hidden="true">|</span>
+        <a href="help.html">Правила</a>
+        <span aria-hidden="true">|</span>
+        <a href="help.html">Помощь</a>
+      </div>
+    </footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

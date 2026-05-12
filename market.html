@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Night Store — маркет</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="market">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="btn-back" href="index.html" style="flex-shrink:0">← На форум</a>
+        <a class="brand" href="market.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <div class="header-search" style="max-width:400px">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" placeholder="Поиск по маркету..." />
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-btn" aria-label="Корзина"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></button>
+          <button type="button" class="icon-btn" aria-label="Сообщения"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="help.html">Поддержка 24/7</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span>Поиск</span></nav>
+
+    <main class="layout-market">
+      <aside class="sidebar-market">
+        <div class="balance-widget">
+          <div class="row">
+            <span style="color:var(--text-muted)">Баланс</span>
+            <span class="balance js-balance-value">0 ₽</span>
+          </div>
+          <div class="balance-actions">
+            <button type="button">Пополнить</button>
+            <button type="button">Вывести</button>
+            <button type="button">Перевод</button>
+          </div>
+        </div>
+
+        <div class="tool-panel">
+          <h4>Получить код с почты</h4>
+          <input type="text" placeholder="Почта от аккаунта" />
+          <input type="text" placeholder="Логин от аккаунта" />
+          <button type="button" class="btn-primary" style="margin-top:4px">Получить код</button>
+        </div>
+
+        <div class="tool-panel">
+          <h4>Получить письма</h4>
+          <input type="text" placeholder="Почта:пароль" />
+          <button type="button" class="btn-primary" style="margin-top:4px">Получить письма</button>
+        </div>
+
+        <div class="sidebar-card" style="margin-top:12px">
+          <div class="nav-section-title" style="margin-top:0">Меню маркета</div>
+          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Мои аккаунты</a>
+          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
+          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Избранное</a>
+        </div>
+      </aside>
+
+      <div class="market-main">
+        <div class="market-header-bar">
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Продать ▾</button>
+            <div class="dropdown-panel">
+              <a href="#">Лот вручную</a>
+              <a href="#">API-выгрузка</a>
+            </div>
+          </div>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Массовый залив ▾</button>
+            <div class="dropdown-panel">
+              <a href="#">Шаблон CSV</a>
+              <a href="#">Документация</a>
+            </div>
+          </div>
+          <span style="color:var(--text-dim);font-size:0.85rem;margin-left:auto">₽ RUB · <a href="#">English</a></span>
+        </div>
+
+        <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 12px">Последние поиски и сохранённые фильтры.</p>
+        <div class="tag-cloud" id="tagCloudRoot" style="margin-bottom:18px"></div>
+
+        <section class="category-section" aria-label="Категории площадок">
+          <h2 class="category-section__title">Категории</h2>
+          <div class="category-grid" id="categoryGrid">
+            <button type="button" class="category-tile" data-cat="steam" title="Steam" style="--tile:#171a21"><span class="category-tile__abbr">Steam</span></button>
+            <button type="button" class="category-tile" data-cat="telegram" title="Telegram" style="--tile:#229ED9"><span class="category-tile__abbr">TG</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="fortnite" title="Fortnite" style="--tile:#2f2d52"><span class="category-tile__abbr">FN</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="riot" title="Riot" style="--tile:#d53235"><span class="category-tile__abbr">Riot</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="ea" title="EA" style="--tile:#ff4747"><span class="category-tile__abbr">EA</span></button>
+            <button type="button" class="category-tile" data-cat="ubisoft" title="Ubisoft" style="--tile:#0070ff"><span class="category-tile__abbr">UBI</span></button>
+            <button type="button" class="category-tile" data-cat="minecraft" title="Minecraft" style="--tile:#5b8731"><span class="category-tile__abbr">MC</span></button>
+            <button type="button" class="category-tile" data-cat="supercell" title="Supercell" style="--tile:#1e3264"><span class="category-tile__abbr">SC</span></button>
+            <button type="button" class="category-tile" data-cat="roblox" title="Roblox" style="--tile:#e2231a"><span class="category-tile__abbr">RB</span></button>
+            <button type="button" class="category-tile" data-cat="wot" title="World of Tanks" style="--tile:#451a03"><span class="category-tile__abbr">WoT</span></button>
+            <button type="button" class="category-tile" data-cat="warthunder" title="War Thunder" style="--tile:#2a2419"><span class="category-tile__abbr">WT</span></button>
+            <button type="button" class="category-tile" data-cat="epic" title="Epic Games" style="--tile:#2b2b2b"><span class="category-tile__abbr">Epic</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="gift" title="Гифты" style="--tile:#3d2a4f"><span class="category-tile__abbr">Gift</span></button>
+            <button type="button" class="category-tile" data-cat="tarkov" title="Escape from Tarkov" style="--tile:#24211d"><span class="category-tile__abbr">EFT</span></button>
+            <button type="button" class="category-tile category-tile--dark" data-cat="rockstar" title="Rockstar" style="--tile:#fcaf17"><span class="category-tile__abbr">R*</span></button>
+            <button type="button" class="category-tile" data-cat="discord" title="Discord" style="--tile:#5865F2"><span class="category-tile__abbr">DC</span></button>
+            <button type="button" class="category-tile" data-cat="tiktok" title="TikTok" style="--tile:#010101"><span class="category-tile__abbr">TT</span></button>
+            <button type="button" class="category-tile" data-cat="instagram" title="Instagram" style="--tile:linear-gradient(45deg,#f58529,#dd2a7b,#8134af)"><span class="category-tile__abbr">IG</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="ai" title="AI / сервисы" style="--tile:#1e293b"><span class="category-tile__abbr">AI</span></button>
+            <button type="button" class="category-tile" data-cat="bnet" title="Battle.net" style="--tile:#0074e0"><span class="category-tile__abbr">Bnet</span></button>
+            <button type="button" class="category-tile" data-cat="vpn" title="VPN" style="--tile:#0d3b2e"><span class="category-tile__abbr">VPN</span></button>
+            <button type="button" class="category-tile" data-cat="xiaomi" title="Xiaomi" style="--tile:#ff6700"><span class="category-tile__abbr">Mi</span></button>
+            <button type="button" class="category-tile" data-cat="warface" title="Warface" style="--tile:#4a5568"><span class="category-tile__abbr">WF</span><span class="category-tile__warn category-tile__warn--red" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="other" title="Другое" style="--tile:#2a2635"><span class="category-tile__abbr">…</span></button>
+          </div>
+        </section>
+
+        <div class="filter-compact">
+          <div class="filter-compact__row">
+            <div class="field-price">
+              <label class="sr-only" for="priceFrom">Цена от</label>
+              <input id="priceFrom" type="number" inputmode="decimal" placeholder="Цена от" />
+              <span class="field-price__cur">₽</span>
+            </div>
+            <div class="field-price">
+              <label class="sr-only" for="priceTo">Цена до</label>
+              <input id="priceTo" type="number" inputmode="decimal" placeholder="до" />
+              <span class="field-price__cur">₽</span>
+            </div>
+            <div class="field-search-grow">
+              <label class="sr-only" for="searchTitle">Поиск</label>
+              <input id="searchTitle" type="search" placeholder="Поиск по заголовку, Steam ID" autocomplete="off" />
+            </div>
+          </div>
+          <div class="filter-compact__row">
+            <button type="button" class="btn-all-filters" id="openAllFilters" aria-haspopup="dialog" aria-controls="marketFiltersModal">Все фильтры <span aria-hidden="true">▾</span></button>
+            <div class="filter-compact__meta">
+              <button type="button" class="btn-reset-mini" id="resetCompactFilters">✕ Сбросить</button>
+            </div>
+            <span class="filter-compact__count">Показано: <strong class="js-market-shown">0</strong> · в каталоге: <strong class="js-market-catalog">0</strong> аккаунтов</span>
+          </div>
+          <div class="filter-compact__row filter-compact__row--sort">
+            <div class="sort-tabs" role="group" aria-label="Сортировка">
+              <button type="button" class="is-active" data-sort-tab>По умолчанию</button>
+              <button type="button" data-sort-tab>Дешевые</button>
+              <button type="button" data-sort-tab>Дорогие</button>
+              <div class="dropdown-wrap sort-dropdown" data-dropdown>
+                <button type="button" class="sort-dropdown-toggle" data-dropdown-toggle aria-expanded="false" aria-haspopup="menu">Свежие <span class="sort-dropdown-chevron" aria-hidden="true">▾</span></button>
+                <div class="dropdown-panel sort-dropdown-panel" role="menu" aria-label="Свежие — варианты">
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По поднятию</button>
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По заливу</button>
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По последнему редактированию</button>
+                </div>
+              </div>
+              <div class="dropdown-wrap sort-dropdown" data-dropdown>
+                <button type="button" class="sort-dropdown-toggle" data-dropdown-toggle aria-expanded="false" aria-haspopup="menu">Старые <span class="sort-dropdown-chevron" aria-hidden="true">▾</span></button>
+                <div class="dropdown-panel sort-dropdown-panel" role="menu" aria-label="Старые — варианты">
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По поднятию</button>
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По заливу</button>
+                  <button type="button" class="sort-dropdown-option" role="menuitem">По последнему редактированию</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-compact__row">
+            <div class="filter-compact__actions">
+              <button type="button" class="btn-ghost-market">♡ Сохранить поиск</button>
+              <button type="button" class="btn-ghost-market">Массовая покупка</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="listingsRoot" class="listings-root"></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">Night Store · маркет</footer>
+  </div>
+
+  <div class="modal" id="marketFiltersModal" aria-hidden="true">
+    <div class="modal__backdrop" data-modal-close tabindex="-1"></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="marketFiltersModalTitle">
+      <div class="modal__head">
+        <h2 id="marketFiltersModalTitle">Все фильтры</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal__body">
+        <div class="adv-grid">
+          <div class="adv-card">
+            <h3 class="adv-card__title">Аккаунт</h3>
+            <div class="adv-field">
+              <label>Выберите игру</label>
+              <select><option>Без VAC бана</option><option>Любая игра</option><option>CS2</option><option>Dota 2</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Происхождение</label>
+              <select><option>Происхождение аккаунта</option><option>Россия</option><option>СНГ</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Исключить происхождение</label>
+              <select><option>—</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Доступ к почте</label>
+              <select><option>Не важно</option><option>Есть</option><option>Нет</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Почтовый домен</label>
+              <input type="text" placeholder="Домен" />
+            </div>
+            <label class="adv-check"><input type="checkbox" /> Не продавался ранее</label>
+            <label class="adv-check"><input type="checkbox" /> Продавался ранее</label>
+            <label class="adv-check"><input type="checkbox" /> С транзакциями</label>
+            <label class="adv-check"><input type="checkbox" /> Без транзакций</label>
+            <div class="adv-field">
+              <label>Очков от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Уровень от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Игр от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">Регион и активность</h3>
+            <div class="adv-field">
+              <label>Страна</label>
+              <select><option>Не важно</option><option>RU</option><option>UA</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Исключить страну</label>
+              <select><option>—</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Отлежка от, дней</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Длительность гарантии</label>
+              <select><option>Любая</option><option>24 ч</option><option>7 дн</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Последняя транзакция больше</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option><option>мес. назад</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Последняя транзакция не позднее</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Гифты ₽ от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Сумма покупок ₽</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Регистрация ранее</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Регистрация позже</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option></select></div>
+            </div>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">Баланс и инвентарь</h3>
+            <div class="adv-field">
+              <label>Баланс на удержании ₽</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Баланс ₽ от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Игра для инвентаря</label>
+              <select><option>Выберите игру</option><option>CS2</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Стоимость инвентаря ₽</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <label class="adv-check"><input type="checkbox" /> Игнорировать, если бан в этой игре</label>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">Steam · ограничения</h3>
+            <div class="adv-field">
+              <label>SDA (.maFile)</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Лимит ($5)</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Красная табличка</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Trade Ban</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Trade Limit</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Market</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Карточки к получению</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <label class="adv-check"><input type="checkbox" /> Не проверять наличие игры</label>
+            <label class="adv-check"><input type="checkbox" /> Без VAC во всех играх</label>
+            <div class="adv-field">
+              <label>Часов за 2 недели</label>
+              <div class="range-pair"><input type="number" placeholder="Часов от" /><input type="number" placeholder="до" /></div>
+            </div>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">CS2 <span class="game-tag">CS2</span></h3>
+            <div class="adv-field">
+              <label>Ранги ММ (от — до)</label>
+              <div class="range-pair"><select><option>Карта</option></select><select><option>—</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Напарники 2×2</label>
+              <div class="range-pair"><select><option>от</option></select><select><option>до</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Приватный ранг</label>
+              <div class="range-pair"><input type="number" placeholder="1" /><input type="number" placeholder="40" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Медали CS2</label>
+              <select><option>Выберите медали</option></select>
+            </div>
+            <label class="adv-check"><input type="checkbox" /> Искать медали через «ИЛИ»</label>
+            <div class="adv-field">
+              <label>FACEIT уровень</label>
+              <div class="range-pair"><input type="number" placeholder="1" /><input type="number" placeholder="10" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Привязан FACEIT</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Бан в ММ CS2</label>
+              <div class="tri-toggle"><button type="button" class="is-on">Не важно</button><button type="button">Нет</button><button type="button">Да</button></div>
+            </div>
+            <div class="adv-field">
+              <label>Премьер ELO</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="50000" /></div>
+            </div>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">Dota 2 <span class="game-tag">Dota 2</span></h3>
+            <div class="adv-field">
+              <label>MMR</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Матчей</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Побед</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Порядочность</label>
+              <div class="range-pair"><input type="number" placeholder="1" /><input type="number" placeholder="12000" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Последняя игра больше</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option></select></div>
+            </div>
+            <div class="adv-field">
+              <label>Последняя игра меньше</label>
+              <div class="adv-inline-row"><input type="number" placeholder="X" /><select><option>лет назад</option></select></div>
+            </div>
+          </div>
+
+          <div class="adv-card">
+            <h3 class="adv-card__title">Гифты и Rust <span class="game-tag">Rust</span></h3>
+            <div class="adv-field">
+              <label>Выберите гифт</label>
+              <select><option>Выберите гифт</option></select>
+            </div>
+            <div class="adv-field">
+              <label>Гифтов от / до</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Rust · смерти</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+            <div class="adv-field">
+              <label>Rust · убийства</label>
+              <div class="range-pair"><input type="number" placeholder="от" /><input type="number" placeholder="до" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn-reset-mini" data-modal-close>Закрыть</button>
+        <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" id="modalResetFilters">✕ Сбросить фильтры</button>
+        <span class="spacer"></span>
+        <span class="filter-compact__count">Показано: <strong class="js-market-shown">0</strong> · в каталоге: <strong class="js-market-catalog">0</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="fab-chat" aria-label="Поддержка"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

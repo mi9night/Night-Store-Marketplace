@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Профиль — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="profile">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <nav class="nav-main" aria-label="Основное меню">
+          <a href="market.html">Маркет</a>
+          <a href="help.html">Статьи</a>
+          <a href="help.html">Гарант</a>
+          <a href="help.html">Соц. сети</a>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="nav-more-btn" data-dropdown-toggle aria-expanded="false">Другое ▾</button>
+            <div class="dropdown-panel">
+              <a href="help.html">FAQ</a>
+              <a href="help.html">Правила</a>
+            </div>
+          </div>
+        </nav>
+        <div class="header-search">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" placeholder="Поиск..." />
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-btn" aria-label="Сообщения"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="market.html">Маркет</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <a href="#">Пользователи</a> / <a class="breadcrumb-accent js-profile-bc-user" href="profile.html"><span class="js-profile-breadcrumb-name">…</span></a></nav>
+
+    <main class="layout-profile">
+      <aside class="sidebar-forum profile-sidebar">
+        <div class="sidebar-card">
+          <div class="profile-avatar-wrap">
+            <img class="avatar-xl-img js-profile-avatar-xl" src="" alt="" width="1" height="1" loading="lazy" />
+          </div>
+          <input type="file" id="profileAvatarInput" accept="image/*" hidden />
+          <button type="button" class="btn-secondary" id="profileAvatarBtn">Поменять аватар</button>
+          <div class="deposit-block">
+            <h3 class="js-deposit-title">Страховой депозит</h3>
+            <div class="amount js-deposit-amount">0 ₽</div>
+            <div class="wallet-actions">
+              <button type="button" class="topup">＋ Пополнить</button>
+              <button type="button" class="withdraw">↓ Снять</button>
+            </div>
+          </div>
+          <details style="margin-top:14px;color:var(--text-muted);font-size:0.85rem">
+            <summary style="cursor:pointer;color:var(--text)">Заметка о пользователе</summary>
+            <p style="margin:8px 0 0">Заметки видны только вам после входа в аккаунт.</p>
+          </details>
+        </div>
+      </aside>
+
+      <div class="sidebar-card" style="margin:0">
+        <div class="profile-name-row">
+          <h1 class="profile-h1 profile-h1--linked"><a class="profile-title-link js-profile-h1" href="profile.html">…</a></h1>
+          <span class="profile-mod-badge" id="profileModBadge" hidden title="Модератор Night Store" aria-label="Модератор">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>MOD</span>
+          </span>
+        </div>
+        <p class="status-line js-profile-status">…</p>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-item__label">Регистрация</span><span class="info-item__value js-reg">—</span></div>
+          <div class="info-item"><span class="info-item__label">ID</span><span class="info-item__value js-nid">—</span></div>
+          <div class="info-item"><span class="info-item__label">Пол</span><span class="info-item__value js-gender">—</span></div>
+          <div class="info-item"><span class="info-item__label">День рождения</span><span class="info-item__value js-bday">—</span></div>
+        </div>
+        <p style="margin:0 0 16px;font-size:0.9rem">
+          <a class="js-profile-threads-link" href="profile.html">Темы от <span class="js-profile-links-user">…</span></a> · <a href="market.html">Аккаунты на маркете</a>
+        </p>
+
+        <h2 class="section-title" id="user-topics">Ваши темы</h2>
+        <div id="create-thread" class="new-thread-card">
+          <h3 class="new-thread-card__title">Новая тема</h3>
+          <label class="sr-only" for="newThreadTitle">Заголовок темы</label>
+          <input type="text" id="newThreadTitle" class="new-thread-input" placeholder="Заголовок темы…" maxlength="200" autocomplete="off" />
+          <label class="sr-only" for="newThreadBody">Текст темы</label>
+          <textarea id="newThreadBody" class="new-thread-input" style="min-height:88px;margin-top:10px" placeholder="Текст темы (необязательно)…" maxlength="8000"></textarea>
+          <div class="thread-attach-row">
+            <input type="file" id="newThreadImagesInput" accept="image/*" multiple hidden />
+            <button type="button" class="btn-secondary thread-attach-btn" id="newThreadImagesBtn">Фото к теме</button>
+            <span class="thread-attach-hint">до 4 фото, JPEG в браузере</span>
+          </div>
+          <div id="newThreadImagesPreview" class="attach-preview" hidden></div>
+          <button type="button" class="btn-primary" id="createThreadBtn" style="margin-top:10px;width:auto;padding:10px 20px">Создать тему</button>
+          <p class="new-thread-hint">Темы хранятся в браузере (localStorage) на этом устройстве.</p>
+        </div>
+        <div id="profileThreadsRoot"></div>
+
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab is-active" role="tab">Стена</button>
+          <button type="button" class="tab" role="tab">Собственные посты</button>
+          <button type="button" class="tab" role="tab">Лента</button>
+          <button type="button" class="tab" role="tab">Недавние сообщения</button>
+          <button type="button" class="tab" role="tab">Споры</button>
+          <button type="button" class="tab" role="tab">Предупреждения</button>
+        </div>
+
+        <div class="profile-wall-wrap">
+          <div class="profile-wall-card">
+            <div class="wall-composer wall-composer--panel">
+              <img class="wall-avatar-img js-wall-avatar" src="" alt="" width="44" height="44" loading="lazy" />
+              <div class="wall-composer__main">
+                <div class="wall-input-shell">
+                  <div class="wall-editor-topbar" id="wallEditorTopbar" hidden>
+                    <div class="wall-editor-topbar__left">
+                      <div class="wall-tb-anchor">
+                        <button type="button" class="wall-tb-btn" id="wallTbAlignBtn" title="Выравнивание" aria-haspopup="true" aria-expanded="false" aria-controls="wallTbAlignPopover">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+                        </button>
+                        <div class="wall-tb-menu wall-tb-menu--dropup" id="wallTbAlignPopover" hidden role="menu" aria-label="Выравнивание">
+                          <button type="button" class="wall-tb-menu__item" data-wall-align="left" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg></span>
+                            <span>По левому краю</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-align="center" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M5 18h14"/></svg></span>
+                            <span>По центру</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-align="right" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M10 12h10M6 18h14"/></svg></span>
+                            <span>По правому краю</span>
+                          </button>
+                        </div>
+                      </div>
+                      <button type="button" class="wall-tb-btn" data-wall-tb="link" title="Ссылка">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                      </button>
+                      <button type="button" class="wall-tb-btn wall-tb-btn--text" data-wall-tb="gif" title="Вставить GIF по ссылке">GIF</button>
+                      <div class="wall-tb-anchor">
+                        <button type="button" class="wall-tb-btn" id="wallTbGalleryBtn" title="Медиа (фото)">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="2.5" y="5" width="14.5" height="13" rx="1.2"/>
+                            <circle cx="7" cy="9.5" r="1.1" fill="currentColor" stroke="none"/>
+                            <path d="M5 16l3.2-3.2 1.8 1.8 2.2-2.2L16 15"/>
+                            <rect x="17.5" y="4" width="4.5" height="16" rx="1"/>
+                            <path d="M18.5 6.5h2.5M18.5 9.5h2.5M18.5 12.5h2.5M18.5 15.5h2.5"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="wall-tb-anchor">
+                        <button type="button" class="wall-tb-btn" id="wallTbMoreBtn" title="Дополнительно" aria-haspopup="true" aria-expanded="false" aria-controls="wallTbMorePopover">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>
+                        <div class="wall-tb-menu wall-tb-menu--dropup wall-tb-menu--wide" id="wallTbMorePopover" hidden role="menu" aria-label="Дополнительно">
+                          <button type="button" class="wall-tb-menu__item" data-wall-more="spoiler" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                            </span>
+                            <span>Спойлер</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-more="code" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            </span>
+                            <span>Код</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-more="icode" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                            </span>
+                            <span>Инлайн-код</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-more="censor" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="5" x2="19" y2="19"/></svg>
+                            </span>
+                            <span>Цензура</span>
+                          </button>
+                          <button type="button" class="wall-tb-menu__item" data-wall-more="user" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </span>
+                            <span>Имя пользователя</span>
+                          </button>
+                          <div class="wall-tb-menu__sep" role="separator"></div>
+                          <button type="button" class="wall-tb-menu__item wall-tb-menu__item--danger" data-wall-more="deletemy" role="menuitem">
+                            <span class="wall-tb-menu__ico" aria-hidden="true">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </span>
+                            <span>Удалить мои сообщения</span>
+                          </button>
+                        </div>
+                      </div>
+                      <button type="button" class="wall-tb-btn" data-wall-tb="spoiler" title="Спойлер">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17.94 17.94A10 10 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                      </button>
+                    </div>
+                    <div class="wall-editor-topbar__right">
+                      <button type="button" class="wall-tb-btn" id="wallUndoBtn" title="Отменить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-15-6.7L3 13"/></svg></button>
+                      <button type="button" class="wall-tb-btn" id="wallRedoBtn" title="Вернуть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0115-6.7L21 13"/></svg></button>
+                      <button type="button" class="wall-tb-btn" id="wallFsBtn" title="На весь экран"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg></button>
+                    </div>
+                  </div>
+                  <label class="sr-only" for="wallPostInput">Сообщение на стене</label>
+                  <textarea id="wallPostInput" class="wall-input-shell__textarea" rows="3" placeholder="Напишите что-нибудь..." maxlength="4000"></textarea>
+                  <input type="file" id="wallImageInput" accept="image/*" multiple hidden />
+                  <div class="wall-input-shell__icons">
+                    <button type="button" class="wall-input-shell__icon" id="wallToggleTopbar" title="Панель форматирования" aria-expanded="false" aria-controls="wallEditorTopbar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+                    <button type="button" class="wall-input-shell__icon" id="wallEmojiBtn" title="Эмодзи" aria-haspopup="true" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+                    <button type="button" class="wall-input-shell__icon" id="wallImageBtn" title="Изображение"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
+                  </div>
+                  <div class="wall-emoji-popover" id="wallEmojiPopover" role="dialog" aria-label="Эмодзи" hidden>
+                    <div class="wall-emoji-popover__caret" aria-hidden="true"></div>
+                    <div class="wall-emoji-popover__grid" id="wallEmojiGrid"></div>
+                    <div class="wall-emoji-popover__recent-label">Недавние</div>
+                    <div class="wall-emoji-popover__recent" id="wallEmojiRecent"></div>
+                  </div>
+                </div>
+                <div id="wallPendingPreview" class="attach-preview" hidden></div>
+                <div class="wall-composer__actions">
+                  <button type="button" class="btn-primary wall-publish-btn" id="wallPublishBtn">Опубликовать</button>
+                  <button type="button" class="btn-secondary wall-poll-btn" id="wallPollBtn">Добавить голосование</button>
+                </div>
+                <div id="wallPollDraft" class="wall-poll-draft" hidden></div>
+              </div>
+            </div>
+
+            <div class="wall-toolbar">
+              <div class="wall-dropdown" data-wall-dropdown>
+                <button type="button" class="wall-dropdown__toggle" data-wall-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+                  Найти сообщения <span class="wall-dropdown__chev" aria-hidden="true">▾</span>
+                </button>
+                <div class="wall-dropdown__panel wall-find-panel" role="menu">
+                  <div class="wall-find-panel__section wall-find-panel__links">
+                    <button type="button" class="wall-find-link" data-wall-filter="all" role="menuitem">Все сообщения на стене</button>
+                    <button type="button" class="wall-find-link" data-wall-filter="mine" role="menuitem">Мои сообщения профиля</button>
+                    <button type="button" class="wall-find-link" data-wall-filter="deleted" role="menuitem">Удаленные сообщения</button>
+                  </div>
+                  <div class="wall-find-panel__divider" role="separator"></div>
+                  <div class="wall-find-panel__section">
+                    <div class="wall-find-panel__label">Сообщения пользователя</div>
+                    <div class="wall-find-panel__row">
+                      <input type="text" class="wall-find-input" id="wallFindUser" placeholder="Имя пользователя" autocomplete="off" />
+                      <button type="button" class="wall-find-btn" id="wallFindUserBtn">Найти</button>
+                    </div>
+                  </div>
+                  <div class="wall-find-panel__divider" role="separator"></div>
+                  <div class="wall-find-panel__section">
+                    <div class="wall-find-panel__label">Поиск сообщений в профиле</div>
+                    <div class="wall-find-panel__row">
+                      <input type="search" class="wall-find-input" id="wallFindQuery" placeholder="Введите запрос" autocomplete="off" />
+                      <button type="button" class="wall-find-btn" id="wallFindQueryBtn">Найти</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wall-dropdown wall-dropdown--align-end" data-wall-dropdown>
+                <button type="button" class="wall-dropdown__toggle" data-wall-dropdown-toggle aria-expanded="false" aria-haspopup="true">
+                  Сортировать <span class="wall-dropdown__chev" aria-hidden="true">▾</span>
+                </button>
+                <div class="wall-dropdown__panel wall-sort-panel" role="menu">
+                  <button type="button" class="wall-sort-item is-active" data-wall-sort="date" role="menuitem"><span class="wall-sort-item__x" aria-hidden="true">✕</span> По дате</button>
+                  <button type="button" class="wall-sort-item" data-wall-sort="likes" role="menuitem">По количеству лайков</button>
+                  <button type="button" class="wall-sort-item" data-wall-sort="replies" role="menuitem">По количеству ответов</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="wall-feed" id="wallFeedRoot">
+              <p class="wall-feed__empty" id="wallFeedEmpty">На стене пока нет ни одного сообщения</p>
+              <div id="wallFeedList" class="wall-feed__list" hidden></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">Night Store · профиль</footer>
+  </div>
+  <button type="button" class="fab-chat" aria-label="Чат"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

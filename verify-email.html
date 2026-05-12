@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Подтверждение почты — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="verify-email" class="auth-body">
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      <a class="auth-back" href="login.html">← Ко входу</a>
+      <a class="brand brand--auth" href="index.html">
+        <img src="assets/logo.svg" width="32" height="32" alt="" />
+        <span>Night <strong>Store</strong></span>
+      </a>
+      <span class="auth-toplink auth-muted">Шаг подтверждения</span>
+    </header>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <h1 class="auth-card__title">Подтвердите e-mail</h1>
+        <p class="auth-card__sub">На адрес <strong id="verifyEmailAddr">…</strong> отправлен код. Без подтверждения вход на сайт недоступен.</p>
+        <button type="button" class="btn-secondary auth-send" id="verifyResendBtn">Выслать код ещё раз</button>
+        <form id="verifyForm" class="auth-form">
+          <label class="auth-label" for="verifyCodeInput">Код из письма</label>
+          <input class="auth-input" id="verifyCodeInput" inputmode="numeric" maxlength="8" placeholder="6 цифр" required autocomplete="one-time-code" />
+          <button type="submit" class="btn-primary auth-submit">Подтвердить и продолжить</button>
+        </form>
+      </div>
+    </main>
+
+    <footer class="auth-footer-plate" aria-label="Информация о сервисе">
+      <div class="auth-footer-plate__inner">
+        <div class="auth-footer-col">
+          <div class="auth-footer-brand"><img src="assets/logo.svg" width="28" height="28" alt="" /> Night <strong>Store</strong></div>
+          <p class="auth-footer-tag">Безопасная торговая площадка и форум: сделки, гарант, маркет.</p>
+          <p class="auth-footer-mail">
+            <a href="https://t.me/nightstore_support" target="_blank" rel="noopener noreferrer">@nightstore_support</a>
+          </p>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Способы оплаты</h2>
+          <p class="auth-footer-icons" aria-hidden="true">💳 · SBP · Crypto · Steam · ₽</p>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Информация</h2>
+          <a href="help.html">О сервисе</a>
+          <a href="help.html">Правила и гарантии</a>
+          <a href="help.html">Советы и гайды</a>
+          <a href="market.html">Маркет</a>
+        </div>
+        <div class="auth-footer-col">
+          <h2 class="auth-footer-h">Соц. сети</h2>
+          <a href="help.html">Telegram</a>
+          <a href="help.html">Discord</a>
+          <a href="help.html">YouTube</a>
+        </div>
+        <div class="auth-footer-col auth-footer-col--cta">
+          <a class="btn-secondary auth-footer-support" href="help.html">Написать в поддержку</a>
+        </div>
+      </div>
+      <div class="auth-footer-links">
+        <a href="index.html">Night Store</a>
+        <span aria-hidden="true">|</span>
+        <a href="help.html">Правила</a>
+        <span aria-hidden="true">|</span>
+        <a href="help.html">Помощь</a>
+      </div>
+    </footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
