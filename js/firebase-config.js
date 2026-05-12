@@ -1,13 +1,13 @@
 /**
  * Конфиг веб-приложения Firebase (Console → Project settings → Your apps).
- * Пока apiKey пустой — сайт работает как раньше (локальные аккаунты).
- * После заполнения включатся регистрация/вход через Firebase Auth.
+ * Analytics в проекте не подключён — используется compat Auth через js/firebase-init.js.
  */
 window.__NIGHTSTORE_FIREBASE_CONFIG__ = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
+  apiKey: "AIzaSyBQJ5R8Nlc1CivtxCXk-qFH5N2CG8MdqoY",
+  authDomain: "night-store-401e8.firebaseapp.com",
+  projectId: "night-store-401e8",
+  storageBucket: "night-store-401e8.firebasestorage.app",
+  messagingSenderId: "664034265257",
+  appId: "1:664034265257:web:8003e62c38e597acfcc1b8",
+  measurementId: "G-TLH25L1ZJ0",
 };
