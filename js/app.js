@@ -315,6 +315,7 @@
     if (!data.users) data.users = [];
     list.forEach(function (rec) {
       if (!rec || !rec.id || !rec.username) return;
+      if (isModPurgedUsername(rec.username)) return;
       var normalized = userRecordFromRegistration(rec);
       var ix = data.users.findIndex(function (x) {
         return x.id === rec.id;
@@ -332,6 +333,9 @@
         );
       });
       if (!dup) data.users.push(normalized);
+    });
+    data.users = (data.users || []).filter(function (x) {
+      return x && !isModPurgedUsername(x.username);
     });
   }
 
@@ -432,12 +436,12 @@
         mode: "cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: em.toLowerCase(),
+          email: String(em).toLowerCase(),
           purpose: String(purpose || ""),
           code: String(code || ""),
         }),
       }).then(function (r) {
-        if (!r.ok) throw new Error("bad");
+        if (!r.ok) throw new Error("mail_webhook_" + r.status);
         window.alert("Код отправлен на " + em + ". Проверьте почту и папку «Спам».");
       });
     }
@@ -446,12 +450,12 @@
       return Promise.resolve();
     }
     window.alert(
-      "Отправка кода на почту не настроена. В js/firebase-config.js задайте window.NIGHTSTORE_EMAIL_CODE_WEBHOOK (POST JSON: email, purpose, code). Для локальной отладки откройте страницу с ?debugCodes=1."
+      "Код на сайте не показывается. Задайте в js/firebase-config.js window.NIGHTSTORE_EMAIL_CODE_WEBHOOK — URL вашего API (POST JSON: email, purpose, code), например Cloudflare Worker + Resend. Для отладки без почты: ?debugCodes=1 в адресе страницы."
     );
     return Promise.reject(new Error("no_webhook"));
   }
 
-  /** Логины, не показываемые в модерации и удаляемые из сохранённых регистраций. */
+  /** Логины-фейки: не в модерации, вычищаются из регистраций и из списка пользователей в памяти. */
   var MOD_PURGED_USERNAMES = { lunar: true };
 
   function isModPurgedUsername(username) {
@@ -789,7 +793,6 @@
   var PENDING_LINK_PRIMARY_KEY = "nightstore_pending_link_primary_v1";
   var ANCHOR_PUBLIC_NID_EMAIL = "akknomet1@gmail.com";
   var USER_STATS_MOD_KEY = "nightstore_mod_user_stats_v1";
-  var FORUM_TROPHY_PTS_KEY = "nightstore_forum_trophy_pts_v1";
   var SUPPORT_THREADS_KEY = "nightstore_support_threads_v1";
   var PRODUCT_ADMIN_CODES_KEY = "nightstore_product_admin_codes_v1";
   var PRODUCT_MOD_NOTES_KEY = "nightstore_product_mod_notes_v1";
@@ -906,33 +909,6 @@
     if (patch && patch[key] != null && isFinite(Number(patch[key]))) return Math.max(0, Number(patch[key]));
     if (key === "reputation") return u.reputation != null ? Number(u.reputation) : Number(u.likes) || 0;
     return Math.max(0, Number(u[key]) || 0);
-  }
-
-  function getForumTrophyPts(username) {
-    try {
-      var o = JSON.parse(localStorage.getItem(FORUM_TROPHY_PTS_KEY) || "{}");
-      return Math.max(0, Number(o[String(username || "")] || 0));
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  function bumpForumTrophyPts(username, delta) {
-    var u = String(username || "").trim();
-    if (!u || !delta) return;
-    var o = {};
-    try {
-      o = JSON.parse(localStorage.getItem(FORUM_TROPHY_PTS_KEY) || "{}");
-    } catch (e) {
-      o = {};
-    }
-    if (!o || typeof o !== "object") o = {};
-    o[u] = Math.max(0, Number(o[u] || 0) + Number(delta));
-    try {
-      localStorage.setItem(FORUM_TROPHY_PTS_KEY, JSON.stringify(o));
-    } catch (e) {
-      /* quota */
-    }
   }
 
   function ensureUsersHaveStablePublicNumericIds(data) {
@@ -1100,7 +1076,9 @@
         return;
       }
       var c = storeEmailCode(f.email, "link_verify");
-      deliverEmailCodeToInbox(f.email, "link_verify", c).catch(function () {});
+      deliverEmailCodeToInbox(f.email, "link_verify", c).catch(function () {
+        window.alert("Письмо не отправлено. Проверьте NIGHTSTORE_EMAIL_CODE_WEBHOOK или ?debugCodes=1.");
+      });
     });
     overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
       var f = readLinkForm();
@@ -2680,7 +2658,6 @@
       normalizeThread(row);
       arr.unshift(row);
       saveProfileThreads(username, arr);
-      bumpForumTrophyPts(username, 3);
       input.value = "";
       if (bodyEl) bodyEl.value = "";
       threadPendingImages.length = 0;
@@ -4090,12 +4067,6 @@
         statTile("Подписчики", getProfileStatForUser(u, "followers"));
     }
 
-    var ftEl = document.getElementById("profileForumTrophies");
-    if (ftEl) {
-      ftEl.hidden = true;
-      ftEl.textContent = "";
-    }
-
     var ut = document.getElementById("user-topics");
     if (ut) ut.textContent = isOwn ? "Ваши темы" : "Темы пользователя";
 
@@ -4601,7 +4572,6 @@
             ts: Date.now(),
           });
         });
-        bumpForumTrophyPts(me.username, 1);
         replyTa.value = "";
         topicReplyImages.length = 0;
         paintTopicReplyPreviews();
@@ -4674,9 +4644,18 @@
     }
 
     function usersForModPanels() {
-      return (data.users || []).filter(function (u) {
+      var arr = (data.users || []).filter(function (u) {
         return u && u.username && !isModPurgedUsername(u.username);
       });
+      arr.sort(function (a, b) {
+        var na = Number(a.numericId);
+        var nb = Number(b.numericId);
+        if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
+        if (isFinite(na) && !isFinite(nb)) return -1;
+        if (!isFinite(na) && isFinite(nb)) return 1;
+        return String(a.username || "").localeCompare(String(b.username || ""), "ru", { sensitivity: "base" });
+      });
+      return arr;
     }
 
     var supportSelId = root.getAttribute("data-mod-support-sel") || "";
@@ -4854,7 +4833,8 @@
             escapeHtml(sel.subject || "Обращение") +
             '</strong> <span class="mod-sup-chat__badge">' +
             escapeHtml(st2) +
-            "</span></div>" +
+            '</span></div>' +
+            '<p class="mod-sup-pub-hint">Статус «Решено» / «Закрыто» виден автору на странице «Поддержка».</p>' +
             '<div class="mod-sup-chat__msgs">' +
             (msgs || '<p class="mod-empty">Сообщений пока нет.</p>') +
             "</div>" +
@@ -4874,8 +4854,7 @@
           '<div class="mod-support-toolbar">' +
           '<input type="search" id="modSupportSearch" class="mod-search-input" placeholder="Поиск по обращениям…" value="' +
           escapeHtml(supportQ) +
-          '" />' +
-          '<span class="mod-support-toolbar__hint">Только «Все» — список обращений</span></div>' +
+          '" /></div>' +
           '<div class="mod-support-shell">' +
           '<aside class="mod-support-sidebar"><div class="mod-support-list">' +
           (leftRows || '<p class="mod-empty">Обращений нет.</p>') +
@@ -5410,7 +5389,8 @@
           escapeHtml(th0.subject || "Обращение") +
           '</strong> <span class="mod-sup-chat__badge">' +
           escapeHtml(st2) +
-          "</span></div>" +
+          '</span></div>' +
+          '<p class="mod-sup-pub-hint">Статус обращения отображается здесь и у вас в разделе «Поддержка».</p>' +
           '<div class="mod-sup-chat__msgs">' +
           (msgs || '<p class="mod-empty">Пока нет сообщений.</p>') +
           "</div>" +
@@ -5609,7 +5589,11 @@
           var ek = String(emailKey || "").toLowerCase();
           if (!codeVal) {
             var c0 = storeEmailCode(ek, "login_pass");
-            deliverEmailCodeToInbox(ek, "login_pass", c0).catch(function () {});
+            deliverEmailCodeToInbox(ek, "login_pass", c0).catch(function () {
+              window.alert(
+                "Письмо с кодом не ушло (сеть или сервер). Проверьте NIGHTSTORE_EMAIL_CODE_WEBHOOK. Код на странице не показывается; для отладки: ?debugCodes=1."
+              );
+            });
             return;
           }
           if (!verifyEmailCode(ek, codeVal, "login_pass")) {
@@ -5646,7 +5630,11 @@
                     } catch (eSync) {
                       /* ignore */
                     }
-                    deliverEmailCodeToInbox(emailLowerForCode, "login_pass", c1).catch(function () {});
+                    deliverEmailCodeToInbox(emailLowerForCode, "login_pass", c1).catch(function () {
+                      window.alert(
+                        "Письмо с кодом не ушло. Проверьте webhook или сеть. Для отладки без почты: ?debugCodes=1."
+                      );
+                    });
                   });
               }
               if (!verifyEmailCode(emailLowerForCode, codeVal, "login_pass")) {
@@ -5711,7 +5699,9 @@
           return;
         }
         var c = storeEmailCode(email, "login_pass");
-        deliverEmailCodeToInbox(email, "login_pass", c).catch(function () {});
+        deliverEmailCodeToInbox(email, "login_pass", c).catch(function () {
+          window.alert("Письмо не отправлено. Настройте webhook или используйте ?debugCodes=1.");
+        });
       });
     }
     if (formC) {
@@ -5921,7 +5911,9 @@
           return;
         }
         var c = storeEmailCode(u.email, "verify");
-        deliverEmailCodeToInbox(u.email, "verify", c).catch(function () {});
+        deliverEmailCodeToInbox(u.email, "verify", c).catch(function () {
+          window.alert("Не удалось отправить код повторно.");
+        });
       });
     }
     if (form) {

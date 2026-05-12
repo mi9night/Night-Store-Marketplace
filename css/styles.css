@@ -4510,6 +4510,13 @@ body.page-topic-forum {
   color: var(--text-muted);
 }
 
+.mod-sup-pub-hint {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
 .mod-support-shell {
   display: grid;
   grid-template-columns: minmax(220px, 300px) 1fr;
