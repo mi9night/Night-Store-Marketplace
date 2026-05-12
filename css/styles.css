@@ -640,17 +640,21 @@ img {
 
 .profile-stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px 10px;
   margin: 0 0 18px;
-  padding: 12px 14px;
+  padding: 12px 10px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface-2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-stats__item {
-  min-width: 72px;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: center;
 }
 
@@ -669,6 +673,17 @@ img {
   margin-top: 4px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+@media (max-width: 520px) {
+  .profile-stats {
+    flex-wrap: wrap;
+  }
+
+  .profile-stats__item {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 72px;
+  }
 }
 
 .ns-modal-overlay {
