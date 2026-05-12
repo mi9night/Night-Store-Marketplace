@@ -431,10 +431,13 @@
     var em = String(email || "").trim();
     var hook = typeof window !== "undefined" ? String(window.NIGHTSTORE_EMAIL_CODE_WEBHOOK || "").trim() : "";
     if (hook) {
+      var headers = { "Content-Type": "application/json" };
+      var sec = typeof window !== "undefined" ? String(window.NIGHTSTORE_EMAIL_CODE_SECRET || "").trim() : "";
+      if (sec) headers["X-Webhook-Secret"] = sec;
       return fetch(hook, {
         method: "POST",
         mode: "cors",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({
           email: String(em).toLowerCase(),
           purpose: String(purpose || ""),
@@ -454,7 +457,7 @@
         em +
         "»: " +
         code +
-        " (действует 15 мин). Введите его в поле «Код из письма» и снова отправьте форму. Для отправки на реальную почту задайте NIGHTSTORE_EMAIL_CODE_WEBHOOK в js/firebase-config.js."
+        " (действует 15 мин). Введите его в поле «Код из письма» и снова отправьте форму."
     );
     return Promise.resolve();
   }
@@ -1402,7 +1405,7 @@
         formatRubForViewer(data, u.username, lu.depositRub || 0, {}) +
         '</div></div><span class="user-mega__second-go" aria-hidden="true">›</span></button>';
     }
-    secondHtml +=
+    var supportHtml =
       '<a class="user-mega__support-block" href="support.html">' +
       iconSvg("M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z", 20) +
       "<span>Поддержка</span></a>";
@@ -1426,6 +1429,7 @@
       gridHtml +
       "</div>" +
       modStrip +
+      supportHtml +
       '<div class="user-mega__accounts">' +
       secondHtml +
       '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +

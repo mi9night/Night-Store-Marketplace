@@ -5342,12 +5342,17 @@ a.user-mega__name.user-mega__profile-link:hover {
   color: var(--text-muted);
 }
 
+.user-mega__grid + .user-mega__support-block {
+  margin-top: 10px;
+}
+
 a.user-mega__support-block {
   width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  margin-bottom: 10px;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);

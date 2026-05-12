@@ -3,12 +3,16 @@
  * Analytics в проекте не подключён — используется compat Auth через js/firebase-init.js.
  */
 /**
- * URL для отправки кодов на почту (POST JSON: { email, purpose, code }).
- * Реализуйте Cloudflare Worker + Resend/SendGrid и вставьте URL сюда.
- * Если пусто — код показывается в окне браузера (как демо); для реальной почты задайте URL.
+ * URL вашего API для отправки кодов на почту (POST JSON: { email, purpose, code }).
+ * Пример: Cloudflare Worker + Resend — см. workers/nightstore-email-code-worker.js.
+ * Пока оставьте пустым: код показывается в окне браузера (демо). После покупки домена
+ * подключите Resend, вставьте URL Worker сюда и задеплойте.
+ *
+ * Опционально: window.NIGHTSTORE_EMAIL_CODE_SECRET — тот же секрет, что WEBHOOK_SECRET в Worker.
  * Отладка: ?debugCodes=1 в адресе страницы.
  */
 window.NIGHTSTORE_EMAIL_CODE_WEBHOOK = "";
+window.NIGHTSTORE_EMAIL_CODE_SECRET = "";
 
 window.__NIGHTSTORE_FIREBASE_CONFIG__ = {
   apiKey: "AIzaSyBQJ5R8Nlc1CivtxCXk-qFH5N2CG8MdqoY",
