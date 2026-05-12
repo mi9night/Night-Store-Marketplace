@@ -4,3 +4,5 @@ firestore-debug.log
 ui-debug.log
 .cursor/
 Night-Store-Marketplace/
+node_modules/
+.wrangler/
