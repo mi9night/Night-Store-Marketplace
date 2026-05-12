@@ -6,3 +6,4 @@ ui-debug.log
 Night-Store-Marketplace/
 node_modules/
 .wrangler/
+dist/

@@ -3,6 +3,6 @@
   "private": true,
   "description": "Статический сайт: сборка no-op для Cloudflare Pages (контент в корне репозитория).",
   "scripts": {
-    "build": "node -e \"process.exit(0)\""
+    "build": "node scripts/pages-build.js"
   }
 }
