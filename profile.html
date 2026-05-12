@@ -61,8 +61,8 @@
           <div class="profile-avatar-wrap">
             <img class="avatar-xl-img js-profile-avatar-xl" src="" alt="" width="1" height="1" loading="lazy" />
           </div>
-          <input type="file" id="profileAvatarInput" accept="image/*" hidden />
-          <button type="button" class="btn-secondary" id="profileAvatarBtn">Поменять аватар</button>
+          <input type="file" id="profileAvatarInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+          <button type="button" class="btn-secondary" id="profileAvatarBtn" title="JPG, PNG, WebP или GIF (анимация)">Поменять аватар</button>
           <div class="deposit-block">
             <h3 class="js-deposit-title">Страховой депозит</h3>
             <div class="amount js-deposit-amount">0 ₽</div>
@@ -103,9 +103,20 @@
           <div class="info-item"><span class="info-item__label">День рождения</span><span class="info-item__value js-bday">—</span></div>
         </div>
         <div class="profile-stats" id="profileStatsRow" aria-label="Статистика"></div>
-        <p style="margin:0 0 16px;font-size:0.9rem">
-          <a class="js-profile-threads-link" href="profile.html">Темы от <span class="js-profile-links-user">…</span></a> · <a href="market.html">Аккаунты на маркете</a>
-        </p>
+        <div class="profile-toplinks" role="navigation" aria-label="Темы и маркет">
+          <a class="profile-toplinks__item js-profile-threads-link" href="profile.html#user-topics">
+            <span class="profile-toplinks__ico" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </span>
+            <span class="profile-toplinks__text">Темы от <span class="js-profile-links-user">…</span></span>
+          </a>
+          <a class="profile-toplinks__item" href="market.html">
+            <span class="profile-toplinks__ico" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.48L23 6H6"/></svg>
+            </span>
+            <span class="profile-toplinks__text">Аккаунты на Маркете</span>
+          </a>
+        </div>
 
         <h2 class="section-title" id="user-topics">Ваши темы</h2>
         <div id="create-thread" class="new-thread-card">

@@ -5,8 +5,8 @@
 /**
  * URL для отправки кодов на почту (POST JSON: { email, purpose, code }).
  * Реализуйте Cloudflare Worker + Resend/SendGrid и вставьте URL сюда.
- * Код на сайте не показывается; без URL пользователь увидит подсказку настроить webhook.
- * Отладка без почты: откройте страницу с ?debugCodes=1 в URL.
+ * Если пусто — код показывается в окне браузера (как демо); для реальной почты задайте URL.
+ * Отладка: ?debugCodes=1 в адресе страницы.
  */
 window.NIGHTSTORE_EMAIL_CODE_WEBHOOK = "";
 

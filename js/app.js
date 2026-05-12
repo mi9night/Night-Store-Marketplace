@@ -450,9 +450,13 @@
       return Promise.resolve();
     }
     window.alert(
-      "Код на сайте не показывается. Задайте в js/firebase-config.js window.NIGHTSTORE_EMAIL_CODE_WEBHOOK — URL вашего API (POST JSON: email, purpose, code), например Cloudflare Worker + Resend. Для отладки без почты: ?debugCodes=1 в адресе страницы."
+      "Код для «" +
+        em +
+        "»: " +
+        code +
+        " (действует 15 мин). Введите его в поле «Код из письма» и снова отправьте форму. Для отправки на реальную почту задайте NIGHTSTORE_EMAIL_CODE_WEBHOOK в js/firebase-config.js."
     );
-    return Promise.reject(new Error("no_webhook"));
+    return Promise.resolve();
   }
 
   /** Логины-фейки: не в модерации, вычищаются из регистраций и из списка пользователей в памяти. */
@@ -709,13 +713,48 @@
     }
   }
 
+  /** Лимит длины data URL для встраиваемых картинок в темах/стене (JPEG/WebP). */
+  var MAX_DATA_IMAGE_URL_LEN = 600000;
+  /** Лимит для GIF-аватара (анимация не проходит через canvas). */
+  var MAX_GIF_AVATAR_DATA_URL_LEN = 880000;
+
   function isDataImageUrl(s) {
-    return typeof s === "string" && s.indexOf("data:image/") === 0 && s.length < 600000;
+    if (typeof s !== "string" || s.indexOf("data:image/") !== 0) return false;
+    if (s.indexOf("data:image/gif") === 0) return s.length > 0 && s.length <= MAX_GIF_AVATAR_DATA_URL_LEN;
+    return s.length < MAX_DATA_IMAGE_URL_LEN;
   }
 
-  function fileToCompressedDataUrl(file, callback) {
+  function fileToCompressedDataUrl(file, callback, opts) {
+    opts = opts || {};
     if (!file || !file.type || file.type.indexOf("image/") !== 0) {
       callback(null);
+      return;
+    }
+    if (opts.preserveGif && String(file.type).toLowerCase() === "image/gif") {
+      var gr = new FileReader();
+      gr.onload = function () {
+        var url = gr.result;
+        if (typeof url !== "string") {
+          callback(null);
+          return;
+        }
+        if (url.length > MAX_GIF_AVATAR_DATA_URL_LEN) {
+          window.alert(
+            "Этот GIF слишком большой для аватара. Сожмите файл или сократите анимацию (до примерно 600–700 КБ веса файла)."
+          );
+          callback(null);
+          return;
+        }
+        if (!isDataImageUrl(url)) {
+          callback(null);
+          return;
+        }
+        callback(url);
+      };
+      gr.onerror = function () {
+        callback(null);
+      };
+      gr.readAsDataURL(file);
       return;
     }
     var reader = new FileReader();
@@ -1077,7 +1116,7 @@
       }
       var c = storeEmailCode(f.email, "link_verify");
       deliverEmailCodeToInbox(f.email, "link_verify", c).catch(function () {
-        window.alert("Письмо не отправлено. Проверьте NIGHTSTORE_EMAIL_CODE_WEBHOOK или ?debugCodes=1.");
+        window.alert("Письмо не отправлено (ошибка webhook или сеть). Для отладки: ?debugCodes=1.");
       });
     });
     overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
@@ -1302,7 +1341,6 @@
     var mod = canModerate(data, u);
     var partnerId = getLinkedPartnerUserId(u.id);
     var linkedUsers = partnerId ? [userById(data, partnerId)].filter(Boolean) : [];
-    var canAddLink = linkedUsers.length < 1;
 
     var myProf = "profile.html?user=" + encodeURIComponent(u.username);
     var grid = [
@@ -1364,10 +1402,10 @@
         formatRubForViewer(data, u.username, lu.depositRub || 0, {}) +
         '</div></div><span class="user-mega__second-go" aria-hidden="true">›</span></button>';
     }
-    if (canAddLink) {
-      secondHtml +=
-        '<button type="button" class="user-mega__add-link" data-add-linked>Привязать ещё один аккаунт (макс. 1)</button>';
-    }
+    secondHtml +=
+      '<a class="user-mega__support-block" href="support.html">' +
+      iconSvg("M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z", 20) +
+      "<span>Поддержка</span></a>";
 
     panel.className = "dropdown-panel user-mega";
     panel.innerHTML =
@@ -1390,7 +1428,7 @@
       modStrip +
       '<div class="user-mega__accounts">' +
       secondHtml +
-      '</div><div class="user-mega__foot"><a class="user-mega__support" href="support.html">Поддержка</a><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
+      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
       iconSvg("M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1", 20) +
       "</button></div>";
 
@@ -1491,13 +1529,6 @@
     }
     panel._nightstoreSwitchLinked = onSwitchLinked;
     panel.addEventListener("click", onSwitchLinked);
-    var ad = panel.querySelector("[data-add-linked]");
-    if (ad) {
-      ad.addEventListener("click", function (e) {
-        e.stopPropagation();
-        openNightstoreLinkAccountDialog(data, u);
-      });
-    }
     var avBig = panel.querySelector(".user-mega__av");
     if (avBig) attachAvatarFallback(avBig, u.username);
     var secIm = panel.querySelector(".user-mega__second img");
@@ -1549,6 +1580,7 @@
 
   function isSubscribedToTopic(viewerUsername, ownerUsername, threadTs) {
     var ts = Number(threadTs);
+    if (!isFinite(ts)) return false;
     return loadTopicSubs(viewerUsername).some(function (s) {
       return s.owner === ownerUsername && Number(s.ts) === ts;
     });
@@ -1831,21 +1863,39 @@
   }
 
   function notifyTopicReplySubscribers(data, ownerUsername, threadTs, topicTitle, replierUsername) {
+    var ownerU = String(ownerUsername || "");
+    var replier = String(replierUsername || "");
+    var tsKey = Number(threadTs);
+    if (!ownerU || !replier) return;
+    var titleStr = String(topicTitle || "тема");
+    var linkId = isFinite(tsKey) ? String(tsKey) : String(threadTs);
+
+    function shouldNotifyUsername(un) {
+      var u = String(un || "");
+      if (!u || u === replier) return false;
+      if (u === ownerU) return true;
+      return isSubscribedToTopic(u, ownerU, tsKey);
+    }
+
+    var sent = Object.create(null);
     var users = data.users || [];
     users.forEach(function (u) {
-      if (u.username === replierUsername) return;
-      if (!isSubscribedToTopic(u.username, ownerUsername, threadTs)) return;
+      if (!u || !u.username) return;
+      if (!shouldNotifyUsername(u.username)) return;
+      if (sent[u.username]) return;
+      sent[u.username] = true;
       pushNotification(u.username, {
-        id: String(Date.now()) + "_" + Math.random().toString(16).slice(2, 10),
+        id:
+          String(Date.now()) +
+          "_" +
+          Math.random().toString(16).slice(2, 10) +
+          "_" +
+          encodeURIComponent(u.username),
         tab: "themes",
         read: false,
         ts: Date.now(),
-        title: 'Новое сообщение в «' + String(topicTitle || "тема") + "»",
-        link:
-          "topic.html?user=" +
-          encodeURIComponent(ownerUsername) +
-          "&id=" +
-          encodeURIComponent(String(threadTs)),
+        title: 'Новое сообщение в «' + titleStr + "»",
+        link: "topic.html?user=" + encodeURIComponent(ownerU) + "&id=" + encodeURIComponent(linkId),
         kind: "topic_reply",
       });
     });
@@ -1853,8 +1903,9 @@
   }
 
   function deleteProfileThread(username, threadTs) {
+    var want = Number(threadTs);
     var arr = loadProfileThreads(username).filter(function (x) {
-      return x.ts !== threadTs;
+      return Number(x.ts) !== want;
     });
     saveProfileThreads(username, arr);
   }
@@ -2057,7 +2108,7 @@
     root.innerHTML =
       "<p>Здесь задаются предпочтения по оповещениям (локально в браузере).</p>" +
       "<ul class=\"notif-settings-list\">" +
-      "<li>Темы и ответы — при подписке на тему в колокольчик приходят новые сообщения.</li>" +
+      "<li>Темы и ответы — при ответе другого пользователя уведомления получают подписчики темы и автор темы; на своё сообщение колокольчик не срабатывает.</li>" +
       "<li>Маркет — вкладка «Маркет» зарезервирована под покупки и сделки (можно расширить позже).</li>" +
       "<li>Модерация — жалобы на посты стены, комментарии и темы приходят пользователям с пометкой модератора в data/site.json.</li>" +
       "</ul>";
@@ -2458,6 +2509,10 @@
 
   function normalizeThread(th) {
     if (!th || typeof th !== "object") return th;
+    if (th.ts != null) {
+      var tn = Number(th.ts);
+      if (isFinite(tn)) th.ts = tn;
+    }
     if (th.ts == null) th.ts = Date.now();
     if (th.title == null) th.title = "";
     if (th.body == null) th.body = "";
@@ -2498,8 +2553,9 @@
 
   function updateProfileThread(username, threadTs, mutator) {
     var arr = loadProfileThreads(username);
+    var want = Number(threadTs);
     var idx = arr.findIndex(function (x) {
-      return x.ts === threadTs;
+      return Number(x.ts) === want;
     });
     if (idx === -1) return null;
     mutator(arr[idx]);
@@ -4130,7 +4186,7 @@
               wallAv.src = url;
               attachAvatarFallback(wallAv, u.username);
             }
-          });
+          }, { preserveGif: true });
           avInp.value = "";
         });
       }
@@ -4175,7 +4231,7 @@
     }
     var arr = loadProfileThreads(owner.username);
     var idx = arr.findIndex(function (x) {
-      return x.ts === ts;
+      return Number(x.ts) === ts;
     });
     if (idx === -1) {
       if (missing) missing.hidden = false;
@@ -4195,25 +4251,30 @@
     function currentThread() {
       var list = loadProfileThreads(owner.username);
       var t = list.find(function (x) {
-        return x.ts === ts;
+        return Number(x.ts) === ts;
       });
       return t ? normalizeThread(t) : null;
     }
 
     function paintTopicChrome(th) {
       var ownerSettings = document.getElementById("topicSettingsOwner");
-      if (ownerSettings) ownerSettings.hidden = me.id !== owner.id;
+      if (ownerSettings) ownerSettings.hidden = !me || me.id !== owner.id;
       var closedHint = document.getElementById("topicClosedHint");
       if (closedHint) closedHint.hidden = !th.closed;
       var replyBox = document.getElementById("topicReplyBox");
-      if (replyBox) replyBox.hidden = !!th.closed;
+      if (replyBox) replyBox.hidden = !!th.closed || !me;
       var subBtn = document.getElementById("topicSubscribeBtn");
       if (subBtn) {
-        var subbed = isSubscribedToTopic(me.username, owner.username, ts);
-        subBtn.classList.toggle("is-subscribed", subbed);
-        subBtn.setAttribute("aria-pressed", subbed ? "true" : "false");
-        var lab = document.getElementById("topicSubscribeLabel");
-        if (lab) lab.textContent = subbed ? "Подписан на тему" : "Подписаться на тему";
+        if (!me) {
+          subBtn.hidden = true;
+        } else {
+          subBtn.hidden = false;
+          var subbed = isSubscribedToTopic(me.username, owner.username, ts);
+          subBtn.classList.toggle("is-subscribed", subbed);
+          subBtn.setAttribute("aria-pressed", subbed ? "true" : "false");
+          var lab = document.getElementById("topicSubscribeLabel");
+          if (lab) lab.textContent = subbed ? "Подписан на тему" : "Подписаться на тему";
+        }
       }
       var tcb = document.getElementById("topicToggleCloseBtn");
       if (tcb) tcb.textContent = th.closed ? "Открыть тему" : "Закрыть тему";
@@ -4287,7 +4348,7 @@
       var cd = document.getElementById("topicCountDislikes");
       if (cl) cl.textContent = formatIntRu(th.likes || 0);
       if (cd) cd.textContent = formatIntRu(th.dislikes || 0);
-      var v = th.voteByUser && th.voteByUser[me.username];
+      var v = me && th.voteByUser ? th.voteByUser[me.username] : undefined;
       var btnL = document.getElementById("topicBtnLike");
       var btnD = document.getElementById("topicBtnDislike");
       if (btnL) {
@@ -4365,7 +4426,7 @@
         }
       }
 
-      if (isSubscribedToTopic(me.username, owner.username, ts)) {
+      if (me && isSubscribedToTopic(me.username, owner.username, ts)) {
         upsertTopicSub(me.username, owner.username, ts, th.title);
       }
       paintTopicChrome(th);
@@ -4458,6 +4519,10 @@
     }
 
     function applyVote(direction) {
+      if (!me) {
+        window.alert("Войдите, чтобы оценивать тему.");
+        return;
+      }
       updateProfileThread(owner.username, ts, function (th) {
         var prev = th.voteByUser[me.username];
         if (direction === "up") {
@@ -4552,6 +4617,10 @@
     if (replyBtn && replyTa && replyBtn.dataset.wired !== "1") {
       replyBtn.dataset.wired = "1";
       replyBtn.addEventListener("click", function () {
+        if (!me) {
+          window.alert("Войдите в аккаунт, чтобы отвечать в теме.");
+          return;
+        }
         var cur = currentThread();
         if (!cur || cur.closed) {
           return;
@@ -4584,6 +4653,10 @@
     if (subBtn && subBtn.dataset.wired !== "1") {
       subBtn.dataset.wired = "1";
       subBtn.addEventListener("click", function () {
+        if (!me) {
+          window.alert("Войдите в аккаунт, чтобы подписаться на тему.");
+          return;
+        }
         var th = currentThread();
         if (!th) return;
         if (isSubscribedToTopic(me.username, owner.username, ts)) {
@@ -5331,6 +5404,16 @@
     }
     var selId = root.getAttribute("data-sup-sel") || "";
 
+    function supportNewFormFields() {
+      return (
+        '<label class="sr-only" for="supNewSub">Тема обращения</label>' +
+        '<input type="text" id="supNewSub" class="mod-search-input sup-form__field" maxlength="120" placeholder="Тема обращения" />' +
+        '<label class="sr-only" for="supNewBody">Текст сообщения</label>' +
+        '<textarea id="supNewBody" class="sup-form__ta" rows="6" maxlength="4000" placeholder="Опишите проблему…"></textarea>' +
+        '<button type="button" class="btn-primary sup-form__submit" id="supNewBtn">Отправить</button>'
+      );
+    }
+
     function paintSup() {
       var threads = loadSupportThreads().filter(function (th) {
         return th && (th.userId === me.id || th.username === me.username);
@@ -5338,35 +5421,9 @@
       threads.sort(function (a, b) {
         return (Number(b.updated) || 0) - (Number(a.updated) || 0);
       });
-      var left = threads
-        .map(function (th) {
-          var act = th.id === selId ? " is-active" : "";
-          var st = th.status === "resolved" ? "Решено" : th.status === "closed" ? "Закрыто" : "Открыто";
-          return (
-            '<button type="button" class="mod-sup-row' +
-            act +
-            '" data-sup-pick="' +
-            escapeHtml(th.id) +
-            '"><span class="mod-sup-row__name">' +
-            escapeHtml(th.subject || "Обращение") +
-            '</span><span class="mod-sup-row__st">' +
-            escapeHtml(st) +
-            "</span></button>"
-          );
-        })
-        .join("");
-      var th0 = threads.find(function (x) {
-        return x.id === selId;
-      });
-      var right = "";
-      if (!th0) {
-        right =
-          '<div class="mod-support-empty">Выберите обращение слева или создайте новое.</div>' +
-          '<div class="mod-sup-new"><h3 class="mod-h2">Новое обращение</h3>' +
-          '<input type="text" id="supNewSub" class="mod-search-input" maxlength="120" placeholder="Тема" />' +
-          '<textarea id="supNewBody" rows="4" maxlength="4000" placeholder="Сообщение…"></textarea>' +
-          '<button type="button" class="btn-primary" id="supNewBtn">Отправить</button></div>';
-      } else {
+      var compose = root.getAttribute("data-sup-compose") === "1";
+
+      function chatHtmlFor(th0) {
         var msgs = (th0.messages || [])
           .map(function (m) {
             var who = m.role === "staff" ? "Поддержка" : "Вы";
@@ -5384,7 +5441,7 @@
           })
           .join("");
         var st2 = th0.status === "resolved" ? "Решено" : th0.status === "closed" ? "Закрыто" : "Открыто";
-        right =
+        return (
           '<div class="mod-sup-chat"><div class="mod-sup-chat__head"><strong>' +
           escapeHtml(th0.subject || "Обращение") +
           '</strong> <span class="mod-sup-chat__badge">' +
@@ -5398,72 +5455,166 @@
             ? ""
             : '<div class="mod-sup-chat__composer"><textarea id="supUserTa" rows="3" maxlength="4000" placeholder="Дополнить обращение…"></textarea>' +
               '<button type="button" class="btn-primary" data-sup-user-send>Отправить</button></div>') +
-          "</div>";
+          "</div>"
+        );
       }
+
+      function bindSupportPage() {
+        root.querySelectorAll("[data-sup-pick]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            selId = b.getAttribute("data-sup-pick") || "";
+            root.setAttribute("data-sup-sel", selId);
+            root.removeAttribute("data-sup-compose");
+            paintSup();
+          });
+        });
+        var nb = document.getElementById("supNewBtn");
+        if (nb) {
+          nb.addEventListener("click", function () {
+            var s = document.getElementById("supNewSub");
+            var t = document.getElementById("supNewBody");
+            var sub = s ? s.value.trim() : "";
+            var body = t ? t.value.trim() : "";
+            if (!sub || !body) {
+              window.alert("Укажите тему и текст.");
+              return;
+            }
+            var all = loadSupportThreads();
+            var id = "sup_" + Date.now();
+            all.unshift({
+              id: id,
+              userId: me.id,
+              username: me.username,
+              subject: sub,
+              status: "open",
+              created: Date.now(),
+              updated: Date.now(),
+              messages: [{ role: "user", author: me.username, body: body, ts: Date.now() }],
+            });
+            saveSupportThreads(all);
+            selId = id;
+            root.setAttribute("data-sup-sel", selId);
+            root.removeAttribute("data-sup-compose");
+            paintSup();
+          });
+        }
+        var us = root.querySelector("[data-sup-user-send]");
+        if (us) {
+          us.addEventListener("click", function () {
+            var ta = document.getElementById("supUserTa");
+            var txt = ta ? ta.value.trim() : "";
+            if (!txt || !selId) return;
+            var all = loadSupportThreads();
+            var th = all.find(function (x) {
+              return x.id === selId;
+            });
+            if (!th || th.status === "closed") return;
+            if (!th.messages) th.messages = [];
+            th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now() });
+            th.updated = Date.now();
+            saveSupportThreads(all);
+            paintSup();
+          });
+        }
+        var nw = root.querySelector("[data-sup-new]");
+        if (nw) {
+          nw.addEventListener("click", function () {
+            selId = "";
+            root.removeAttribute("data-sup-sel");
+            root.setAttribute("data-sup-compose", "1");
+            paintSup();
+          });
+        }
+        var cancelCompose = root.querySelector("[data-sup-compose-cancel]");
+        if (cancelCompose) {
+          cancelCompose.addEventListener("click", function () {
+            root.removeAttribute("data-sup-compose");
+            if (threads.length) {
+              selId = threads[0].id;
+              root.setAttribute("data-sup-sel", selId);
+            }
+            paintSup();
+          });
+        }
+      }
+
+      if (!threads.length) {
+        root.innerHTML =
+          '<div class="support-solo">' +
+          '<div class="support-solo__head">' +
+          '<h1 class="support-solo__h1">Поддержка</h1>' +
+          '<p class="mod-sub support-solo__sub">Напишите тему и описание — после отправки здесь появится список ваших обращений.</p>' +
+          "</div>" +
+          '<div class="sidebar-card support-solo__card">' +
+          '<h2 class="mod-h2 support-solo__h2">Новое обращение</h2>' +
+          supportNewFormFields() +
+          "</div></div>";
+        bindSupportPage();
+        return;
+      }
+
+      if (!compose) {
+        if (!selId || !threads.some(function (x) {
+          return x.id === selId;
+        })) {
+          selId = threads[0].id;
+          root.setAttribute("data-sup-sel", selId);
+        }
+      }
+
+      var th0 = !compose
+        ? threads.find(function (x) {
+            return x.id === selId;
+          })
+        : null;
+
+      var left = threads
+        .map(function (th) {
+          var act = th.id === selId && !compose ? " is-active" : "";
+          var st = th.status === "resolved" ? "Решено" : th.status === "closed" ? "Закрыто" : "Открыто";
+          return (
+            '<button type="button" class="mod-sup-row' +
+            act +
+            '" data-sup-pick="' +
+            escapeHtml(th.id) +
+            '"><span class="mod-sup-row__name">' +
+            escapeHtml(th.subject || "Обращение") +
+            '</span><span class="mod-sup-row__st">' +
+            escapeHtml(st) +
+            "</span></button>"
+          );
+        })
+        .join("");
+
+      var right;
+      if (compose) {
+        right =
+          '<div class="mod-sup-compose">' +
+          '<div class="mod-sup-compose__head">' +
+          '<h2 class="mod-h2" style="margin:0">Новое обращение</h2>' +
+          '<button type="button" class="btn-secondary mod-sup-compose__cancel" data-sup-compose-cancel>Отмена</button>' +
+          "</div>" +
+          '<p class="mod-sup-compose__hint">После отправки обращение появится в списке слева.</p>' +
+          supportNewFormFields() +
+          "</div>";
+      } else {
+        right = chatHtmlFor(th0 || threads[0]);
+      }
+
       root.innerHTML =
-        '<div class="mod-support-toolbar"><h1 class="mod-page-head" style="margin:0">Поддержка</h1></div>' +
+        '<div class="mod-support-toolbar mod-support-toolbar--user">' +
+        '<h1 class="mod-support-toolbar__title">Поддержка</h1>' +
+        '<button type="button" class="btn-secondary mod-support-toolbar__new" data-sup-new>Новое обращение</button>' +
+        "</div>" +
         '<div class="mod-support-shell">' +
-        '<aside class="mod-support-sidebar"><div class="mod-support-list">' +
-        (left || '<p class="mod-empty">Обращений пока нет.</p>') +
+        '<aside class="mod-support-sidebar"><div class="mod-support-list-label">Мои обращения</div><div class="mod-support-list">' +
+        left +
         "</div></aside>" +
         '<section class="mod-support-main">' +
         right +
         "</section></div>";
 
-      root.querySelectorAll("[data-sup-pick]").forEach(function (b) {
-        b.addEventListener("click", function () {
-          selId = b.getAttribute("data-sup-pick") || "";
-          root.setAttribute("data-sup-sel", selId);
-          paintSup();
-        });
-      });
-      var nb = document.getElementById("supNewBtn");
-      if (nb) {
-        nb.addEventListener("click", function () {
-          var s = document.getElementById("supNewSub");
-          var t = document.getElementById("supNewBody");
-          var sub = s ? s.value.trim() : "";
-          var body = t ? t.value.trim() : "";
-          if (!sub || !body) {
-            window.alert("Укажите тему и текст.");
-            return;
-          }
-          var all = loadSupportThreads();
-          var id = "sup_" + Date.now();
-          all.unshift({
-            id: id,
-            userId: me.id,
-            username: me.username,
-            subject: sub,
-            status: "open",
-            created: Date.now(),
-            updated: Date.now(),
-            messages: [{ role: "user", author: me.username, body: body, ts: Date.now() }],
-          });
-          saveSupportThreads(all);
-          selId = id;
-          root.setAttribute("data-sup-sel", selId);
-          paintSup();
-        });
-      }
-      var us = root.querySelector("[data-sup-user-send]");
-      if (us) {
-        us.addEventListener("click", function () {
-          var ta = document.getElementById("supUserTa");
-          var txt = ta ? ta.value.trim() : "";
-          if (!txt || !selId) return;
-          var all = loadSupportThreads();
-          var th = all.find(function (x) {
-            return x.id === selId;
-          });
-          if (!th || th.status === "closed") return;
-          if (!th.messages) th.messages = [];
-          th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now() });
-          th.updated = Date.now();
-          saveSupportThreads(all);
-          paintSup();
-        });
-      }
+      bindSupportPage();
     }
 
     paintSup();
@@ -5591,7 +5742,7 @@
             var c0 = storeEmailCode(ek, "login_pass");
             deliverEmailCodeToInbox(ek, "login_pass", c0).catch(function () {
               window.alert(
-                "Письмо с кодом не ушло (сеть или сервер). Проверьте NIGHTSTORE_EMAIL_CODE_WEBHOOK. Код на странице не показывается; для отладки: ?debugCodes=1."
+                "Письмо с кодом не ушло (сеть или ответ сервера). Проверьте NIGHTSTORE_EMAIL_CODE_WEBHOOK. Для отладки: ?debugCodes=1."
               );
             });
             return;
@@ -5632,7 +5783,7 @@
                     }
                     deliverEmailCodeToInbox(emailLowerForCode, "login_pass", c1).catch(function () {
                       window.alert(
-                        "Письмо с кодом не ушло. Проверьте webhook или сеть. Для отладки без почты: ?debugCodes=1."
+                        "Письмо с кодом не ушло (webhook или сеть). Для отладки: ?debugCodes=1."
                       );
                     });
                   });
@@ -5700,7 +5851,7 @@
         }
         var c = storeEmailCode(email, "login_pass");
         deliverEmailCodeToInbox(email, "login_pass", c).catch(function () {
-          window.alert("Письмо не отправлено. Настройте webhook или используйте ?debugCodes=1.");
+          window.alert("Письмо не отправлено (ошибка webhook или сеть). Для отладки: ?debugCodes=1.");
         });
       });
     }
