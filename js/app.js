@@ -4170,17 +4170,21 @@
     var tabs = document.querySelectorAll("[data-login-tab]");
     var tabPanels = document.querySelectorAll("[data-login-panel]");
     var auth = window.NSFirebaseAuth;
+    var tabBar = document.querySelector(".auth-card .auth-tabs") || document.querySelector(".auth-tabs");
     if (auth) {
-      tabs.forEach(function (t) {
-        if ((t.getAttribute("data-login-tab") || "") === "code") {
-          t.hidden = true;
-        }
-      });
+      if (tabBar) {
+        tabBar.hidden = true;
+        tabBar.setAttribute("aria-hidden", "true");
+      }
       tabPanels.forEach(function (p) {
         if ((p.getAttribute("data-login-panel") || "") === "code") {
           p.hidden = true;
         }
       });
+      var sub = document.querySelector(".auth-card__sub");
+      if (sub) {
+        sub.textContent = "Логин или e-mail и пароль.";
+      }
     }
     tabs.forEach(function (t) {
       t.addEventListener("click", function () {
