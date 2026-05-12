@@ -287,7 +287,12 @@
           new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
       ),
       numericId:
-        typeof rec.numericId === "number" && !isNaN(rec.numericId) && rec.numericId > 0 ? rec.numericId : 0,
+        rec.numericId != null &&
+        rec.numericId !== "" &&
+        isFinite(Number(rec.numericId)) &&
+        Number(rec.numericId) > 0
+          ? Number(rec.numericId)
+          : 0,
       gender: rec.gender || "—",
       birthday: rec.birthday || "—",
       status: rec.status || "В сети",
@@ -435,146 +440,6 @@
     }
   }
 
-  var PUBLIC_NUMERIC_MAP_KEY = "nightstore_public_numeric_by_user_v1";
-  var LINK_PRIMARY_STORAGE_KEY = "nightstore_link_primary_id_v1";
-
-  function loadPublicNumericMap() {
-    try {
-      var o = JSON.parse(localStorage.getItem(PUBLIC_NUMERIC_MAP_KEY) || "{}");
-      return o && typeof o === "object" ? o : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function savePublicNumericMap(m) {
-    try {
-      localStorage.setItem(PUBLIC_NUMERIC_MAP_KEY, JSON.stringify(m));
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  function userIdSortRankPublic(uid) {
-    var s = String(uid || "");
-    var um = s.match(/^u(\d+)$/i);
-    if (um) return [0, parseInt(um[1], 10), s];
-    if (s.indexOf("fb_") === 0) return [1, s];
-    if (s.indexOf("ur") === 0) return [2, s];
-    return [9, s];
-  }
-
-  function syncPublicNumericIds(data) {
-    var map = loadPublicNumericMap();
-    var list = (data.users || []).filter(Boolean).sort(function (a, b) {
-      var ra = userIdSortRankPublic(a.id);
-      var rb = userIdSortRankPublic(b.id);
-      if (ra[0] !== rb[0]) return ra[0] - rb[0];
-      if (ra[0] === 0 && rb[0] === 0) return ra[1] - rb[1];
-      return String(ra[1]).localeCompare(String(rb[1]));
-    });
-    list.forEach(function (u) {
-      if (!u || !u.id) return;
-      if (map[u.id] != null && map[u.id] !== "") return;
-      var max = 10000000;
-      Object.keys(map).forEach(function (k) {
-        var n = parseInt(map[k], 10);
-        if (!isNaN(n) && n > max) max = n;
-      });
-      map[u.id] = max + 1;
-    });
-    savePublicNumericMap(map);
-    (data.users || []).forEach(function (u) {
-      if (!u || !u.id) return;
-      var n = parseInt(map[u.id], 10);
-      if (!isNaN(n) && n > 0) u.numericId = n;
-    });
-  }
-
-  function getOrCreatePublicNumericId(userId) {
-    var map = loadPublicNumericMap();
-    if (map[userId] != null && map[userId] !== "") {
-      return parseInt(map[userId], 10);
-    }
-    var max = 10000000;
-    Object.keys(map).forEach(function (k) {
-      var n = parseInt(map[k], 10);
-      if (!isNaN(n) && n > max) max = n;
-    });
-    var nid = max + 1;
-    map[userId] = nid;
-    savePublicNumericMap(map);
-    return nid;
-  }
-
-  function setPendingLinkPrimary(primaryUserId) {
-    try {
-      sessionStorage.setItem(LINK_PRIMARY_STORAGE_KEY, String(primaryUserId || ""));
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  function clearPendingLinkPrimary() {
-    try {
-      sessionStorage.removeItem(LINK_PRIMARY_STORAGE_KEY);
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  function consumePendingAccountLink(data, secondaryUserId) {
-    var raw = "";
-    try {
-      raw = sessionStorage.getItem(LINK_PRIMARY_STORAGE_KEY) || "";
-    } catch (e) {
-      raw = "";
-    }
-    if (!raw) return;
-    try {
-      sessionStorage.removeItem(LINK_PRIMARY_STORAGE_KEY);
-    } catch (e2) {
-      /* ignore */
-    }
-    var primaryId = String(raw);
-    if (!primaryId || primaryId === secondaryUserId) return;
-    if (!userById(data, primaryId) || !userById(data, secondaryUserId)) return;
-    saveLinkedAccountIds(primaryId, [secondaryUserId]);
-  }
-
-  function closeNsLinkAccountModal() {
-    var el = document.getElementById("nsLinkAccBackdrop");
-    if (el) el.remove();
-  }
-
-  function openLinkSecondAccountModal(data, primaryUser) {
-    closeNsLinkAccountModal();
-    clearPendingLinkPrimary();
-    setPendingLinkPrimary(primaryUser.id);
-    var root = document.createElement("div");
-    root.id = "nsLinkAccBackdrop";
-    root.className = "ns-modal-backdrop";
-    root.innerHTML =
-      '<div class="ns-modal-card" role="dialog" aria-modal="true" aria-labelledby="nsLinkAccTitle">' +
-      '<button type="button" class="ns-modal-close" data-ns-link-close aria-label="Закрыть">×</button>' +
-      '<h2 id="nsLinkAccTitle" class="ns-modal-title">Второй аккаунт</h2>' +
-      '<p class="ns-modal-text">Зарегистрируйте новый аккаунт или войдите в существующий — он будет привязан к текущему профилю (не более одного дополнительного).</p>' +
-      '<div class="ns-modal-actions">' +
-      '<a class="btn-primary" href="register.html">Зарегистрироваться</a>' +
-      '<a class="btn-secondary" href="login.html">Войти в другой аккаунт</a>' +
-      "</div></div>";
-    document.body.appendChild(root);
-    function close() {
-      clearPendingLinkPrimary();
-      closeNsLinkAccountModal();
-    }
-    var x = root.querySelector("[data-ns-link-close]");
-    if (x) x.addEventListener("click", close);
-    root.addEventListener("click", function (e) {
-      if (e.target === root) close();
-    });
-  }
-
   function findUserByLoginOrEmail(data, needle) {
     var q = String(needle || "").trim().toLowerCase();
     if (!q) return null;
@@ -685,7 +550,7 @@
       balanceRub: 0,
       depositRub: 0,
       registration: "",
-      numericId: getOrCreatePublicNumericId(id),
+      numericId: null,
       gender: "—",
       birthday: "—",
       status: "В сети",
@@ -719,7 +584,6 @@
     data.sessionUserId = rec.id;
     data._sessionGuest = false;
     mergeRegisteredUsersIntoData(data);
-    syncPublicNumericIds(data);
   }
 
   function mergeLocalUserPrefs(data) {
@@ -762,12 +626,7 @@
     return typeof s === "string" && s.indexOf("data:image/") === 0 && s.length < 600000;
   }
 
-  function fileToCompressedDataUrl(file, callback, opts) {
-    opts = opts || {};
-    var maxW = typeof opts.maxW === "number" ? opts.maxW : 900;
-    var q1 = typeof opts.quality === "number" ? opts.quality : 0.82;
-    var q2 = typeof opts.quality2 === "number" ? opts.quality2 : 0.58;
-    var softCap = typeof opts.softCap === "number" ? opts.softCap : 480000;
+  function fileToCompressedDataUrl(file, callback) {
     if (!file || !file.type || file.type.indexOf("image/") !== 0) {
       callback(null);
       return;
@@ -777,6 +636,7 @@
       var dataUrl = reader.result;
       var img = new Image();
       img.onload = function () {
+        var maxW = 900;
         var w = img.width;
         var h = img.height;
         if (w > maxW) {
@@ -788,12 +648,9 @@
         canvas.height = h;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
-        var out = canvas.toDataURL("image/jpeg", q1);
-        if (out.length > softCap) {
-          out = canvas.toDataURL("image/jpeg", q2);
-        }
-        if (out.length > softCap) {
-          out = canvas.toDataURL("image/jpeg", 0.45);
+        var out = canvas.toDataURL("image/jpeg", 0.82);
+        if (out.length > 480000) {
+          out = canvas.toDataURL("image/jpeg", 0.62);
         }
         callback(out);
       };
@@ -808,7 +665,7 @@
     reader.readAsDataURL(file);
   }
 
-  function filesToDataUrlList(files, maxCount, callback, opts) {
+  function filesToDataUrlList(files, maxCount, callback) {
     var list = [];
     var slice = [].slice.call(files || [], 0, maxCount);
     var i = 0;
@@ -821,7 +678,7 @@
         if (url) list.push(url);
         i++;
         step();
-      }, opts);
+      });
     }
     step();
   }
@@ -842,6 +699,210 @@
   var EMAIL_CODES_KEY = "nightstore_email_codes_v1";
   var LINKED_ACCOUNTS_KEY = "nightstore_linked_accounts_v1";
   var HIDE_BALANCE_KEY = "nightstore_hide_balance_v1";
+  var PUBLIC_NID_MAP_KEY = "nightstore_public_numeric_id_map_v1";
+  var PUBLIC_NID_NEXT_KEY = "nightstore_public_numeric_id_next_v1";
+  var PUBLIC_NID_MIN = 10000001;
+  var PUBLIC_NID_MAX = 99999999;
+  var PENDING_LINK_PRIMARY_KEY = "nightstore_pending_link_primary_v1";
+
+  function loadPublicNumericIdMap() {
+    try {
+      var m = JSON.parse(localStorage.getItem(PUBLIC_NID_MAP_KEY) || "{}");
+      return m && typeof m === "object" ? m : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function savePublicNumericIdMap(map) {
+    try {
+      localStorage.setItem(PUBLIC_NID_MAP_KEY, JSON.stringify(map));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function loadPublicNumericIdNext() {
+    try {
+      var n = Number(localStorage.getItem(PUBLIC_NID_NEXT_KEY));
+      if (isFinite(n) && n >= PUBLIC_NID_MIN && n <= PUBLIC_NID_MAX) return Math.floor(n);
+    } catch (e) {
+      /* ignore */
+    }
+    return PUBLIC_NID_MIN;
+  }
+
+  function savePublicNumericIdNext(n) {
+    try {
+      localStorage.setItem(PUBLIC_NID_NEXT_KEY, String(Math.floor(n)));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function numericIdTakenInMap(map, nid, exceptUserId) {
+    var k;
+    for (k in map) {
+      if (!Object.prototype.hasOwnProperty.call(map, k)) continue;
+      if (exceptUserId && k === exceptUserId) continue;
+      if (Number(map[k]) === Number(nid)) return true;
+    }
+    return false;
+  }
+
+  function ensureUsersHaveStablePublicNumericIds(data) {
+    var map = loadPublicNumericIdMap();
+    var changed = false;
+    var users = data.users || [];
+    var seq = loadPublicNumericIdNext();
+    var i;
+    for (i = 0; i < users.length; i++) {
+      var u = users[i];
+      if (!u || !u.id) continue;
+      var fromMap = map[u.id];
+      if (fromMap != null && isFinite(Number(fromMap))) {
+        var fm = Number(fromMap);
+        if (u.numericId !== fm) {
+          u.numericId = fm;
+          changed = true;
+        }
+        continue;
+      }
+      var cur = Number(u.numericId);
+      var curOk =
+        isFinite(cur) &&
+        cur >= PUBLIC_NID_MIN &&
+        cur <= PUBLIC_NID_MAX &&
+        !numericIdTakenInMap(map, cur, u.id);
+      if (curOk) {
+        map[u.id] = cur;
+        changed = true;
+        continue;
+      }
+      while (seq <= PUBLIC_NID_MAX && numericIdTakenInMap(map, seq, null)) {
+        seq++;
+      }
+      if (seq > PUBLIC_NID_MAX) seq = PUBLIC_NID_MIN;
+      map[u.id] = seq;
+      u.numericId = seq;
+      seq++;
+      changed = true;
+    }
+    if (changed) {
+      var maxUsed = PUBLIC_NID_MIN - 1;
+      Object.keys(map).forEach(function (k) {
+        maxUsed = Math.max(maxUsed, Number(map[k]) || 0);
+      });
+      if (maxUsed >= PUBLIC_NID_MIN) savePublicNumericIdNext(maxUsed + 1);
+      else savePublicNumericIdNext(seq);
+      savePublicNumericIdMap(map);
+      var arr = loadRegisteredUsersRaw();
+      var touched = false;
+      arr.forEach(function (r) {
+        if (r && r.id && map[r.id] != null && Number(r.numericId) !== Number(map[r.id])) {
+          r.numericId = Number(map[r.id]);
+          touched = true;
+        }
+      });
+      if (touched) saveRegisteredUsersRaw(arr);
+    }
+  }
+
+  function tryFinishPendingAccountLink(data) {
+    var raw = null;
+    try {
+      raw = sessionStorage.getItem(PENDING_LINK_PRIMARY_KEY);
+    } catch (e) {
+      raw = null;
+    }
+    if (!raw) return;
+    var me = sessionUser(data);
+    if (!me || me.id === raw) return;
+    if (loadLinkedAccountIds(raw).length >= 1) {
+      try {
+        sessionStorage.removeItem(PENDING_LINK_PRIMARY_KEY);
+      } catch (e2) {
+        /* ignore */
+      }
+      return;
+    }
+    saveLinkedAccountIds(raw, [me.id]);
+    try {
+      sessionStorage.removeItem(PENDING_LINK_PRIMARY_KEY);
+    } catch (e3) {
+      /* ignore */
+    }
+    window.alert("Новый аккаунт привязан к основному.");
+  }
+
+  function openNightstoreLinkAccountDialog(data, primaryUser) {
+    var old = document.getElementById("nsLinkAccountOverlay");
+    if (old) old.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "nsLinkAccountOverlay";
+    overlay.className = "ns-modal-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "nsLinkAccTitle");
+    overlay.innerHTML =
+      '<div class="ns-modal ns-modal--link">' +
+      '<button type="button" class="ns-modal__close" data-ns-link-close aria-label="Закрыть">×</button>' +
+      '<h2 id="nsLinkAccTitle" class="ns-modal__title">Второй аккаунт</h2>' +
+      '<p class="ns-modal__text">Привяжите уже существующий логин или создайте новый — после регистрации он будет автоматически привязан к «' +
+      escapeHtml(primaryUser.username) +
+      '».</p>' +
+      '<div class="ns-modal__actions">' +
+      '<button type="button" class="btn-primary" data-ns-link-reg>Зарегистрировать новый</button>' +
+      '<button type="button" class="btn-secondary" data-ns-link-existing>Привязать существующий</button>' +
+      "</div>" +
+      '<div class="ns-modal__panel" data-ns-link-panel hidden>' +
+      '<label class="ns-modal__label" for="nsLinkLoginInput">Логин пользователя</label>' +
+      '<input type="text" id="nsLinkLoginInput" class="ns-modal__input" autocomplete="username" />' +
+      '<button type="button" class="btn-primary ns-modal__submit" data-ns-link-submit>Привязать</button>' +
+      "</div>" +
+      "</div>";
+    document.body.appendChild(overlay);
+    function close() {
+      overlay.remove();
+    }
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay || e.target.hasAttribute("data-ns-link-close")) close();
+    });
+    overlay.querySelector("[data-ns-link-reg]").addEventListener("click", function () {
+      try {
+        sessionStorage.setItem(PENDING_LINK_PRIMARY_KEY, primaryUser.id);
+      } catch (e) {
+        window.alert("Не удалось сохранить контекст привязки.");
+        return;
+      }
+      window.location.href = "register.html";
+    });
+    overlay.querySelector("[data-ns-link-existing]").addEventListener("click", function () {
+      var panel = overlay.querySelector("[data-ns-link-panel]");
+      if (panel) panel.hidden = false;
+    });
+    overlay.querySelector("[data-ns-link-submit]").addEventListener("click", function () {
+      var inp = document.getElementById("nsLinkLoginInput");
+      var log = inp ? String(inp.value || "").trim() : "";
+      if (!log) {
+        window.alert("Введите логин.");
+        return;
+      }
+      var target = findUserByLoginOrEmail(data, log);
+      if (!target || target.id === primaryUser.id) {
+        window.alert("Пользователь не найден или это ваш текущий аккаунт.");
+        return;
+      }
+      if (loadLinkedAccountIds(primaryUser.id).length >= 1) {
+        window.alert("Уже привязан максимум один дополнительный аккаунт.");
+        close();
+        return;
+      }
+      saveLinkedAccountIds(primaryUser.id, [target.id]);
+      paintUserMegaMenu(data);
+      close();
+    });
+  }
 
   function loadWallEmojiRecent() {
     try {
@@ -926,6 +987,7 @@
       paintGuestAuthDropdown();
       return;
     }
+    tryFinishPendingAccountLink(data);
     document.querySelectorAll(".js-user-name").forEach(function (el) {
       el.textContent = u.username;
     });
@@ -1197,11 +1259,7 @@
     if (ad) {
       ad.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (loadLinkedAccountIds(u.id).length >= 1) {
-          window.alert("Уже привязан максимум один дополнительный аккаунт.");
-          return;
-        }
-        openLinkSecondAccountModal(data, u);
+        openNightstoreLinkAccountDialog(data, u);
       });
     }
     var avBig = panel.querySelector(".user-mega__av");
@@ -1276,13 +1334,21 @@
   }
 
   function saveNotifications(username, arr) {
-    var copy = arr.slice(0, 200);
-    for (var lim = 200; lim >= 15; lim = Math.max(15, Math.floor(lim * 0.65))) {
+    var cap = 100;
+    try {
+      localStorage.setItem(notifStorageKey(username), JSON.stringify(arr.slice(0, cap)));
+      return true;
+    } catch (e) {
       try {
-        localStorage.setItem(notifStorageKey(username), JSON.stringify(copy.slice(0, lim)));
-        return;
-      } catch (e) {
-        copy = copy.slice(0, Math.max(10, lim - 8));
+        var slim = arr
+          .filter(function (x) {
+            return x && !x.read;
+          })
+          .slice(0, 45);
+        localStorage.setItem(notifStorageKey(username), JSON.stringify(slim));
+        return true;
+      } catch (e2) {
+        return false;
       }
     }
   }
@@ -1290,10 +1356,13 @@
   function pushNotification(username, item) {
     var list = loadNotifications(username);
     list.unshift(item);
-    if (list.length > 220) {
-      list = list.slice(0, 220);
+    if (!saveNotifications(username, list)) {
+      list = loadNotifications(username).filter(function (x) {
+        return x && !x.read;
+      });
+      list.unshift(item);
+      saveNotifications(username, list.slice(0, 50));
     }
-    saveNotifications(username, list);
   }
 
   function userIsModerator(data, u) {
@@ -2029,6 +2098,10 @@
     return "nightstore_threads_" + encodeURIComponent(username || "guest");
   }
 
+  function wallStorageKey(username) {
+    return "nightstore_wall_" + encodeURIComponent(username || "guest");
+  }
+
   function normalizeThread(th) {
     if (!th || typeof th !== "object") return th;
     if (th.ts == null) th.ts = Date.now();
@@ -2434,7 +2507,7 @@
             voteByUser: voteByUser,
             deleted: !!p.deleted,
             images: Array.isArray(p.images)
-              ? p.images.filter(isDataImageUrl).slice(0, 3)
+              ? p.images.filter(isDataImageUrl).slice(0, 8)
               : [],
             comments: comments,
             poll: normalizeWallPoll(p.poll),
@@ -2457,33 +2530,54 @@
     return p;
   }
 
+  function cloneWallPostsForSave(posts) {
+    return (posts || []).slice(0, 80).map(function (p) {
+      if (!p || typeof p !== "object") return p;
+      var o = Object.assign({}, p);
+      o.images = Array.isArray(p.images) ? p.images.slice() : [];
+      o.comments = Array.isArray(p.comments) ? p.comments.map(function (c) {
+        return c && typeof c === "object" ? Object.assign({}, c) : c;
+      }) : [];
+      return o;
+    });
+  }
+
+  function stripWallPostImages(list) {
+    list.forEach(function (p) {
+      if (p && typeof p === "object") p.images = [];
+    });
+  }
+
   function saveWallPosts(profileUsername, posts) {
-    var maxPosts = 40;
-    var slice = posts.slice(0, maxPosts);
-    for (var attempt = 0; attempt < 18; attempt++) {
+    var key = wallStorageKey(profileUsername);
+    var work = cloneWallPostsForSave(posts);
+    function write(list) {
       try {
-        localStorage.setItem(wallStorageKey(profileUsername), JSON.stringify(slice));
+        localStorage.setItem(key, JSON.stringify(list));
         return true;
       } catch (e) {
-        if (!slice.length) break;
-        if (slice.length > 1) {
-          slice = slice.slice(0, -1);
-          continue;
-        }
-        var stripped = false;
-        slice = slice.map(function (p, idx) {
-          if (!p || idx !== slice.length - 1) return p;
-          if (p.images && p.images.length) {
-            stripped = true;
-            return Object.assign({}, p, { images: [] });
-          }
-          return p;
-        });
-        if (!stripped) break;
+        return false;
+      }
+    }
+    if (write(work)) return true;
+    stripWallPostImages(work);
+    if (write(work)) {
+      window.alert(
+        "Места в браузере мало: вложения в постах на стене сжаты (без картинок в сохранении). Удалите старые посты или очистите данные сайта, если нужно полное хранение."
+      );
+      return true;
+    }
+    while (work.length > 8) {
+      work.pop();
+      if (write(work)) {
+        window.alert(
+          "Часть старых постов на стене удалена из сохранения из‑за переполнения хранилища браузера."
+        );
+        return true;
       }
     }
     window.alert(
-      "Не удалось сохранить данные стены: хранилище браузера переполнено. Удалите старые посты или уменьшите число фото."
+      "Не удалось сохранить данные стены: хранилище браузера переполнено. Освободите место (другие сайты в localStorage) или удалите тяжёлые данные Night Store в настройках браузера."
     );
     return false;
   }
@@ -2927,18 +3021,13 @@
           wallImgInput.click();
         });
         wallImgInput.addEventListener("change", function () {
-          filesToDataUrlList(
-            wallImgInput.files,
-            Math.max(0, 3 - wallPendingImages.length),
-            function (got) {
+          filesToDataUrlList(wallImgInput.files, 6 - wallPendingImages.length, function (got) {
             got.forEach(function (u) {
-              if (wallPendingImages.length < 3) wallPendingImages.push(u);
+              if (wallPendingImages.length < 6) wallPendingImages.push(u);
             });
             wallImgInput.value = "";
             paintWallPending();
-          },
-            { maxW: 560, quality: 0.68, quality2: 0.5, softCap: 130000 }
-          );
+          });
         });
       }
 
@@ -3201,7 +3290,7 @@
         var newPost = {
           id: Date.now(),
           body: text,
-          images: wallPendingImages.slice(0, 3),
+          images: wallPendingImages.slice(0, 6),
           author: session.username,
           date: formatThreadDate(),
           likes: 0,
@@ -3501,8 +3590,8 @@
     }
     if (!u) u = sessionUser(data);
 
-    syncPublicNumericIds(data);
     var session = sessionUser(data);
+    var isOwn = !!(session && u && session.id === u.id);
 
     document.title = u.username + " — Night Store";
 
@@ -3528,7 +3617,7 @@
 
     var amount = document.querySelector(".js-deposit-amount");
     if (amount) {
-      var viewer = session;
+      var viewer = sessionUser(data);
       amount.setAttribute("data-deposit-rub", String(u.depositRub || 0));
       amount.textContent = formatRubForViewer(
         data,
@@ -3550,7 +3639,7 @@
 
     var fields = [
       ["js-reg", u.registration],
-      ["js-nid", String(u.numericId || "—")],
+      ["js-nid", String(u.numericId)],
       ["js-gender", u.gender],
       ["js-bday", u.birthday],
     ];
@@ -3559,28 +3648,8 @@
       if (el) el.textContent = pair[1];
     });
 
-    function setProfileStat(sel, n) {
-      var el = document.querySelector(sel);
-      if (el) el.textContent = String(Math.max(0, Math.round(Number(n) || 0)));
-    }
-    setProfileStat(".js-profile-stat-sym", u.likes);
-    setProfileStat(".js-profile-stat-likes", u.subscriptions);
-    setProfileStat(".js-profile-stat-msg", u.messages);
-    setProfileStat(".js-profile-stat-troph", u.trophies);
-    setProfileStat(".js-profile-stat-give", u.giveaways);
-    setProfileStat(".js-profile-stat-sub", u.subscriptions);
-    setProfileStat(".js-profile-stat-follow", u.followers);
-
     var linksUser = document.querySelector(".js-profile-links-user");
     if (linksUser) linksUser.textContent = u.username;
-
-    var isOwn = !!(session && u.id === session.id);
-
-    var modTab = document.getElementById("profileModTab");
-    if (modTab) modTab.hidden = !(session && canModerate(data, session));
-
-    var topicsTitle = document.getElementById("user-topics");
-    if (topicsTitle) topicsTitle.textContent = isOwn ? "Ваши темы" : "Темы";
 
     var threads = loadProfileThreads(u.username);
     var threadsRoot = document.getElementById("profileThreadsRoot");
@@ -3608,6 +3677,69 @@
       wallAv.src = u.avatar;
       wallAv.alt = "";
       attachAvatarFallback(wallAv, u.username);
+    }
+
+    var editBtn0 = document.getElementById("profileAvatarBtn");
+    var avInp0 = document.getElementById("profileAvatarInput");
+    if (editBtn0) editBtn0.hidden = !isOwn;
+    if (avInp0) avInp0.disabled = !isOwn;
+
+    var statsEl = document.getElementById("profileStatsRow");
+    if (statsEl) {
+      var rep = u.reputation != null ? Number(u.reputation) : Number(u.likes) || 0;
+      function statTile(label, val) {
+        return (
+          '<div class="profile-stats__item"><span class="profile-stats__val">' +
+          formatIntRu(val) +
+          '</span><span class="profile-stats__label">' +
+          escapeHtml(label) +
+          "</span></div>"
+        );
+      }
+      statsEl.innerHTML =
+        statTile("Репутация", rep) +
+        statTile("Лайки", u.likes) +
+        statTile("Сообщения", u.messages) +
+        statTile("Кубки", u.trophies) +
+        statTile("Розыгрыши", u.giveaways) +
+        statTile("Подписки", u.subscriptions) +
+        statTile("Подписчики", u.followers);
+    }
+
+    var ut = document.getElementById("user-topics");
+    if (ut) ut.textContent = isOwn ? "Ваши темы" : "Темы пользователя";
+
+    var modTab = document.getElementById("profileTabModeration");
+    if (modTab) {
+      var sv = sessionUser(data);
+      modTab.hidden = !(sv && canModerate(data, sv));
+      if (!modTab.dataset.nsWired) {
+        modTab.dataset.nsWired = "1";
+        modTab.addEventListener("click", function () {
+          window.location.href = "moderation.html";
+        });
+      }
+    }
+
+    var copyNid = document.getElementById("profileCopyNid");
+    if (copyNid && !copyNid.dataset.nsWired) {
+      copyNid.dataset.nsWired = "1";
+      copyNid.addEventListener("click", function () {
+        var t = String(u.numericId || "");
+        function ok() {
+          copyNid.classList.add("is-copied");
+          setTimeout(function () {
+            copyNid.classList.remove("is-copied");
+          }, 900);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(t).then(ok).catch(function () {
+            window.prompt("Скопируйте ID", t);
+          });
+        } else {
+          window.prompt("Скопируйте ID", t);
+        }
+      });
     }
 
     if (isOwn) {
@@ -3641,9 +3773,6 @@
           avInp.value = "";
         });
       }
-    } else {
-      var hideAvBtn = document.getElementById("profileAvatarBtn");
-      if (hideAvBtn) hideAvBtn.hidden = true;
     }
 
     if (!window.__nightstoreProfileFxBound) {
@@ -4405,9 +4534,6 @@
         var next = new URLSearchParams(location.search).get("next");
         function goAfterLogin(u) {
           writeSession(u.id);
-          mergeRegisteredUsersIntoData(data);
-          syncPublicNumericIds(data);
-          consumePendingAccountLink(data, u.id);
           if (!u.emailVerified) {
             window.location.href = "verify-email.html";
             return;
@@ -4579,7 +4705,7 @@
               balanceRub: 0,
               depositRub: 0,
               registration: "",
-              numericId: getOrCreatePublicNumericId(id),
+              numericId: null,
               gender: "—",
               birthday: "—",
               status: "В сети",
@@ -4595,8 +4721,6 @@
             saveRegisteredUsersRaw(arr);
             writeSession(id);
             mergeRegisteredUsersIntoData(data);
-            syncPublicNumericIds(data);
-            consumePendingAccountLink(data, id);
             window.alert(
               "Аккаунт создан. На почту отправлено письмо для подтверждения (Firebase). Откройте ссылку в письме."
             );
@@ -4621,7 +4745,7 @@
         balanceRub: 0,
         depositRub: 0,
         registration: "",
-        numericId: getOrCreatePublicNumericId(id),
+        numericId: null,
         gender: "—",
         birthday: "—",
         status: "В сети",
@@ -4636,9 +4760,6 @@
       });
       saveRegisteredUsersRaw(arr);
       writeSession(id);
-      mergeRegisteredUsersIntoData(data);
-      syncPublicNumericIds(data);
-      consumePendingAccountLink(data, id);
       window.alert("Аккаунт создан. Подтвердите почту. Код: " + code + " (15 мин.)");
       window.location.href = "verify-email.html";
     });
@@ -4742,7 +4863,6 @@
       .then(function (data) {
         window.NightStoreData = data;
         mergeRegisteredUsersIntoData(data);
-        syncPublicNumericIds(data);
         normalizeAvatarsInData(data);
         mergeSessionFromStorage(data);
         return firebaseWait.then(function () {
@@ -4752,6 +4872,7 @@
       })
       .then(function (data) {
         mergeLocalUserPrefs(data);
+        ensureUsersHaveStablePublicNumericIds(data);
         ensureFxRatesMerged(data, function () {
           if (!gateSiteAccess(data, page)) return;
           applySessionUser(data);

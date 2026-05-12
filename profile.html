@@ -79,7 +79,7 @@
       </aside>
 
       <div class="profile-main">
-        <div class="profile-main-card">
+      <div class="sidebar-card profile-main-card">
         <div class="profile-name-row">
           <h1 class="profile-h1 profile-h1--linked"><a class="profile-title-link js-profile-h1" href="profile.html">…</a></h1>
           <span class="profile-mod-badge" id="profileModBadge" hidden title="Модератор Night Store" aria-label="Модератор">
@@ -90,19 +90,19 @@
         <p class="status-line js-profile-status">…</p>
         <div class="info-grid">
           <div class="info-item"><span class="info-item__label">Регистрация</span><span class="info-item__value js-reg">—</span></div>
-          <div class="info-item"><span class="info-item__label">ID</span><span class="info-item__value js-nid">—</span></div>
+          <div class="info-item info-item--nid">
+            <span class="info-item__label">ID</span>
+            <span class="info-item__nid-row">
+              <span class="info-item__value js-nid">—</span>
+              <button type="button" class="profile-nid-copy" id="profileCopyNid" title="Копировать ID" aria-label="Копировать ID">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+            </span>
+          </div>
           <div class="info-item"><span class="info-item__label">Пол</span><span class="info-item__value js-gender">—</span></div>
           <div class="info-item"><span class="info-item__label">День рождения</span><span class="info-item__value js-bday">—</span></div>
         </div>
-        <div class="profile-stats-rail" aria-label="Статистика профиля">
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-sym">0</strong> симпатий</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-likes">0</strong> лайков</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-msg">0</strong> сообщений</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-troph">0</strong> трофеев</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-give">0</strong> розыгрышей</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-sub">0</strong> подписок</span>
-          <span class="profile-stats-rail__item"><strong class="js-profile-stat-follow">0</strong> подписчиков</span>
-        </div>
+        <div class="profile-stats" id="profileStatsRow" aria-label="Статистика"></div>
         <p style="margin:0 0 16px;font-size:0.9rem">
           <a class="js-profile-threads-link" href="profile.html">Темы от <span class="js-profile-links-user">…</span></a> · <a href="market.html">Аккаунты на маркете</a>
         </p>
@@ -132,7 +132,7 @@
           <button type="button" class="tab" role="tab">Недавние сообщения</button>
           <button type="button" class="tab" role="tab">Споры</button>
           <button type="button" class="tab" role="tab">История блокировок</button>
-          <a href="moderation.html" class="tab tab--link" role="tab" id="profileModTab" hidden>Модерация</a>
+          <button type="button" class="tab" id="profileTabModeration" role="tab" hidden>Модерация</button>
         </div>
 
         <div class="profile-wall-wrap">
