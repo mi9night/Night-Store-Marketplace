@@ -440,6 +440,35 @@
     }
   }
 
+  /** Если текущий аккаунт указан как «второй» у другого в localStorage — вернуть id того основного. */
+  function findPrimaryThatLinksTo(linkedUserId) {
+    var lid = String(linkedUserId || "");
+    if (!lid) return null;
+    try {
+      var m = JSON.parse(localStorage.getItem(LINKED_ACCOUNTS_KEY) || "{}");
+      if (!m || typeof m !== "object") return null;
+      var k;
+      for (k in m) {
+        if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+        var arr = m[k];
+        if (!Array.isArray(arr)) continue;
+        var hit = arr.some(function (x) {
+          return String(x) === lid;
+        });
+        if (hit) return k;
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  function getLinkedPartnerUserId(currentUserId) {
+    var row = loadLinkedAccountIds(currentUserId);
+    if (row.length) return row[0];
+    return findPrimaryThatLinksTo(currentUserId);
+  }
+
   function findUserByLoginOrEmail(data, needle) {
     var q = String(needle || "").trim().toLowerCase();
     if (!q) return null;
@@ -1234,12 +1263,8 @@
     }).join("");
 
     var mod = canModerate(data, u);
-    var linkedIds = loadLinkedAccountIds(u.id);
-    var linkedUsers = linkedIds
-      .map(function (id) {
-        return userById(data, id);
-      })
-      .filter(Boolean);
+    var partnerId = getLinkedPartnerUserId(u.id);
+    var linkedUsers = partnerId ? [userById(data, partnerId)].filter(Boolean) : [];
     var canAddLink = linkedUsers.length < 1;
 
     var myProf = "profile.html?user=" + encodeURIComponent(u.username);
@@ -1524,29 +1549,16 @@
     return !!(u && String(u.email || "").toLowerCase() === ANCHOR_PUBLIC_NID_EMAIL);
   }
 
-  function stripAdminExceptAnchorEmail(data) {
-    (data.users || []).forEach(function (u) {
-      if (!u) return;
-      if (isAnchoredAdminUser(u)) {
-        u.isModerator = true;
-        u.isOwner = true;
-      } else {
-        u.isModerator = false;
-        u.isOwner = false;
-      }
-    });
-  }
-
   function userIsModerator(data, u) {
-    return isAnchoredAdminUser(u);
+    return isAnchoredAdminUser(u) || !!(u && (u.isModerator === true || u.role === "moderator"));
   }
 
   function userIsOwner(data, u) {
-    return isAnchoredAdminUser(u);
+    return isAnchoredAdminUser(u) || !!(u && u.isOwner === true);
   }
 
   function canModerate(data, u) {
-    return isAnchoredAdminUser(u);
+    return userIsModerator(data, u) || userIsOwner(data, u);
   }
 
   function loadModTickets() {
@@ -3754,14 +3766,29 @@
 
   function initProfile(data) {
     var params = new URLSearchParams(window.location.search);
-    var wanted = params.get("user");
+    var wantedRaw = params.get("user");
+    var wanted = null;
+    if (wantedRaw) {
+      try {
+        wanted = decodeURIComponent(String(wantedRaw).trim());
+      } catch (eDec) {
+        wanted = String(wantedRaw).trim();
+      }
+    }
     var u = null;
     if (wanted) {
+      var wl = wanted.toLowerCase();
       u = (data.users || []).find(function (x) {
-        return x.username === wanted;
+        return String(x.username || "").toLowerCase() === wl;
       });
     }
     if (!u) u = sessionUser(data);
+
+    if (!u) {
+      var next = encodeURIComponent(location.pathname + location.search + location.hash);
+      window.location.href = "login.html?next=" + next;
+      return;
+    }
 
     var session = sessionUser(data);
     var isOwn = !!(session && u && session.id === u.id);
@@ -5315,7 +5342,6 @@
       })
       .then(function (data) {
         mergeLocalUserPrefs(data);
-        stripAdminExceptAnchorEmail(data);
         ensureUsersHaveStablePublicNumericIds(data);
         ensureFxRatesMerged(data, function () {
           if (!gateSiteAccess(data, page)) return;
