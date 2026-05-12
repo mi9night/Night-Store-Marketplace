@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Настройки — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="settings">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <nav class="nav-main" aria-label="Основное меню">
+          <a href="market.html">Маркет</a>
+          <a href="help.html">Статьи</a>
+          <a href="help.html">Гарант</a>
+          <a href="help.html">Соц. сети</a>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="nav-more-btn" data-dropdown-toggle aria-expanded="false">Другое ▾</button>
+            <div class="dropdown-panel">
+              <a href="help.html">FAQ</a>
+              <a href="help.html">Правила</a>
+            </div>
+          </div>
+        </nav>
+        <div class="header-search">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" placeholder="Поиск людей и товаров…" autocomplete="off" />
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-btn" aria-label="Сообщения"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="market.html">Маркет</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <span>Настройки</span></nav>
+
+    <main class="layout-settings">
+      <aside class="settings-sidebar" data-settings-nav>
+        <div class="settings-nav-group">
+          <h3 class="settings-nav-group__title">Профиль</h3>
+          <button type="button" class="settings-nav__btn is-active" data-settings-tab="personal">Персональная информация</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="contact">Контактная информация</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="prefs">Предпочтения</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="privacy">Приватность</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="blacklist">Чёрный список</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="status">Повышение статуса</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="usernotes">Заметки о пользователях</button>
+        </div>
+        <div class="settings-nav-group">
+          <h3 class="settings-nav-group__title">Уведомления</h3>
+          <button type="button" class="settings-nav__btn" data-settings-tab="notifs">Настройки оповещений</button>
+        </div>
+        <div class="settings-nav-group">
+          <h3 class="settings-nav-group__title">Безопасность и доступ</h3>
+          <button type="button" class="settings-nav__btn" data-settings-tab="security">Безопасность</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="secret">Секретная фраза</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="twofa">Двухфакторная аутентификация</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="authz">Авторизации</button>
+        </div>
+        <div class="settings-nav-group">
+          <h3 class="settings-nav-group__title">Аккаунты и интеграции</h3>
+          <button type="button" class="settings-nav__btn" data-settings-tab="external">Внешние учётные записи</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="linked">Привязанные аккаунты</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="devapi">API для разработчика</button>
+        </div>
+        <div class="settings-nav-group">
+          <h3 class="settings-nav-group__title">Маркет, финансы и сервисы</h3>
+          <button type="button" class="settings-nav__btn" data-settings-tab="merchants">Мерчанты</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="marketset">Настройки маркета</button>
+          <button type="button" class="settings-nav__btn" data-settings-tab="modset">Модерация</button>
+        </div>
+      </aside>
+      <div class="settings-content">
+        <section class="settings-panel sidebar-card" data-settings-panel="personal">
+          <h1 class="settings-panel__h1">Персональная информация</h1>
+          <p class="settings-panel__muted">Имя, аватар и основные данные берутся из профиля. Редактирование — на странице профиля.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="contact" hidden>
+          <h1 class="settings-panel__h1">Контактная информация</h1>
+          <p class="settings-panel__muted">E-mail и способы связи. В прототипе данные из аккаунта.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="prefs" hidden>
+          <h1 class="settings-panel__h1">Предпочтения</h1>
+          <p class="settings-panel__muted">Язык, валюта отображения и тема — часть настроек вынесена в меню профиля (валюта).</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="privacy" hidden>
+          <h1 class="settings-panel__h1">Приватность</h1>
+          <p class="settings-panel__muted">Кто видит профиль и активность.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="blacklist" hidden>
+          <h1 class="settings-panel__h1">Чёрный список</h1>
+          <p class="settings-panel__muted">Список скрытых пользователей.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="status" hidden>
+          <h1 class="settings-panel__h1">Повышение статуса</h1>
+          <p class="settings-panel__muted">Условия и уровни аккаунта.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="usernotes" hidden>
+          <h1 class="settings-panel__h1">Заметки о пользователях</h1>
+          <p class="settings-panel__muted">Личные пометки на страницах других пользователей.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="notifs" hidden>
+          <h1 class="settings-panel__h1">Настройки оповещений</h1>
+          <p class="settings-panel__muted">Отдельная страница уведомлений: <a href="notifications.html">notifications.html</a>.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="security" hidden>
+          <h1 class="settings-panel__h1">Безопасность</h1>
+          <p class="settings-panel__muted">Пароль и вход. Смена пароля через регистрацию/Firebase в вашей сборке.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="secret" hidden>
+          <h1 class="settings-panel__h1">Секретная фраза</h1>
+          <p class="settings-panel__muted">Резервный доступ к аккаунту.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="twofa" hidden>
+          <h1 class="settings-panel__h1">Двухфакторная аутентификация</h1>
+          <p class="settings-panel__muted">2FA пока не подключена к бэкенду.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="authz" hidden>
+          <h1 class="settings-panel__h1">Авторизации</h1>
+          <p class="settings-panel__muted">Сессии и устройства.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="external" hidden>
+          <h1 class="settings-panel__h1">Внешние учётные записи</h1>
+          <p class="settings-panel__muted">Привязка соцсетей и OAuth.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="linked" hidden>
+          <h1 class="settings-panel__h1">Привязанные аккаунты</h1>
+          <p class="settings-panel__muted">Второй аккаунт настраивается в меню профиля (кнопка «Привязать…»).</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="devapi" hidden>
+          <h1 class="settings-panel__h1">API для разработчика</h1>
+          <p class="settings-panel__muted">Ключи API в будущих версиях.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="merchants" hidden>
+          <h1 class="settings-panel__h1">Мерчанты</h1>
+          <p class="settings-panel__muted">Настройки продавца на маркете.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="marketset" hidden>
+          <h1 class="settings-panel__h1">Настройки маркета</h1>
+          <p class="settings-panel__muted">Фильтры и отображение лотов.</p>
+        </section>
+        <section class="settings-panel sidebar-card" data-settings-panel="modset" hidden>
+          <h1 class="settings-panel__h1">Модерация</h1>
+          <p class="settings-panel__muted">Панель модераторов: <a href="moderation.html">moderation.html</a>.</p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">Night Store · настройки</footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
