@@ -1107,6 +1107,13 @@
     return s.length < MAX_DATA_IMAGE_URL_LEN;
   }
 
+  function nsAllowedChatMediaSrc(src) {
+    var s = String(src || "").trim();
+    if (!s) return false;
+    if (isDataImageUrl(s)) return true;
+    return /^https:\/\//i.test(s);
+  }
+
   function fileToCompressedDataUrl(file, callback, opts) {
     opts = opts || {};
     if (!file || !file.type || file.type.indexOf("image/") !== 0) {
@@ -2457,6 +2464,16 @@
     });
   }
 
+  function closeAllHeaderDropdowns() {
+    document.querySelectorAll(".cart-dropdown.is-open, .msgs-dropdown.is-open, .notif-dropdown.is-open").forEach(function (w) {
+      w.classList.remove("is-open");
+    });
+    document.querySelectorAll("[data-market-cart-toggle],[data-msgs-toggle],[data-notify-toggle]").forEach(function (b) {
+      b.setAttribute("aria-expanded", "false");
+      b.classList.remove("is-header-panel-open");
+    });
+  }
+
   function initNotificationCenter(data) {
     var btn = document.querySelector("[data-notify-toggle]");
     if (!btn || btn.closest(".notif-dropdown")) return;
@@ -2622,9 +2639,12 @@
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      var open = wrap.classList.toggle("is-open");
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) {
+      var wasOpen = wrap.classList.contains("is-open");
+      closeAllHeaderDropdowns();
+      if (!wasOpen) {
+        wrap.classList.add("is-open");
+        btn.setAttribute("aria-expanded", "true");
+        btn.classList.add("is-header-panel-open");
         setTab(activeTab);
         paintList();
       }
@@ -2633,6 +2653,14 @@
     wrap.addEventListener("click", function (e) {
       e.stopPropagation();
     });
+
+    if (!window.__nsHeaderOutsideClose) {
+      window.__nsHeaderOutsideClose = true;
+      document.addEventListener("click", function (e) {
+        if (e.target.closest(".cart-dropdown, .msgs-dropdown, .notif-dropdown")) return;
+        closeAllHeaderDropdowns();
+      });
+    }
 
     updateNotifyBadge(data);
   }
@@ -2676,10 +2704,18 @@
     function paintCartPanel() {
       var d = window.NightStoreData || data;
       var items = loadMarketCart();
-      var total = marketCartGoodsCount(items);
-      if (countLabel) countLabel.textContent = formatGoodsCountRu(total);
-      badge.textContent = total > 99 ? "99+" : String(total || "0");
-      badge.hidden = total === 0;
+      var totalQty = marketCartGoodsCount(items);
+      var sumRub = 0;
+      items.forEach(function (row) {
+        var pp = findProductById(d, row.id);
+        if (pp) sumRub += Math.max(0, Math.floor(Number(pp.price) || 0)) * Math.max(1, Math.floor(Number(row.qty) || 1));
+      });
+      if (countLabel) {
+        countLabel.textContent =
+          formatGoodsCountRu(totalQty) + " · " + formatIntRu(sumRub) + " ₽";
+      }
+      badge.textContent = totalQty > 99 ? "99+" : String(totalQty || "0");
+      badge.hidden = totalQty === 0;
       var vu = sessionUser(d);
       var vun = vu && vu.username ? vu.username : "";
       if (!listEl) return;
@@ -2721,17 +2757,6 @@
             '<span class="cart-line__price">' +
             escapeHtml(price) +
             "</span></a>" +
-            '<div class="cart-line__qty" role="group" aria-label="Количество">' +
-            '<button type="button" class="cart-line__qty-btn" data-cart-delta="' +
-            escapeHtml(String(row.id)) +
-            '" data-cart-step="-1" aria-label="Меньше">−</button>' +
-            '<span class="cart-line__qty-val">' +
-            formatIntRu(row.qty) +
-            "</span>" +
-            '<button type="button" class="cart-line__qty-btn" data-cart-delta="' +
-            escapeHtml(String(row.id)) +
-            '" data-cart-step="1" aria-label="Больше">+</button>' +
-            "</div>" +
             '<button type="button" class="cart-line__remove" data-cart-remove="' +
             escapeHtml(String(row.id)) +
             '" aria-label="Убрать из корзины">×</button>' +
@@ -2745,20 +2770,6 @@
           e.preventDefault();
           e.stopPropagation();
           removeMarketCartLine(b.getAttribute("data-cart-remove") || "");
-          dispatchMarketCartChanged();
-        });
-      });
-      listEl.querySelectorAll("[data-cart-delta]").forEach(function (b) {
-        b.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          var id = b.getAttribute("data-cart-delta") || "";
-          var step = Math.floor(Number(b.getAttribute("data-cart-step")) || 0);
-          var cur = loadMarketCart().find(function (x) {
-            return x.id === id;
-          });
-          var q = (cur ? cur.qty : 1) + step;
-          setMarketCartQty(id, q);
           dispatchMarketCartChanged();
         });
       });
@@ -2796,28 +2807,21 @@
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      var open = wrap.classList.toggle("is-open");
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) paintCartPanel();
+      var wasOpen = wrap.classList.contains("is-open");
+      closeAllHeaderDropdowns();
+      if (!wasOpen) {
+        wrap.classList.add("is-open");
+        btn.setAttribute("aria-expanded", "true");
+        btn.classList.add("is-header-panel-open");
+        paintCartPanel();
+      }
     });
 
     if (!window.__nsMarketCartDocClose) {
       window.__nsMarketCartDocClose = true;
-      document.addEventListener("click", function (e) {
-        if (e.target.closest(".cart-dropdown")) return;
-        document.querySelectorAll(".cart-dropdown.is-open").forEach(function (w) {
-          w.classList.remove("is-open");
-          var t = w.querySelector("[data-market-cart-toggle]");
-          if (t) t.setAttribute("aria-expanded", "false");
-        });
-      });
       document.addEventListener("keydown", function (e) {
         if (e.key !== "Escape") return;
-        document.querySelectorAll(".cart-dropdown.is-open").forEach(function (w) {
-          w.classList.remove("is-open");
-          var t = w.querySelector("[data-market-cart-toggle]");
-          if (t) t.setAttribute("aria-expanded", "false");
-        });
+        closeAllHeaderDropdowns();
       });
     }
 
@@ -2895,6 +2899,9 @@
           var av = ou && ou.avatar ? ou.avatar : dicebearAvatar(other);
           var last = (th.messages || []).slice(-1)[0];
           var prev = last ? (last.from === u.username ? "Вы: " : "") + String(last.body || "").slice(0, 72) : "—";
+          if (last && last.media && last.media.length) {
+            prev = (last.from === u.username ? "Вы: " : "") + "[медиа]";
+          }
           var tss = formatNotifTime(th.updated || 0);
           return (
             '<a class="msgs-dd-row" href="messages.html?with=' +
@@ -2940,22 +2947,15 @@
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      var open = wrap.classList.toggle("is-open");
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) paintMsgsDd();
+      var wasOpen = wrap.classList.contains("is-open");
+      closeAllHeaderDropdowns();
+      if (!wasOpen) {
+        wrap.classList.add("is-open");
+        btn.setAttribute("aria-expanded", "true");
+        btn.classList.add("is-header-panel-open");
+        paintMsgsDd();
+      }
     });
-
-    if (!window.__nsMsgsDocClose) {
-      window.__nsMsgsDocClose = true;
-      document.addEventListener("click", function (e) {
-        if (e.target.closest(".msgs-dropdown")) return;
-        document.querySelectorAll(".msgs-dropdown.is-open").forEach(function (w) {
-          w.classList.remove("is-open");
-          var t = w.querySelector("[data-msgs-toggle]");
-          if (t) t.setAttribute("aria-expanded", "false");
-        });
-      });
-    }
 
     if (!window.__nsMsgsGlobal) {
       window.__nsMsgsGlobal = true;
@@ -2982,6 +2982,19 @@
   function initForum(data) {
     var root = document.getElementById("forumFeed");
     if (!root) return;
+
+    var ixBtn0 = document.getElementById("forumIndexCreateBtn");
+    if (ixBtn0 && !ixBtn0.dataset.nsForumPickWired) {
+      ixBtn0.dataset.nsForumPickWired = "1";
+      ixBtn0.addEventListener("click", function () {
+        var su = sessionUser(data);
+        if (!su || data._sessionGuest) {
+          window.location.href = "register.html?next=" + encodeURIComponent("index.html");
+          return;
+        }
+        openForumSectionPickerModal(data);
+      });
+    }
 
     var u = sessionUser(data);
     var sideName = document.querySelector(".mini-profile .name.js-sidebar-name");
@@ -3061,6 +3074,374 @@
     root.querySelectorAll(".avatar-sm-img").forEach(function (im) {
       attachAvatarFallback(im, im.getAttribute("data-avatar-seed") || "");
     });
+  }
+
+  function nsForumBoardCatalog() {
+    return [
+      {
+        title: "Основная категория",
+        items: [
+          { id: "freebies", label: "Халява", logo: "🎁" },
+          { id: "trade", label: "Торговля", logo: "🛍️" },
+          { id: "jobs", label: "Работа и услуги", logo: "💼" },
+          { id: "arbitrage", label: "Арбитраж", logo: "⚖️" },
+        ],
+      },
+      {
+        title: "Тематическая категория",
+        items: [
+          { id: "thematic", label: "Тематические вопросы", logo: "❓" },
+          { id: "chatgpt", label: "Спроси у ChatGPT", logo: "🧠" },
+          { id: "articles", label: "Статьи", logo: "📄" },
+          { id: "software", label: "Софт", logo: "🛠️" },
+        ],
+      },
+      {
+        title: "Игровая категория",
+        items: [
+          { id: "pubg", label: "PUBG", logo: "🎯" },
+          { id: "cs2", label: "Counter-Strike 2", logo: "🔫" },
+          { id: "dota2", label: "Dota 2", logo: "🛡️" },
+          { id: "overwatch", label: "Overwatch", logo: "⚡" },
+          { id: "fortnite", label: "Fortnite", logo: "🏝️" },
+          { id: "valorant", label: "Valorant", logo: "◼️" },
+          { id: "gta", label: "GTA", logo: "🚗" },
+          { id: "wot", label: "World of Tanks", logo: "🛞" },
+          { id: "mihoyo", label: "miHoYo", logo: "✨" },
+          { id: "deadlock", label: "Deadlock", logo: "🔒" },
+          { id: "survival", label: "Survival игры", logo: "⛏️" },
+          { id: "games_other", label: "Остальные игры", logo: "🎮" },
+        ],
+      },
+      {
+        title: "Общая категория",
+        items: [
+          { id: "offtopic", label: "Малая Оффтопка", logo: "✈️" },
+          { id: "pc", label: "Компьютеры", logo: "🖥️" },
+          { id: "phones", label: "Телефоны", logo: "📱" },
+          { id: "webdev", label: "Веб-разработка", logo: "💻" },
+          { id: "prog", label: "Программирование", logo: "⌨️" },
+          { id: "graphics", label: "Графика", logo: "🎨" },
+          { id: "forum_life", label: "Жизнь форума", logo: "💜" },
+          { id: "test_board", label: "Тестовый раздел", logo: "🧪" },
+        ],
+      },
+    ];
+  }
+
+  function nsForumBoardLabel(boardId) {
+    var bid = String(boardId || "");
+    var groups = nsForumBoardCatalog();
+    for (var gi = 0; gi < groups.length; gi++) {
+      var items = groups[gi].items || [];
+      for (var ii = 0; ii < items.length; ii++) {
+        if (items[ii].id === bid) return items[ii].label;
+      }
+    }
+    if (bid === "user_custom") return "Пользовательский раздел";
+    if (bid.indexOf("trend_") === 0) return "Популярная тема";
+    return bid || "Раздел";
+  }
+
+  function nsForumPopularTiles(data) {
+    var posts = (data && data.forumPosts) || [];
+    var out = [];
+    for (var i = 0; i < posts.length && out.length < 5; i++) {
+      if (posts[i] && posts[i].title) {
+        out.push({ id: "trend_" + i, label: String(posts[i].title).slice(0, 72), logo: "🔥" });
+      }
+    }
+    var fb = [
+      { id: "trend_demo_market", label: "Обсуждения маркета Night Store", logo: "🛒" },
+      { id: "trend_demo_ui", label: "Интерфейс и идеи", logo: "✨" },
+      { id: "trend_demo_lounge", label: "Ночной лаунж", logo: "🌙" },
+    ];
+    for (var j = 0; j < fb.length && out.length < 5; j++) {
+      out.push(fb[j]);
+    }
+    return out.slice(0, 5);
+  }
+
+  function closeForumSectionPickerModal() {
+    var el = document.getElementById("nsForumPickModal");
+    if (el) el.classList.remove("is-open");
+  }
+
+  function openForumSectionPickerModal(data) {
+    data = data || window.NightStoreData;
+    var el = document.getElementById("nsForumPickModal");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "nsForumPickModal";
+      el.className = "ns-forum-pick-modal";
+      el.setAttribute("role", "dialog");
+      el.setAttribute("aria-modal", "true");
+      el.setAttribute("aria-label", "Выбор раздела");
+      document.body.appendChild(el);
+    }
+    var picked = null;
+    function tileHtml(it) {
+      return (
+        '<button type="button" class="ns-forum-tile" data-forum-pick="' +
+        escapeHtml(it.id) +
+        '"><span class="ns-forum-tile__logo" aria-hidden="true">' +
+        escapeHtml(it.logo || "📁") +
+        '</span><span class="ns-forum-tile__text">' +
+        escapeHtml(it.label) +
+        '</span><span class="ns-forum-tile__chev" aria-hidden="true">›</span></button>'
+      );
+    }
+    var groupsHtml = nsForumBoardCatalog()
+      .map(function (g) {
+        return (
+          '<div class="ns-forum-pick-group"><div class="ns-forum-pick-group__title">' +
+          escapeHtml(g.title) +
+          '</div><div class="ns-forum-pick-grid">' +
+          g.items.map(tileHtml).join("") +
+          "</div></div>"
+        );
+      })
+      .join("");
+    var pop = nsForumPopularTiles(data || {});
+    var popHtml =
+      '<div class="ns-forum-pick-group"><div class="ns-forum-pick-group__title">Популярные темы</div><div class="ns-forum-pick-grid">' +
+      pop.map(tileHtml).join("") +
+      "</div></div>";
+    var userHtml =
+      '<div class="ns-forum-pick-user"><button type="button" class="btn-primary ns-forum-pick-user__btn" id="nsForumUserCreateBtn">Создать пользовательскую тему</button></div>';
+    el.innerHTML =
+      '<div class="ns-forum-pick-modal__panel sidebar-card">' +
+      '<div class="ns-forum-pick-modal__head"><div><h2 class="ns-forum-pick-modal__h">Выбор раздела</h2>' +
+      '<p class="mod-sub">Выберите один раздел — откроется редактор темы.</p></div>' +
+      '<button type="button" class="ns-forum-pick-close" data-forum-pick-close aria-label="Закрыть">×</button></div>' +
+      '<input type="search" class="msgs-aside__search ns-forum-pick-search" placeholder="Поиск" id="nsForumPickSearch" />' +
+      '<div class="ns-forum-pick-scroll">' +
+      groupsHtml +
+      userHtml +
+      popHtml +
+      "</div>" +
+      '<div class="ns-forum-pick-foot">' +
+      '<button type="button" class="btn-secondary" data-forum-pick-close>Отмена</button>' +
+      '<button type="button" class="btn-primary" data-forum-pick-go>Продолжить</button>' +
+      "</div></div>";
+    el.classList.add("is-open");
+    function syncPickedUi() {
+      el.querySelectorAll("[data-forum-pick]").forEach(function (b) {
+        b.classList.toggle("is-picked", b.getAttribute("data-forum-pick") === picked);
+      });
+    }
+    el.onclick = function (e) {
+      if (e.target === el) closeForumSectionPickerModal();
+    };
+    el.querySelectorAll("[data-forum-pick-close]").forEach(function (b) {
+      b.onclick = function () {
+        closeForumSectionPickerModal();
+      };
+    });
+    el.querySelectorAll("[data-forum-pick]").forEach(function (b) {
+      b.onclick = function () {
+        picked = b.getAttribute("data-forum-pick") || null;
+        syncPickedUi();
+      };
+    });
+    var go = el.querySelector("[data-forum-pick-go]");
+    if (go) {
+      go.onclick = function () {
+        if (!picked) {
+          showNsToast("Выберите один раздел.");
+          return;
+        }
+        window.location.href = "forum-new-thread.html?board=" + encodeURIComponent(picked);
+        closeForumSectionPickerModal();
+      };
+    }
+    var uc = document.getElementById("nsForumUserCreateBtn");
+    if (uc) {
+      uc.onclick = function () {
+        window.location.href = "forum-new-thread.html?board=user_custom";
+        closeForumSectionPickerModal();
+      };
+    }
+    var sIn = document.getElementById("nsForumPickSearch");
+    if (sIn) {
+      sIn.oninput = function () {
+        var q = sIn.value.trim().toLowerCase();
+        el.querySelectorAll("[data-forum-pick]").forEach(function (b) {
+          var t = (b.textContent || "").toLowerCase();
+          b.hidden = !!(q && t.indexOf(q) === -1);
+        });
+      };
+    }
+  }
+
+  function initForumNewThreadPage(data) {
+    var root = document.getElementById("forumNewThreadRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите, чтобы создавать темы.</p>';
+      initMarketCartDropdown(data);
+      initHeaderMessagesDropdown(data);
+      paintMarketLangStrip(data);
+      return;
+    }
+    var board = "";
+    try {
+      board = new URLSearchParams(location.search).get("board") || "";
+    } catch (eBr) {
+      board = "";
+    }
+    board = String(board || "").trim();
+    if (!board) {
+      root.innerHTML =
+        '<p class="mod-empty">Раздел не выбран. <button type="button" class="btn-primary" id="nsForumPickAgain">Выбрать раздел</button> или <a href="index.html">на главную</a>.</p>';
+      var again = document.getElementById("nsForumPickAgain");
+      if (again) {
+        again.addEventListener("click", function () {
+          openForumSectionPickerModal(data);
+        });
+      }
+      initMarketCartDropdown(data);
+      initHeaderMessagesDropdown(data);
+      paintMarketLangStrip(data);
+      return;
+    }
+    var bLabel = nsForumBoardLabel(board);
+    var pendingFnt = [];
+    root.innerHTML =
+      '<nav class="breadcrumbs" style="margin-bottom:12px"><a href="index.html">Форум</a> / <span>' +
+      escapeHtml(bLabel) +
+      "</span></nav>" +
+      '<div class="sidebar-card fnt-card">' +
+      '<h1 class="fnt-card__h1">Создать тему в разделе: ' +
+      escapeHtml(bLabel) +
+      "</h1>" +
+      '<label class="fnt-label" for="fntPrefix">Префикс</label><p class="mod-sub fnt-hint">Выберите подходящий префикс (демо).</p>' +
+      '<select id="fntPrefix" class="mod-search-input fnt-field"><option value="">Без префикса</option><option>Важно</option><option>Вопрос</option><option>Гайд</option></select>' +
+      '<label class="fnt-label" for="fntTitle">Заголовок</label><p class="mod-sub fnt-hint">Сформулируйте в нескольких словах, о чём тема.</p>' +
+      '<input type="text" id="fntTitle" class="mod-search-input fnt-field" maxlength="200" placeholder="Заголовок темы…" />' +
+      '<label class="fnt-label" for="fntBody">Текст</label>' +
+      '<div class="fnt-toolbar">' +
+      '<button type="button" class="msgs-tb" id="fntEmoji" title="Эмодзи">😀</button>' +
+      '<button type="button" class="msgs-tb" id="fntImg" title="Фото">🖼</button>' +
+      '<button type="button" class="msgs-tb" id="fntGif" title="GIF">GIF</button>' +
+      '<input type="file" id="fntFile" accept="image/*" multiple hidden />' +
+      "</div>" +
+      '<div id="fntPending" class="msgs-pending" hidden></div>' +
+      '<textarea id="fntBody" class="fnt-body" rows="10" maxlength="8000" placeholder="Текст темы…"></textarea>' +
+      '<label class="fnt-label" for="fntTags">Метки</label><p class="mod-sub fnt-hint">Несколько меток через запятую.</p>' +
+      '<input type="text" id="fntTags" class="mod-search-input fnt-field" maxlength="200" placeholder="метка1, метка2" />' +
+      '<div class="fnt-actions">' +
+      '<button type="button" class="btn-primary" id="fntSubmit">Создать тему</button>' +
+      '<button type="button" class="btn-secondary" id="fntPreview">Предварительный просмотр</button>' +
+      "</div>" +
+      '<p class="mod-sub fnt-footnote">Тема сохранится локально в браузере и появится в вашем профиле.</p>' +
+      "</div>";
+
+    function paintFntPending() {
+      var pe = document.getElementById("fntPending");
+      if (!pe) return;
+      if (!pendingFnt.length) {
+        pe.innerHTML = "";
+        pe.hidden = true;
+        return;
+      }
+      pe.hidden = false;
+      pe.innerHTML = pendingFnt
+        .map(function (src, i) {
+          return (
+            '<span class="msgs-pending__item"><img src="' +
+            escapeHtml(src) +
+            '" alt=""/><button type="button" class="msgs-pending__rm" data-fnt-rm="' +
+            i +
+            '">×</button></span>'
+          );
+        })
+        .join("");
+      pe.querySelectorAll("[data-fnt-rm]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var ix = Number(b.getAttribute("data-fnt-rm"));
+          if (!isNaN(ix)) pendingFnt.splice(ix, 1);
+          paintFntPending();
+        });
+      });
+    }
+
+    document.getElementById("fntImg") &&
+      document.getElementById("fntImg").addEventListener("click", function () {
+        var fi = document.getElementById("fntFile");
+        if (fi) fi.click();
+      });
+    document.getElementById("fntFile") &&
+      document.getElementById("fntFile").addEventListener("change", function (e) {
+        filesToDataUrlList(e.target.files, Math.max(0, 4 - pendingFnt.length), function (got) {
+          got.forEach(function (url) {
+            if (pendingFnt.length < 4 && nsAllowedChatMediaSrc(url)) pendingFnt.push(url);
+          });
+          e.target.value = "";
+          paintFntPending();
+        });
+      });
+    document.getElementById("fntGif") &&
+      document.getElementById("fntGif").addEventListener("click", function () {
+        var ul = window.prompt("Ссылка https на GIF или изображение:", "");
+        var us = String(ul || "").trim();
+        if (us && nsAllowedChatMediaSrc(us) && pendingFnt.length < 4) {
+          pendingFnt.push(us);
+          paintFntPending();
+        } else if (us) {
+          showNsToast("Нужна корректная https-ссылка.");
+        }
+      });
+    document.getElementById("fntEmoji") &&
+      document.getElementById("fntEmoji").addEventListener("click", function () {
+        var ta = document.getElementById("fntBody");
+        var ch = window.prompt("Эмодзи:", "😀");
+        if (ta && ch) ta.value += ch.slice(0, 8);
+      });
+    document.getElementById("fntPreview") &&
+      document.getElementById("fntPreview").addEventListener("click", function () {
+        var t = document.getElementById("fntTitle");
+        var b = document.getElementById("fntBody");
+        window.alert((t && t.value ? t.value : "(без заголовка)") + "\n\n" + (b && b.value ? b.value.slice(0, 800) : ""));
+      });
+    document.getElementById("fntSubmit") &&
+      document.getElementById("fntSubmit").addEventListener("click", function () {
+        var titleEl = document.getElementById("fntTitle");
+        var bodyEl = document.getElementById("fntBody");
+        var title = titleEl ? titleEl.value.trim() : "";
+        var body = bodyEl ? String(bodyEl.value || "").trim() : "";
+        if (!title) {
+          window.alert("Укажите заголовок темы.");
+          return;
+        }
+        var tags = document.getElementById("fntTags");
+        var tagStr = tags ? tags.value.trim() : "";
+        var arr = loadProfileThreads(u.username);
+        var row = {
+          title: title,
+          body: body,
+          board: board,
+          tags: tagStr,
+          images: pendingFnt.slice(0, 4),
+          views: 0,
+          comments: 0,
+          date: formatThreadDate(),
+          ts: Date.now(),
+          replies: [],
+          likes: 0,
+          dislikes: 0,
+          voteByUser: {},
+        };
+        normalizeThread(row);
+        arr.unshift(row);
+        saveProfileThreads(u.username, arr);
+        window.location.href =
+          "topic.html?user=" + encodeURIComponent(u.username) + "&id=" + encodeURIComponent(String(row.ts));
+      });
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
   }
 
   function filterProducts(data, state) {
@@ -3263,7 +3644,11 @@
       grid.addEventListener("click", function (e) {
         var tile = e.target.closest(".category-tile");
         if (!tile || !grid.contains(tile)) return;
-        tile.classList.toggle("is-selected");
+        var wasOn = tile.classList.contains("is-selected");
+        grid.querySelectorAll(".category-tile.is-selected").forEach(function (t) {
+          t.classList.remove("is-selected");
+        });
+        if (!wasOn) tile.classList.add("is-selected");
         refreshMarketView(data);
       });
     }
@@ -3601,8 +3986,7 @@
       return a
         .map(function (x) {
           if (!x || x.id == null) return null;
-          var qty = Math.max(1, Math.min(99, Math.floor(Number(x.qty) || 1)));
-          return { id: String(x.id).trim(), qty: qty };
+          return { id: String(x.id).trim(), qty: 1 };
         })
         .filter(function (x) {
           return x && x.id;
@@ -3645,7 +4029,7 @@
         return x.id !== sid;
       });
     } else {
-      qty = Math.max(1, Math.min(99, Math.floor(qty)));
+      qty = 1;
       var found = false;
       cur = cur.map(function (x) {
         if (x.id !== sid) return x;
@@ -3660,13 +4044,14 @@
   function addMarketCartLine(productId, delta) {
     var sid = String(productId || "").trim();
     if (!sid) return;
-    var d = Math.max(1, Math.floor(Number(delta) || 1));
     var cur = loadMarketCart();
-    var row = cur.find(function (x) {
+    if (cur.some(function (x) {
       return x.id === sid;
-    });
-    var q = (row ? row.qty : 0) + d;
-    setMarketCartQty(sid, q);
+    })) {
+      showNsToast("Этот лот уже в корзине.");
+      return;
+    }
+    setMarketCartQty(sid, 1);
   }
 
   function removeMarketCartLine(productId) {
@@ -3717,6 +4102,15 @@
     try {
       window.dispatchEvent(new CustomEvent("nightstore-lang-changed"));
     } catch (e5) {
+      /* ignore */
+    }
+    try {
+      var d0 = window.NightStoreData;
+      if (d0) {
+        paintMarketLangStrip(d0);
+        paintUserMegaMenu(d0);
+      }
+    } catch (e6) {
       /* ignore */
     }
   }
@@ -3913,11 +4307,22 @@
     }
   }
 
-  function pushDmUserMessage(fromUser, toUser, body) {
-    if (!fromUser || !toUser || !String(body || "").trim()) return;
+  function pushDmUserMessage(fromUser, toUser, body, media) {
+    var text = String(body || "").trim();
+    var med = Array.isArray(media) ? media : [];
+    med = med.filter(function (m) {
+      return m && (m.type === "img" || m.type === "gif") && nsAllowedChatMediaSrc(m.src);
+    });
+    if (!fromUser || !toUser || (!text && !med.length)) return;
     var th = getOrCreateDmThread(fromUser, toUser);
     th.messages = th.messages || [];
-    th.messages.push({ from: fromUser, to: toUser, body: String(body || "").trim(), ts: Date.now() });
+    th.messages.push({
+      from: fromUser,
+      to: toUser,
+      body: text,
+      ts: Date.now(),
+      media: med,
+    });
     th.updated = Date.now();
     var all = loadDmThreads();
     var ix = all.findIndex(function (x) {
@@ -3947,6 +4352,27 @@
     var u = th.users || [];
     if (u[0] === meName) return u[1] || u[0];
     return u[0] || u[1] || "?";
+  }
+
+  function nsRenderMsgMediaHtml(media, wrapClass, imgClass) {
+    wrapClass = wrapClass || "msgs-bubble__media-wrap";
+    imgClass = imgClass || "msgs-bubble__media";
+    if (!media || !media.length) return "";
+    return media
+      .map(function (m) {
+        if (!m || !m.src || !nsAllowedChatMediaSrc(m.src)) return "";
+        if (m.type !== "img" && m.type !== "gif") return "";
+        return (
+          '<div class="' +
+          wrapClass +
+          '"><img class="' +
+          imgClass +
+          '" src="' +
+          escapeHtml(m.src) +
+          '" alt="" loading="lazy"/></div>'
+        );
+      })
+      .join("");
   }
 
   function renderMarketRecentPanel(data) {
@@ -4359,6 +4785,10 @@
     th.likes = Math.max(0, th.likes);
     th.dislikes = Math.max(0, th.dislikes);
     th.comments = th.replies.length;
+    if (th.board == null) th.board = "";
+    th.board = String(th.board || "");
+    if (th.tags == null) th.tags = "";
+    th.tags = String(th.tags || "");
     if (!Array.isArray(th.images)) th.images = [];
     else
       th.images = th.images.filter(isDataImageUrl).slice(0, 8);
@@ -6061,6 +6491,15 @@
     });
     wireProfileThreadComposer(u.username, isOwn);
 
+    var forumPickBtn = document.getElementById("forumOpenSectionPickerBtn");
+    if (forumPickBtn && !forumPickBtn.dataset.nsForumPickWired) {
+      forumPickBtn.dataset.nsForumPickWired = "1";
+      forumPickBtn.addEventListener("click", function () {
+        if (!isOwn) return;
+        openForumSectionPickerModal(data);
+      });
+    }
+
     wireProfileWall(data, u);
 
     if (window.location.hash === "#create-thread" && isOwn) {
@@ -6069,7 +6508,9 @@
         setTimeout(function () {
           comp.scrollIntoView({ behavior: "smooth", block: "center" });
           var ti = document.getElementById("newThreadTitle");
+          var fp = document.getElementById("forumOpenSectionPickerBtn");
           if (ti) ti.focus();
+          else if (fp) fp.focus();
         }, 200);
       }
     }
@@ -7623,6 +8064,79 @@
       return;
     }
     var selId = root.getAttribute("data-sup-sel") || "";
+    if (root.__nsSupPend == null) root.__nsSupPend = [];
+
+    function paintSupTicketPending() {
+      var pe = root.querySelector("#supUserPending");
+      if (!pe) return;
+      var arr = root.__nsSupPend || [];
+      if (!arr.length) {
+        pe.innerHTML = "";
+        pe.hidden = true;
+        return;
+      }
+      pe.hidden = false;
+      pe.innerHTML = arr
+        .map(function (src, i) {
+          return (
+            '<span class="msgs-pending__item"><img src="' +
+            escapeHtml(src) +
+            '" alt=""/><button type="button" class="msgs-pending__rm" data-sup-pend-rm="' +
+            i +
+            '">×</button></span>'
+          );
+        })
+        .join("");
+    }
+
+    if (!root.dataset.nsSupComposerDel) {
+      root.dataset.nsSupComposerDel = "1";
+      root.addEventListener("click", function (e) {
+        var rm = e.target.closest("[data-sup-pend-rm]");
+        if (rm && root.contains(rm)) {
+          var ix = Number(rm.getAttribute("data-sup-pend-rm"));
+          if (!isNaN(ix) && root.__nsSupPend) {
+            root.__nsSupPend.splice(ix, 1);
+            paintSupTicketPending();
+          }
+          return;
+        }
+        var imgBt = e.target.closest("[data-sup-tick-img],[data-sup-tick-clp]");
+        if (imgBt && root.contains(imgBt)) {
+          var fi = root.querySelector("#supUserFi");
+          if (fi) fi.click();
+          return;
+        }
+        var gifBt = e.target.closest("[data-sup-tick-gif]");
+        if (gifBt && root.contains(gifBt)) {
+          var ul = window.prompt("Ссылка https на GIF или картинку:", "");
+          var us = String(ul || "").trim();
+          if (us && nsAllowedChatMediaSrc(us) && root.__nsSupPend && root.__nsSupPend.length < 4) {
+            root.__nsSupPend.push(us);
+            paintSupTicketPending();
+          } else if (us) {
+            showNsToast("Нужна корректная https-ссылка.");
+          }
+          return;
+        }
+        var emBt = e.target.closest("[data-sup-tick-emoji]");
+        if (emBt && root.contains(emBt)) {
+          var taEm = root.querySelector("#supUserTa");
+          var ch = window.prompt("Эмодзи:", "😀");
+          if (taEm && ch) taEm.value += ch.slice(0, 8);
+        }
+      });
+      root.addEventListener("change", function (e) {
+        if (!e.target || e.target.id !== "supUserFi" || !root.contains(e.target)) return;
+        filesToDataUrlList(e.target.files, Math.max(0, 4 - (root.__nsSupPend || []).length), function (got) {
+          got.forEach(function (url) {
+            if (root.__nsSupPend.length < 4 && nsAllowedChatMediaSrc(url)) root.__nsSupPend.push(url);
+          });
+          e.target.value = "";
+          paintSupTicketPending();
+        });
+      });
+    }
 
     function supportNewFormFields() {
       if (isTickets) {
@@ -7667,7 +8181,9 @@
               escapeHtml(formatNotifTime(m.ts || 0)) +
               '</div><div class="mod-sup-msg__body">' +
               escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
-              "</div></div>"
+              "</div>" +
+              nsRenderMsgMediaHtml(m.media, "mod-sup-msg__media-wrap", "mod-sup-msg__media") +
+              "</div>"
             );
           })
           .join("");
@@ -7698,7 +8214,16 @@
           "</div>" +
           (th0.status === "closed"
             ? ""
-            : '<div class="mod-sup-chat__composer"><textarea id="supUserTa" rows="3" maxlength="4000" placeholder="Дополнить обращение…"></textarea>' +
+            : '<div class="mod-sup-chat__composer mod-sup-chat__composer--rich">' +
+              '<div class="sup-chat-tools">' +
+              '<button type="button" class="msgs-tb" data-sup-tick-emoji title="Эмодзи">😀</button>' +
+              '<button type="button" class="msgs-tb" data-sup-tick-img title="Фото">🖼</button>' +
+              '<button type="button" class="msgs-tb" data-sup-tick-gif title="GIF">GIF</button>' +
+              '<button type="button" class="msgs-tb" data-sup-tick-clp title="Вложение">📎</button>' +
+              '<input type="file" id="supUserFi" accept="image/*" multiple hidden />' +
+              "</div>" +
+              '<div id="supUserPending" class="msgs-pending" hidden></div>' +
+              '<textarea id="supUserTa" rows="3" maxlength="4000" placeholder="Дополнить обращение…"></textarea>' +
               '<button type="button" class="btn-primary" data-sup-user-send>Отправить</button></div>') +
           "</div>"
         );
@@ -7744,19 +8269,26 @@
           });
         }
         var us = root.querySelector("[data-sup-user-send]");
-        if (us) {
+        if (us && us.dataset.nsWired !== "1") {
+          us.dataset.nsWired = "1";
           us.addEventListener("click", function () {
             var ta = document.getElementById("supUserTa");
             var txt = ta ? ta.value.trim() : "";
-            if (!txt || !selId) return;
+            var media = [];
+            (root.__nsSupPend || []).forEach(function (src) {
+              var isGif = /\.gif(\?|$)/i.test(src) || String(src).toLowerCase().indexOf("giphy.com") !== -1;
+              media.push({ type: isGif ? "gif" : "img", src: src });
+            });
+            if ((!txt && !media.length) || !selId) return;
             var all = loadSupportThreads();
             var th = all.find(function (x) {
               return x.id === selId;
             });
             if (!th || th.status === "closed") return;
             if (!th.messages) th.messages = [];
-            th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now() });
+            th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now(), media: media });
             th.updated = Date.now();
+            root.__nsSupPend.length = 0;
             saveSupportThreads(all);
             paintSup();
           });
@@ -7803,6 +8335,7 @@
           supportNewFormFields() +
           "</div></div>";
         bindSupportPage();
+        paintSupTicketPending();
         return;
       }
 
@@ -7888,6 +8421,7 @@
         "</section></div>";
 
       bindSupportPage();
+      paintSupTicketPending();
     }
 
     paintSup();
@@ -7927,6 +8461,7 @@
       notifications: 1,
       moderation: 1,
       settings: 1,
+      "forum-new-thread": 1,
     };
     if (!gated[page]) return true;
     var u = sessionUser(data);
@@ -8796,15 +9331,197 @@
     } catch (e) {
       withQ = "";
     }
+    var msgsTab = "all";
+    try {
+      msgsTab = sessionStorage.getItem("ns_msgs_tab") || "all";
+    } catch (e2) {
+      msgsTab = "all";
+    }
+    var pendingAttachments = [];
+    if (!root.dataset.nsMsgsDelegated) {
+      root.dataset.nsMsgsDelegated = "1";
+      root.addEventListener("click", function (e) {
+        var tab = e.target.closest(".msgs-tab");
+        if (tab && root.contains(tab)) {
+          msgsTab = tab.getAttribute("data-msgs-tab") || "all";
+          try {
+            sessionStorage.setItem("ns_msgs_tab", msgsTab);
+          } catch (x) {
+            /* ignore */
+          }
+          paint();
+          return;
+        }
+        var rm = e.target.closest("[data-msgs-pend-rm]");
+        if (rm && root.contains(rm)) {
+          var ix = Number(rm.getAttribute("data-msgs-pend-rm"));
+          if (!isNaN(ix)) pendingAttachments.splice(ix, 1);
+          paint();
+          return;
+        }
+        var hitBtn = e.target.closest("button");
+        var bid = hitBtn ? hitBtn.id : "";
+        if (bid === "msgsImgBtn" || bid === "msgsClipBtn") {
+          var inp = root.querySelector("#msgsFile");
+          if (inp) inp.click();
+          return;
+        }
+        if (bid === "msgsGifBtn") {
+          var u0 = window.prompt("Прямая ссылка на GIF или картинку (https://…):", "");
+          var us = String(u0 || "").trim();
+          if (!us) return;
+          if (!nsAllowedChatMediaSrc(us)) {
+            showNsToast("Нужна ссылка https:// или загрузите файл.");
+            return;
+          }
+          if (pendingAttachments.length >= 4) return;
+          pendingAttachments.push(us);
+          paint();
+          return;
+        }
+        if (bid === "msgsEmojiBtn") {
+          var ta0 = root.querySelector("#msgsTa");
+          var ch = window.prompt("Вставьте эмодзи:", "😀");
+          if (!ch || !ta0) return;
+          ta0.value += ch.slice(0, 8);
+          return;
+        }
+        if (bid === "msgsSend") {
+          var ta = root.querySelector("#msgsTa");
+          var txt = ta ? ta.value.trim() : "";
+          var ao = "";
+          if (withQ) {
+            try {
+              ao = decodeURIComponent(withQ);
+            } catch (z) {
+              ao = withQ;
+            }
+          }
+          if (!ao) return;
+          var media = [];
+          pendingAttachments.forEach(function (src) {
+            var isGif = /\.gif(\?|$)/i.test(src) || String(src).toLowerCase().indexOf("giphy.com") !== -1;
+            media.push({ type: isGif ? "gif" : "img", src: src });
+          });
+          if (!txt && !media.length) return;
+          pushDmUserMessage(u.username, ao, txt, media);
+          if (ta) ta.value = "";
+          pendingAttachments.length = 0;
+          paint();
+        }
+      });
+      root.addEventListener("input", function (e) {
+        if (e.target && e.target.id === "msgsSideSearch") {
+          try {
+            sessionStorage.setItem("ns_msgs_side_q", e.target.value);
+          } catch (q1) {
+            /* ignore */
+          }
+          paint();
+        }
+      });
+      root.addEventListener("change", function (e) {
+        if (!e.target || e.target.id !== "msgsFile") return;
+        var inp = e.target;
+        filesToDataUrlList(inp.files, Math.max(0, 4 - pendingAttachments.length), function (got) {
+          got.forEach(function (url) {
+            if (pendingAttachments.length < 4 && nsAllowedChatMediaSrc(url)) pendingAttachments.push(url);
+          });
+          inp.value = "";
+          paint();
+        });
+      });
+    }
+    function sideSearchQuery() {
+      try {
+        return String(sessionStorage.getItem("ns_msgs_side_q") || "").trim().toLowerCase();
+      } catch (e3) {
+        return "";
+      }
+    }
+    function filterThreadsByTab(threads, tab, meName) {
+      if (tab === "new") {
+        return threads.filter(function (th) {
+          var last = (th.messages || []).slice(-1)[0];
+          if (!last) return false;
+          if (last.from === meName) return false;
+          if (last.system) return false;
+          return true;
+        });
+      }
+      if (tab === "conv") {
+        return threads.filter(function (th) {
+          return !(th.messages || []).some(function (m) {
+            return m.system;
+          });
+        });
+      }
+      if (tab === "market") {
+        return threads.filter(function (th) {
+          return (th.messages || []).some(function (m) {
+            return m.system || String(m.body || "").indexOf("Покупка") !== -1;
+          });
+        });
+      }
+      return threads.slice();
+    }
+    function filterThreadsBySearch(threads, q, meName) {
+      if (!q) return threads;
+      return threads.filter(function (th) {
+        var oth = otherPartyInThread(th, meName);
+        if (oth.toLowerCase().indexOf(q) !== -1) return true;
+        return (th.messages || []).some(function (m) {
+          return String(m.body || "").toLowerCase().indexOf(q) !== -1;
+        });
+      });
+    }
+    function paintPendingHtml() {
+      if (!pendingAttachments.length) return "";
+      return (
+        '<div id="msgsPending" class="msgs-pending">' +
+        pendingAttachments
+          .map(function (src, i) {
+            return (
+              '<span class="msgs-pending__item"><img src="' +
+              escapeHtml(src) +
+              '" alt=""/><button type="button" class="msgs-pending__rm" data-msgs-pend-rm="' +
+              i +
+              '">×</button></span>'
+            );
+          })
+          .join("") +
+        "</div>"
+      );
+    }
     function paint() {
-      var threads = dmThreadsForUser(u.username);
-      var activeOther = withQ ? decodeURIComponent(withQ) : threads.length ? otherPartyInThread(threads[0], u.username) : "";
+      var allThreads = dmThreadsForUser(u.username);
+      var tabbed = filterThreadsByTab(allThreads, msgsTab, u.username);
+      var threads = filterThreadsBySearch(tabbed, sideSearchQuery(), u.username);
+      var activeOther = withQ
+        ? decodeURIComponent(withQ)
+        : threads.length
+          ? otherPartyInThread(threads[0], u.username)
+          : "";
+      var th0 =
+        allThreads.find(function (x) {
+          return otherPartyInThread(x, u.username) === activeOther;
+        }) || null;
+      if (!th0 && activeOther) {
+        activeOther = threads.length ? otherPartyInThread(threads[0], u.username) : "";
+        th0 =
+          allThreads.find(function (x) {
+            return otherPartyInThread(x, u.username) === activeOther;
+          }) || null;
+      }
       var left = threads
         .map(function (th) {
           var oth = otherPartyInThread(th, u.username);
           var act = oth === activeOther ? " is-active" : "";
           var last = (th.messages || []).slice(-1)[0];
           var prev = last ? (last.from === u.username ? "Вы: " : "") + String(last.body || "").slice(0, 80) : "—";
+          if (last && last.media && last.media.length) {
+            prev = (last.from === u.username ? "Вы: " : "") + "[медиа]";
+          }
           return (
             '<button type="button" class="msgs-side-row' +
             act +
@@ -8820,14 +9537,11 @@
           );
         })
         .join("");
-      var th0 =
-        threads.find(function (x) {
-          return otherPartyInThread(x, u.username) === activeOther;
-        }) || null;
       var msgsHtml = th0
         ? (th0.messages || [])
             .map(function (m) {
               var mine = m.from === u.username;
+              var media = nsRenderMsgMediaHtml(m.media);
               return (
                 '<div class="msgs-bubble' +
                 (mine ? " msgs-bubble--me" : "") +
@@ -8837,21 +9551,45 @@
                 escapeHtml(formatNotifTime(m.ts || 0)) +
                 '</div><div class="msgs-bubble__body">' +
                 escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
-                "</div></div>"
+                "</div>" +
+                media +
+                "</div>"
               );
             })
             .join("")
         : "";
+      var qStored = "";
+      try {
+        qStored = sessionStorage.getItem("ns_msgs_side_q") || "";
+      } catch (e4) {
+        qStored = "";
+      }
       root.innerHTML =
         '<div class="msgs-layout">' +
         '<aside class="msgs-aside sidebar-card">' +
         '<div class="msgs-aside__tabs">' +
-        '<button type="button" class="msgs-tab is-active">Все</button>' +
-        '<button type="button" class="msgs-tab" disabled>Новые</button>' +
-        '<button type="button" class="msgs-tab" disabled>Беседы</button>' +
-        '<button type="button" class="msgs-tab" disabled>Маркет</button>' +
+        [
+          { k: "all", t: "Все" },
+          { k: "new", t: "Новые" },
+          { k: "conv", t: "Беседы" },
+          { k: "market", t: "Маркет" },
+        ]
+          .map(function (row) {
+            return (
+              '<button type="button" class="msgs-tab' +
+              (msgsTab === row.k ? " is-active" : "") +
+              '" data-msgs-tab="' +
+              row.k +
+              '">' +
+              escapeHtml(row.t) +
+              "</button>"
+            );
+          })
+          .join("") +
         "</div>" +
-        '<input type="search" class="msgs-aside__search" placeholder="Поиск" id="msgsSideSearch" />' +
+        '<input type="search" class="msgs-aside__search" placeholder="Поиск" id="msgsSideSearch" value="' +
+        escapeHtml(qStored) +
+        '"/>' +
         '<div class="msgs-aside__list">' +
         (left || '<p class="mod-empty">Нет диалогов</p>') +
         "</div></aside>" +
@@ -8862,7 +9600,17 @@
             '</strong></div><div class="msgs-main__scroll">' +
             (msgsHtml || '<p class="mod-empty">Нет сообщений</p>') +
             '</div><div class="msgs-main__composer">' +
+            '<div class="msgs-composer__grow">' +
+            '<div class="msgs-composer__toolbar">' +
+            '<button type="button" class="msgs-tb" id="msgsEmojiBtn" title="Эмодзи">😀</button>' +
+            '<button type="button" class="msgs-tb" id="msgsImgBtn" title="Фото">🖼</button>' +
+            '<button type="button" class="msgs-tb" id="msgsGifBtn" title="GIF по ссылке">GIF</button>' +
+            '<button type="button" class="msgs-tb" id="msgsClipBtn" title="Вложение">📎</button>' +
+            '<input type="file" id="msgsFile" accept="image/*" multiple hidden />' +
+            "</div>" +
+            paintPendingHtml() +
             '<textarea id="msgsTa" rows="2" maxlength="4000" placeholder="Сообщение…"></textarea>' +
+            "</div>" +
             '<button type="button" class="btn-primary" id="msgsSend">Отправить</button></div>'
           : '<div class="msgs-placeholder"><p>Выберите диалог слева</p></div>') +
         "</section></div>";
@@ -8877,18 +9625,6 @@
           }
         });
       });
-      var sd = root.querySelector("#msgsSend");
-      if (sd && sd.dataset.nsW !== "1") {
-        sd.dataset.nsW = "1";
-        sd.addEventListener("click", function () {
-          var ta = document.getElementById("msgsTa");
-          var txt = ta ? ta.value.trim() : "";
-          if (!txt || !activeOther) return;
-          pushDmUserMessage(u.username, activeOther, txt);
-          if (ta) ta.value = "";
-          paint();
-        });
-      }
     }
     paint();
     initMarketCartDropdown(data);
@@ -9194,6 +9930,7 @@
           else if (page === "register") initRegisterPage(data);
           else if (page === "verify-email") initVerifyEmailPage(data);
           else if (page === "forum") initForum(data);
+          else if (page === "forum-new-thread") initForumNewThreadPage(data);
           else if (page === "market") initMarket(data);
           else if (page === "market-product") initMarketProduct(data);
           else if (page === "market-sell-manual") initMarketSellManualPage(data);

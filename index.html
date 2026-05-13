@@ -37,7 +37,7 @@
           <input type="search" placeholder="Поиск..." autocomplete="off" />
         </div>
         <div class="header-actions">
-          <button type="button" class="icon-btn" aria-label="Сообщения"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
           <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
@@ -62,7 +62,7 @@
     <main class="layout-forum">
       <aside class="sidebar-forum">
         <div class="sidebar-card">
-          <a class="btn-primary" href="profile.html#create-thread">Создать тему</a>
+          <button type="button" class="btn-primary" id="forumIndexCreateBtn">Создать тему</button>
           <div class="nav-section-title">Навигация</div>
           <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Все обсуждения</a>
           <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Мои темы</a>

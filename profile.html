@@ -167,17 +167,8 @@
         <h2 class="section-title" id="user-topics">Ваши темы</h2>
         <div id="create-thread" class="new-thread-card">
           <h3 class="new-thread-card__title">Новая тема</h3>
-          <label class="sr-only" for="newThreadTitle">Заголовок темы</label>
-          <input type="text" id="newThreadTitle" class="new-thread-input" placeholder="Заголовок темы…" maxlength="200" autocomplete="off" />
-          <label class="sr-only" for="newThreadBody">Текст темы</label>
-          <textarea id="newThreadBody" class="new-thread-input" style="min-height:88px;margin-top:10px" placeholder="Текст темы (необязательно)…" maxlength="8000"></textarea>
-          <div class="thread-attach-row">
-            <input type="file" id="newThreadImagesInput" accept="image/*" multiple hidden />
-            <button type="button" class="btn-secondary thread-attach-btn" id="newThreadImagesBtn">Фото к теме</button>
-            <span class="thread-attach-hint">до 4 фото, JPEG в браузере</span>
-          </div>
-          <div id="newThreadImagesPreview" class="attach-preview" hidden></div>
-          <button type="button" class="btn-primary" id="createThreadBtn" style="margin-top:10px;width:auto;padding:10px 20px">Создать тему</button>
+          <p class="new-thread-hint" style="margin-top:0">Выберите раздел форума — откроется полноценный редактор (как на форуме).</p>
+          <button type="button" class="btn-primary" id="forumOpenSectionPickerBtn" style="margin-top:10px;width:auto;padding:10px 20px">Создать тему</button>
           <p class="new-thread-hint">Темы хранятся в браузере (localStorage) на этом устройстве.</p>
         </div>
         <div id="profileThreadsRoot"></div>

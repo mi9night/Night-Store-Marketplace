@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Мои товары — Night Store</title>
+  <title>Новая тема — Night Store</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
 </head>
-<body data-page="market-my-products">
+<body data-page="forum-new-thread">
   <div class="app-shell">
     <header class="site-header">
       <div class="header-inner">
@@ -21,7 +21,7 @@
         </a>
         <div class="header-search" style="max-width:400px">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="search" placeholder="Поиск по маркету..." />
+          <input type="search" placeholder="Поиск…" />
         </div>
         <div class="header-actions">
           <button type="button" class="icon-btn icon-btn--cart icon-btn--cart-ns" aria-label="Корзина" aria-expanded="false" data-market-cart-toggle><span class="cart-ns-glyph" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span></button>
@@ -41,48 +41,11 @@
         </div>
       </div>
     </header>
-
-    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span>Мои товары</span></nav>
-
-    <main class="layout-market">
-      <aside class="sidebar-market">
-        <div class="balance-widget">
-          <div class="row">
-            <span style="color:var(--text-muted)">Баланс</span>
-            <span class="balance js-balance-value">0 ₽</span>
-          </div>
-          <div class="balance-actions">
-            <button type="button" data-demo-wallet="topup">Пополнить</button>
-            <button type="button" data-demo-wallet="withdraw">Вывести</button>
-            <button type="button" data-demo-wallet="transfer">Перевод</button>
-          </div>
-        </div>
-
-        <div class="sidebar-card market-side-nav">
-          <div class="nav-section-title">Маркет</div>
-          <a class="side-link" href="market-my-products.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>Мои товары</a>
-          <a class="side-link" href="market-purchases.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
-          <a class="side-link" href="market-sell-manual.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Новый лот</a>
-          <a class="side-link" href="market.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Каталог</a>
-        </div>
-
-        <div class="sidebar-card market-side-nav market-side-nav--muted">
-          <div class="nav-section-title">Сервис</div>
-          <a class="side-link" href="tickets.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>Тикеты</a>
-        </div>
-      </aside>
-
-      <div class="market-main">
-        <div class="market-header-bar">
-          <a class="btn-secondary" href="market.html" style="width:auto;padding:8px 14px;font-size:0.85rem;text-decoration:none;display:inline-flex;align-items:center">← К каталогу</a>
-          <span class="market-lang-strip js-market-lang-strip" aria-live="polite">₽ RUB · Русский</span>
-        </div>
-        <h1 class="market-page-h1">Мои товары</h1>
-        <div id="marketMyProductsRoot"></div>
-      </div>
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <span>Новая тема</span></nav>
+    <main class="mod-page" style="padding:16px 18px 40px">
+      <div id="forumNewThreadRoot" style="max-width:900px;margin:0 auto"></div>
     </main>
-
-    <footer class="site-footer">Night Store · мои товары</footer>
+    <footer class="site-footer">Night Store · новая тема</footer>
   </div>
   <script src="js/main.js"></script>
   <script src="js/firebase-config.js"></script>
