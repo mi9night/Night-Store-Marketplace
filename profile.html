@@ -62,7 +62,15 @@
             <img class="avatar-xl-img js-profile-avatar-xl" src="" alt="" width="1" height="1" loading="lazy" />
           </div>
           <input type="file" id="profileAvatarInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
-          <button type="button" class="btn-secondary" id="profileAvatarBtn" title="JPG, PNG, WebP или GIF (анимация)">Поменять аватар</button>
+          <div class="profile-avatar-actions">
+            <button type="button" class="btn-secondary" id="profileAvatarBtn">Поменять аватар</button>
+            <div class="ns-hint profile-avatar-hint" aria-label="Подсказка по формату">
+              <button type="button" class="profile-avatar-hint__btn ns-hint__btn" aria-expanded="false" aria-controls="nsHintProfileAvatar" aria-label="Допустимые форматы аватара">i</button>
+              <div class="ns-hint__popover" id="nsHintProfileAvatar" role="tooltip" hidden>
+                <p class="ns-hint__text">JPG, PNG, WebP или GIF (в т.ч. с анимацией).</p>
+              </div>
+            </div>
+          </div>
           <div class="profile-level-widget" aria-label="Уровень и опыт">
             <div class="profile-level-widget__top">
               <div class="profile-level-widget__identity">
@@ -70,7 +78,12 @@
                 <div class="profile-level-widget__titles">
                   <div class="profile-level-widget__lvl-row">
                     <span class="profile-level-widget__lvl"><span class="js-profile-level-num">1</span> LVL</span>
-                    <button type="button" class="profile-level-widget__info" title="Опыт начисляется за активность на форуме и в маркете. Уровень открывает призы." aria-label="Как работают уровни">i</button>
+                    <div class="ns-hint profile-level-widget__hint">
+                      <button type="button" class="profile-level-widget__info ns-hint__btn" aria-expanded="false" aria-controls="nsHintProfileLevel" aria-label="Как работают уровни">i</button>
+                      <div class="ns-hint__popover" id="nsHintProfileLevel" role="tooltip" hidden>
+                        <p class="ns-hint__text">Опыт начисляется за активность на форуме и в маркете. Уровень открывает призы.</p>
+                      </div>
+                    </div>
                   </div>
                   <div class="profile-xp-line">
                     <span class="profile-xp-line__cur js-profile-xp-cur">0</span>
@@ -370,7 +383,7 @@
     </div>
   </div>
 
-  <button type="button" class="fab-chat" aria-label="Чат"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+  <button type="button" class="fab-chat" aria-label="Чат"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5 14.5c0-4.6 3.7-8.3 8.3-8.3 1.7 0 3.2.5 4.5 1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 16.5c2 3.3 5.6 5.3 9.5 5.3 5.4 0 9.8-4.3 9.8-9.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.36"/><path d="M5 19h5l-1 3.5H6L5 19z" fill="currentColor" opacity="0.9"/></svg></button>
   <script src="js/main.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-init.js"></script>

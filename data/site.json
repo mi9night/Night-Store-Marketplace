@@ -117,5 +117,86 @@
   ],
   "recentSearches": [],
   "forumPosts": [],
-  "products": []
+  "products": [
+    {
+      "id": "demo_tg_us",
+      "title": "США +1 | Возраст 30+ дней | Telegram · TData + авторег",
+      "price": 65,
+      "category": "telegram",
+      "sellerId": "u2",
+      "posted": "14 мин. назад",
+      "badges": ["Авторег", "Без спамблока"],
+      "_demoNote": "Вы получаете TData и ключ авторизации сразу после оплаты (демо). Гарантия на замену 24 ч — только как пример текста."
+    },
+    {
+      "id": "demo_steam_cs2",
+      "title": "Steam · CS2 Prime · 500+ часов (демо-лот)",
+      "price": 890,
+      "category": "steam",
+      "sellerId": "u3",
+      "posted": "1 ч. назад",
+      "badges": ["Prime", "VAC чисто"],
+      "_demoNote": "Полный доступ к почте (в демо не проверяется). Регион уточняйте у продавца до оплаты."
+    },
+    {
+      "id": "demo_discord_1",
+      "title": "Discord · аккаунт с Nitro (пример описания)",
+      "price": 120,
+      "category": "discord",
+      "sellerId": "u2",
+      "posted": "2 ч. назад",
+      "badges": [],
+      "_demoNote": "Демо-объявление: реальные данные не передаются."
+    },
+    {
+      "id": "demo_tg_eu",
+      "title": "EU Telegram · возраст 180+ дней",
+      "price": 1200,
+      "category": "telegram",
+      "sellerId": "u5",
+      "posted": "Вчера",
+      "badges": ["С почтой"],
+      "_demoNote": "Страна: ЕС. Способ входа: любой (пример)."
+    },
+    {
+      "id": "demo_fortnite_1",
+      "title": "Fortnite · скины и V-Bucks (демо)",
+      "price": 450,
+      "category": "fortnite",
+      "sellerId": "u2",
+      "posted": "3 ч. назад",
+      "badges": ["Редкие скины"],
+      "_demoNote": "Комментарий продавца: только демонстрация вёрстки."
+    },
+    {
+      "id": "demo_epic_1",
+      "title": "Epic Games · библиотека игр (демо)",
+      "price": 330,
+      "category": "epic",
+      "sellerId": "u3",
+      "posted": "5 ч. назад",
+      "badges": [],
+      "_demoNote": "Баны и ограничения отсутствуют (пример блока на странице товара)."
+    },
+    {
+      "id": "demo_riot_1",
+      "title": "Riot · Valorant EU (демо)",
+      "price": 700,
+      "category": "riot",
+      "sellerId": "u5",
+      "posted": "Сегодня",
+      "badges": ["EU"],
+      "_demoNote": "Регион аккаунта: Европа."
+    },
+    {
+      "id": "demo_instagram_1",
+      "title": "Instagram · старый аккаунт (демо)",
+      "price": 2500,
+      "category": "instagram",
+      "sellerId": "u2",
+      "posted": "2 дн. назад",
+      "badges": ["С отлежкой"],
+      "_demoNote": "Подходит под публикации и рекламу (пример текста)."
+    }
+  ]
 }

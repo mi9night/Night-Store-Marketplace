@@ -13,6 +13,30 @@
     '<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>' +
     "</svg>";
 
+  /** Night Store: «ночной» лайк — дуга луны + шеврон вверх (вместо 👍) */
+  var ICON_NS_VOTE_UP =
+    '<svg class="ns-vote-ico ns-vote-ico--up" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<path d="M5.5 15.5c0-4.4 3.6-8 8-8 1.6 0 3.1.5 4.3 1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    '<path d="M7.5 17.5c2 3.2 5.5 5.2 9.5 5.2 6 0 11-4.9 11-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.38"/>' +
+    '<path d="M12 4.5L8.5 11h7L12 4.5z" fill="currentColor" opacity="0.92"/>' +
+    "</svg>";
+
+  /** Night Store: «ночной» дизлайк — зеркальная дуга + шеврон вниз (вместо 👎) */
+  var ICON_NS_VOTE_DOWN =
+    '<svg class="ns-vote-ico ns-vote-ico--down" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<path d="M5.5 8.5c0 4.4 3.6 8 8 8 1.6 0 3.1-.5 4.3-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    '<path d="M7.5 6.5c2-3.2 5.5-5.2 9.5-5.2 6 0 11 4.9 11 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.38"/>' +
+    '<path d="M12 19.5L8.5 13h7l-3.5 6.5z" fill="currentColor" opacity="0.92"/>' +
+    "</svg>";
+
+  /** Компактная иконка «ночной комментарий» для ленты (вместо 💬) */
+  var ICON_NS_COMMENT_TINY =
+    '<svg class="ns-inline-ico ns-inline-ico--comment" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<path d="M5.5 11.5c0-3.4 2.8-6.2 6.2-6.2 1.2 0 2.4.3 3.4.9" stroke="currentColor" stroke-width="1.85" stroke-linecap="round"/>' +
+    '<path d="M7 13.5c1.4 2.3 3.9 3.8 6.7 3.8" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" opacity="0.38"/>' +
+    '<path d="M4 18.5l1.2-4h3.8c.7 0 1.3.6 1.3 1.3V18" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+    "</svg>";
+
   function formatIntRu(n) {
     return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
   }
@@ -791,10 +815,53 @@
     return next;
   }
 
+  function resetDemoWalletModal(modal) {
+    if (!modal || !modal.id) return;
+    modal.classList.remove("demo-wallet-modal--error");
+    var form = modal.querySelector(".demo-wallet-screen--form");
+    var res = modal.querySelector(".demo-wallet-screen--result");
+    var footForm = modal.querySelector(".demo-wallet-foot--form");
+    var footRes = modal.querySelector(".demo-wallet-foot--result");
+    var title = modal.querySelector(".modal__head h2");
+    if (form) form.hidden = false;
+    if (res) res.hidden = true;
+    if (footForm) footForm.hidden = false;
+    if (footRes) footRes.hidden = true;
+    if (title) {
+      title.textContent =
+        modal.id === "nsDemoWalletModalWithdraw" ? "Демо: вывод на карту" : "Демо: пополнение с карты";
+    }
+  }
+
+  function showDemoWalletResult(modal, opts) {
+    if (!modal) return;
+    opts = opts || {};
+    var form = modal.querySelector(".demo-wallet-screen--form");
+    var res = modal.querySelector(".demo-wallet-screen--result");
+    var footForm = modal.querySelector(".demo-wallet-foot--form");
+    var footRes = modal.querySelector(".demo-wallet-foot--result");
+    var msgEl = modal.querySelector(".demo-wallet-result-msg");
+    var title = modal.querySelector(".modal__head h2");
+    if (form) form.hidden = true;
+    if (res) res.hidden = false;
+    if (footForm) footForm.hidden = true;
+    if (footRes) footRes.hidden = false;
+    if (msgEl) msgEl.textContent = opts.message || "";
+    if (title) title.textContent = opts.headTitle || "Готово";
+    modal.classList.toggle("demo-wallet-modal--error", !!opts.isError);
+    var doneBtn = footRes && footRes.querySelector("[data-ns-demo-wallet-done]");
+    if (doneBtn) {
+      setTimeout(function () {
+        doneBtn.focus();
+      }, 10);
+    }
+  }
+
   function closeDemoWalletModals() {
     document.querySelectorAll("#nsDemoWalletModalTopup, #nsDemoWalletModalWithdraw").forEach(function (m) {
       m.classList.remove("is-open");
       m.setAttribute("aria-hidden", "true");
+      resetDemoWalletModal(m);
     });
     document.body.classList.remove("modal-open");
   }
@@ -816,21 +883,32 @@
         'Title">' +
         escapeHtml(title) +
         '</h2><button type="button" class="modal__close" data-ns-demo-wallet-close="1" aria-label="Закрыть">×</button></div>' +
-        '<div class="modal__body"><p class="demo-wallet-hint">' +
+        '<div class="modal__body">' +
+        '<div class="demo-wallet-screen demo-wallet-screen--form">' +
+        '<p class="demo-wallet-hint">' +
         escapeHtml(hint) +
         '</p><label class="demo-wallet-label" for="' +
         id +
         'Amt">Сумма, ₽</label>' +
         '<input type="number" class="demo-wallet-input" id="' +
         id +
-        'Amt" min="1" max="999999" step="1" value="500" /></div>' +
-        '<div class="modal__foot">' +
+        'Amt" min="1" max="999999" step="1" value="500" />' +
+        "</div>" +
+        '<div class="demo-wallet-screen demo-wallet-screen--result" hidden>' +
+        '<p class="demo-wallet-result-msg" id="' +
+        id +
+        'ResultMsg" aria-live="polite"></p>' +
+        "</div></div>" +
+        '<div class="modal__foot demo-wallet-foot--form">' +
         '<button type="button" class="btn-secondary" data-ns-demo-wallet-close="1">Отмена</button>' +
         '<button type="button" class="btn-primary" id="' +
         btnId +
         '">' +
         escapeHtml(btnLabel) +
-        "</button></div></div></div>"
+        "</button></div>" +
+        '<div class="modal__foot demo-wallet-foot--result" hidden>' +
+        '<button type="button" class="btn-primary" data-ns-demo-wallet-done="1">Понятно</button>' +
+        "</div></div></div>"
       );
     }
     var wrap = document.createElement("div");
@@ -854,6 +932,9 @@
     wrap.querySelectorAll("[data-ns-demo-wallet-close]").forEach(function (el) {
       el.addEventListener("click", closeDemoWalletModals);
     });
+    wrap.querySelectorAll("[data-ns-demo-wallet-done]").forEach(function (el) {
+      el.addEventListener("click", closeDemoWalletModals);
+    });
     if (!window.__nsDemoWalletEscBound) {
       window.__nsDemoWalletEscBound = true;
       document.addEventListener("keydown", function (e) {
@@ -870,14 +951,19 @@
       });
     }
     document.getElementById("nsDemoWalletTopupGo").addEventListener("click", function () {
+      var modal = document.getElementById("nsDemoWalletModalTopup");
       var inp = document.getElementById("nsDemoWalletModalTopupAmt");
       var v = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
       if (!window.NightStoreData) return;
-      applyDemoBalanceDelta(window.NightStoreData, v);
-      closeDemoWalletModals();
-      window.alert("Демо: зачислено " + formatIntRu(v) + " ₽.");
+      var next = applyDemoBalanceDelta(window.NightStoreData, v);
+      if (next == null) {
+        showDemoWalletResult(modal, { message: "Войдите в аккаунт.", isError: true });
+      } else {
+        showDemoWalletResult(modal, { message: "Зачислено " + formatIntRu(v) + " ₽." });
+      }
     });
     document.getElementById("nsDemoWalletWithdrawGo").addEventListener("click", function () {
+      var modal = document.getElementById("nsDemoWalletModalWithdraw");
       var inp = document.getElementById("nsDemoWalletModalWithdrawAmt");
       var v = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
       if (!window.NightStoreData) return;
@@ -885,12 +971,15 @@
       if (!u) return;
       var cur = Math.max(0, Math.floor(Number(u.balanceRub) || 0));
       if (v > cur) {
-        window.alert("Недостаточно средств на балансе.");
+        showDemoWalletResult(modal, { message: "Недостаточно средств на балансе.", isError: true });
         return;
       }
-      applyDemoBalanceDelta(window.NightStoreData, -v);
-      closeDemoWalletModals();
-      window.alert("Демо: вывод " + formatIntRu(v) + " ₽ отражён (с баланса списано).");
+      var next = applyDemoBalanceDelta(window.NightStoreData, -v);
+      if (next == null) {
+        showDemoWalletResult(modal, { message: "Войдите в аккаунт.", isError: true });
+      } else {
+        showDemoWalletResult(modal, { message: "Выведено " + formatIntRu(v) + " ₽." });
+      }
     });
   }
 
@@ -900,6 +989,7 @@
       return;
     }
     ensureDemoWalletModals();
+    document.querySelectorAll("#nsDemoWalletModalTopup, #nsDemoWalletModalWithdraw").forEach(resetDemoWalletModal);
     var idOpen = mode === "withdraw" ? "nsDemoWalletModalWithdraw" : "nsDemoWalletModalTopup";
     document.querySelectorAll("#nsDemoWalletModalTopup, #nsDemoWalletModalWithdraw").forEach(function (m) {
       var on = m.id === idOpen;
@@ -2180,14 +2270,28 @@
 
   function formatNotifTime(ts) {
     try {
-      return new Date(ts).toLocaleString("ru-RU", {
-        weekday: "long",
+      var d = new Date(Number(ts) || 0);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       });
     } catch (e) {
       return "";
     }
+  }
+
+  /** Дата+время из числового ts/id (мс), иначе сохранённая строка. */
+  function formatStoredOrTs(tsOrId, dateFallback) {
+    var t = Number(tsOrId);
+    if (isFinite(t) && t > 1e12) {
+      var s = formatNotifTime(t);
+      if (s) return s;
+    }
+    return String(dateFallback || "");
   }
 
   function notifyTopicReplySubscribers(data, ownerUsername, threadTs, topicTitle, replierUsername) {
@@ -2509,7 +2613,9 @@
           "<span>❤️ " +
           formatIntRu(post.likes) +
           "</span>" +
-          "<span>💬 " +
+          "<span class=\"feed-footer-stat\">" +
+          ICON_NS_COMMENT_TINY +
+          " " +
           formatIntRu(post.comments) +
           "</span>" +
           "<span>" +
@@ -2610,13 +2716,17 @@
             .join("");
           return (
             '<article class="listing-card">' +
-            '<a class="listing-card__media" href="#">' +
+            '<a class="listing-card__media" href="market-product.html?id=' +
+            encodeURIComponent(String(p.id)) +
+            '">' +
             '<img src="' +
             escapeHtml(listingCoverSrc(p)) +
             '" alt="" loading="lazy" width="640" height="360" />' +
             "</a>" +
             '<div class="listing-card__body">' +
-            '<a class="listing-card__title" href="#">' +
+            '<a class="listing-card__title" href="market-product.html?id=' +
+            encodeURIComponent(String(p.id)) +
+            '">' +
             escapeHtml(p.title) +
             "</a>" +
             '<div class="listing-card__row">' +
@@ -2694,6 +2804,7 @@
     }
 
     refreshMarketView(data);
+    renderMarketRecentPanel(data);
 
     var grid = document.getElementById("categoryGrid");
     if (grid) {
@@ -2811,6 +2922,7 @@
         var b = document.querySelector(".js-balance-value");
         if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
         refreshMarketView(d);
+        renderMarketRecentPanel(d);
       });
     }
 
@@ -2819,11 +2931,17 @@
 
   function formatThreadDate() {
     try {
-      return new Date().toLocaleDateString("ru-RU", {
+      var d = new Date();
+      var dateStr = d.toLocaleDateString("ru-RU", {
         day: "numeric",
         month: "short",
         year: "numeric",
       });
+      var timeStr = d.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return dateStr + ", " + timeStr;
     } catch (e) {
       return String(new Date().toISOString()).slice(0, 10);
     }
@@ -2901,6 +3019,22 @@
   }
 
   function initMarketSellManualPage(data) {
+    var u0 = sessionUser(data);
+    var bal0 = document.querySelector(".js-balance-value");
+    if (bal0 && u0) bal0.textContent = formatRubForViewer(data, u0.username, u0.balanceRub || 0, {});
+    renderMarketRecentPanel(data);
+    wireDemoWalletUi(data);
+    if (!window.__nightstoreMarketFxBound) {
+      window.__nightstoreMarketFxBound = true;
+      window.addEventListener("nightstore-currency-changed", function () {
+        var d = window.NightStoreData;
+        if (!d) return;
+        var us = sessionUser(d);
+        var b = document.querySelector(".js-balance-value");
+        if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
+        renderMarketRecentPanel(d);
+      });
+    }
     var sel = document.getElementById("mslCategory");
     if (sel && !sel.dataset.nsFilled) {
       sel.dataset.nsFilled = "1";
@@ -2924,6 +3058,415 @@
         return;
       }
       window.location.href = "market.html";
+    });
+  }
+
+  var MARKET_RECENT_IDS_KEY = "nightstore_market_recent_views_v1";
+
+  function findProductById(data, id) {
+    var sid = String(id == null ? "" : id);
+    var list = data.products || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === sid) return list[i];
+    }
+    return null;
+  }
+
+  function marketCategoryLabelRu(slug) {
+    var slugStr = String(slug || "");
+    var arr = manualLotMarketCategories();
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].v === slugStr) return arr[i].l;
+    }
+    return slugStr || "Лот";
+  }
+
+  function loadMarketRecentIds() {
+    try {
+      var raw = localStorage.getItem(MARKET_RECENT_IDS_KEY);
+      var a = JSON.parse(raw || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveMarketRecentIds(ids) {
+    try {
+      var clean = ids
+        .map(function (x) {
+          return String(x || "").trim();
+        })
+        .filter(Boolean)
+        .filter(function (x, i, arr) {
+          return arr.indexOf(x) === i;
+        })
+        .slice(0, 12);
+      localStorage.setItem(MARKET_RECENT_IDS_KEY, JSON.stringify(clean));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function pushMarketRecentView(productId) {
+    var sid = String(productId || "").trim();
+    if (!sid) return;
+    var cur = loadMarketRecentIds().filter(function (x) {
+      return x !== sid;
+    });
+    cur.unshift(sid);
+    saveMarketRecentIds(cur);
+  }
+
+  function renderMarketRecentPanel(data) {
+    var root = document.getElementById("marketRecentRoot");
+    if (!root) return;
+    var ids = loadMarketRecentIds();
+    var vu = sessionUser(data);
+    var vun = vu && vu.username ? vu.username : "";
+    if (!ids.length) {
+      root.innerHTML =
+        '<p class="market-recent-empty">Карточки товаров будут появляться здесь после просмотра.</p>';
+      return;
+    }
+    root.innerHTML = ids
+      .map(function (pid) {
+        var p = findProductById(data, pid);
+        if (!p) {
+          return (
+            '<div class="market-recent-row market-recent-row--gone"><span class="market-recent-row__title">Товар недоступен</span><span class="market-recent-row__sub">ID: ' +
+            escapeHtml(String(pid)) +
+            "</span></div>"
+          );
+        }
+        var seller = userById(data, p.sellerId) || vu;
+        var sn = seller && seller.username ? seller.username : "?";
+        var href = "market-product.html?id=" + encodeURIComponent(String(p.id));
+        var online = seller && /онлайн|в сети/i.test(String(seller.status || ""));
+        return (
+          '<a class="market-recent-row" href="' +
+          href +
+          '">' +
+          '<div class="market-recent-row__head">' +
+          '<span class="market-recent-row__cat">' +
+          escapeHtml(marketCategoryLabelRu(p.category)) +
+          "</span>" +
+          '<span class="market-recent-row__price">' +
+          formatRubForViewer(data, vun, p.price || 0, {}) +
+          "</span></div>" +
+          '<div class="market-recent-row__title">' +
+          escapeHtml(p.title) +
+          "</div>" +
+          '<div class="market-recent-row__seller">' +
+          '<span class="market-recent-row__seller-name">' +
+          escapeHtml(sn) +
+          '</span><span class="market-recent-row__dot' +
+          (online ? " is-on" : "") +
+          '" aria-hidden="true"></span></div></a>'
+        );
+      })
+      .join("");
+  }
+
+  function sellerStatusOnline(user) {
+    if (!user) return false;
+    return /онлайн|в сети/i.test(String(user.status || ""));
+  }
+
+  function syntheticReviewsForProduct(data, p) {
+    if (p && Array.isArray(p.reviews) && p.reviews.length) return p.reviews;
+    var buyers = (data.users || []).filter(function (u) {
+      return u && u.username && String(u.id) !== String(p.sellerId);
+    });
+    if (!buyers.length) buyers = [{ username: "Покупатель", avatar: "", id: "x" }];
+    var n = 6 + (String(p.id).length % 3);
+    var times = ["только что", "3 мин. назад", "14 мин. назад", "1 ч. назад", "вчера", "3 дн. назад"];
+    var posMsgs = [
+      "Автоматический отзыв по истечении 30 дней",
+      "Всё ок, быстро выдали данные.",
+      "Совпадает с описанием, рекомендую.",
+    ];
+    var negMsgs = ["Долго ждал ответа.", "Описание частично не совпало с фактом."];
+    var out = [];
+    var seed = String(p.id || "")
+      .split("")
+      .reduce(function (s, ch) {
+        return s + ch.charCodeAt(0);
+      }, 0);
+    for (var i = 0; i < n; i++) {
+      var buyer = buyers[i % buyers.length];
+      var pos = (seed + i * 11) % 5 !== 0;
+      out.push({
+        buyerUsername: buyer.username,
+        buyerAvatar: buyer.avatar || "",
+        positive: pos,
+        text: pos ? posMsgs[i % posMsgs.length] : negMsgs[i % negMsgs.length],
+        time: times[i % times.length],
+        purchaseTitle: p.title,
+        priceRub: p.price,
+      });
+    }
+    return out;
+  }
+
+  function pickSimilarProducts(data, current, limit) {
+    limit = limit || 6;
+    var id = String(current && current.id != null ? current.id : "");
+    var list = (data.products || []).filter(function (pr) {
+      return pr && String(pr.id) !== id;
+    });
+    var same = list.filter(function (pr) {
+      return pr.category === current.category;
+    });
+    var rest = list.filter(function (pr) {
+      return pr.category !== current.category;
+    });
+    return same.concat(rest).slice(0, limit);
+  }
+
+  function renderMarketProductDetail(data, p) {
+    var seller = userById(data, p.sellerId) || sessionUser(data);
+    var vu = sessionUser(data);
+    var vun = vu && vu.username ? vu.username : "";
+    var catLabel = marketCategoryLabelRu(p.category);
+    var reviews = syntheticReviewsForProduct(data, p);
+    var posC = reviews.filter(function (r) {
+      return r.positive;
+    }).length;
+    var negC = reviews.length - posC;
+    var badges = (p.badges || [])
+      .map(function (b) {
+        return '<span class="listing-badge">' + escapeHtml(b) + "</span>";
+      })
+      .join("");
+    var similar = pickSimilarProducts(data, p, 6);
+    var simHtml = similar
+      .map(function (sp) {
+        var sl = userById(data, sp.sellerId);
+        var sln = sl && sl.username ? sl.username : "?";
+        var sOnline = sellerStatusOnline(sl);
+        var sb = (sp.badges || [])
+          .slice(0, 3)
+          .map(function (b) {
+            return '<span class="product-sim__tag">' + escapeHtml(b) + "</span>";
+          })
+          .join("");
+        return (
+          '<a class="product-sim" href="market-product.html?id=' +
+          encodeURIComponent(String(sp.id)) +
+          '">' +
+          '<div class="product-sim__top"><span class="product-sim__title">' +
+          escapeHtml(sp.title) +
+          '</span><span class="product-sim__price">' +
+          formatRubForViewer(data, vun, sp.price || 0, {}) +
+          "</span></div>" +
+          (sb ? '<div class="product-sim__tags">' + sb + "</div>" : "") +
+          '<div class="product-sim__foot"><span class="product-sim__seller">' +
+          escapeHtml(sln) +
+          '</span><span class="product-sim__dot' +
+          (sOnline ? " is-on" : "") +
+          '" aria-hidden="true"></span><span class="product-sim__time">' +
+          escapeHtml(sp.posted || "") +
+          "</span></div></a>"
+        );
+      })
+      .join("");
+    var revRows = reviews
+      .map(function (r) {
+        var cls = r.positive ? "is-pos" : "is-neg";
+        var seed = encodeURIComponent(r.buyerUsername || "buyer");
+        var av =
+          r.buyerAvatar ||
+          "https://api.dicebear.com/7.x/notionists/svg?seed=" +
+          seed +
+          "&backgroundColor=1a1624";
+        return (
+          '<article class="product-review ' +
+          cls +
+          '" data-review-tone="' +
+          (r.positive ? "pos" : "neg") +
+          '">' +
+          '<div class="product-review__head">' +
+          '<img class="product-review__av" src="' +
+          escapeHtml(av) +
+          '" width="40" height="40" alt="" loading="lazy" data-avatar-seed="' +
+          escapeHtml(r.buyerUsername || "") +
+          '"/>' +
+          '<div><div class="product-review__who">' +
+          escapeHtml(r.buyerUsername) +
+          "</div>" +
+          '<div class="product-review__when">' +
+          escapeHtml(r.time) +
+          "</div></div></div>" +
+          '<p class="product-review__buy">Купил: <strong>' +
+          escapeHtml(String(r.purchaseTitle || p.title).slice(0, 120)) +
+          "</strong> · " +
+          formatRubForViewer(data, vun, r.priceRub || p.price, {}) +
+          "</p>" +
+          '<p class="product-review__text">' +
+          escapeHtml(r.text) +
+          "</p></article>"
+        );
+      })
+      .join("");
+    var sellerOnline = sellerStatusOnline(seller);
+    return (
+      '<div class="product-detail">' +
+      '<section class="sidebar-card product-hero">' +
+      '<div class="product-hero__seller">' +
+      '<a class="product-hero__av-wrap" href="profile.html?user=' +
+      encodeURIComponent(seller.username) +
+      '"><img class="product-hero__av" src="' +
+      escapeHtml(seller.avatar) +
+      '" width="48" height="48" alt="" loading="lazy" data-avatar-seed="' +
+      escapeHtml(seller.username) +
+      '"/></a>' +
+      '<div><a class="product-hero__seller-name" href="profile.html?user=' +
+      encodeURIComponent(seller.username) +
+      '">' +
+      escapeHtml(seller.username) +
+      '</a><span class="product-hero__dot' +
+      (sellerOnline ? " is-on" : "") +
+      '" title="' +
+      escapeHtml(String(seller.status || "")) +
+      '"></span>' +
+      '<div class="product-hero__meta">На маркете с ' +
+      escapeHtml(seller.registration || "—") +
+      "</div></div></div>" +
+      '<h1 class="product-hero__h1">' +
+      escapeHtml(p.title) +
+      "</h1>" +
+      '<div class="product-hero__sub">' +
+      escapeHtml(p.posted || "") +
+      " · просмотры: демо</div>" +
+      (badges ? '<div class="product-hero__badges">' + badges + "</div>" : "") +
+      '<div class="product-hero__price-row">' +
+      '<span class="product-hero__price">' +
+      formatRubForViewer(data, vun, p.price || 0, {}) +
+      "</span></div>" +
+      '<div class="product-hero__actions">' +
+      '<button type="button" class="btn-primary js-product-buy-demo">Купить</button>' +
+      '<button type="button" class="btn-secondary js-product-cart-demo">В корзину</button>' +
+      "</div>" +
+      '<ul class="product-hero__bullets">' +
+      "<li>Сделка и передача данных — только демонстрация интерфейса.</li>" +
+      "<li>Проверяйте продавца и условия до реальной оплаты на проде.</li></ul>" +
+      "</section>" +
+      '<section class="sidebar-card product-block"><h2 class="product-block__h">Баны и ограничения</h2><p class="product-block__p">Блокировки и ограничения отсутствуют (пример).</p></section>' +
+      '<section class="sidebar-card product-block"><h2 class="product-block__h">Достоверная информация</h2>' +
+      '<dl class="product-kv"><dt>Категория</dt><dd>' +
+      escapeHtml(catLabel) +
+      "</dd><dt>Лот</dt><dd>#" +
+      escapeHtml(String(p.id)) +
+      "</dd><dt>Продавец</dt><dd>" +
+      escapeHtml(seller.username) +
+      "</dd></dl></section>" +
+      '<section class="sidebar-card product-block"><h2 class="product-block__h">Комментарий продавца</h2><p class="product-block__p">' +
+      escapeHtml(String(p._demoNote || "Без описания.")) +
+      "</p></section>" +
+      '<section class="sidebar-card product-reviews" id="productReviewsSection">' +
+      '<div class="product-reviews__head"><h2 class="product-block__h">Отзывы</h2>' +
+      '<span class="product-reviews__count">' +
+      formatIntRu(reviews.length) +
+      "</span></div>" +
+      '<div class="product-reviews__tabs" role="tablist">' +
+      '<button type="button" class="is-active" data-review-tab="all">Все <span class="product-reviews__num">' +
+      formatIntRu(reviews.length) +
+      "</span></button>" +
+      '<button type="button" data-review-tab="pos">Положительные <span class="product-reviews__num product-reviews__num--pos">' +
+      formatIntRu(posC) +
+      "</span></button>" +
+      '<button type="button" data-review-tab="neg">Отрицательные <span class="product-reviews__num product-reviews__num--neg">' +
+      formatIntRu(negC) +
+      "</span></button></div>" +
+      '<div class="product-reviews__list" id="productReviewsList">' +
+      revRows +
+      "</div>" +
+      '<p class="product-reviews__foot">Чтобы оставить отзыв на этот лот, нужно быть его покупателем (в демо покупки не оформляются).</p>' +
+      "</section>" +
+      (simHtml
+        ? '<section class="sidebar-card product-similar"><h2 class="product-block__h">Похожие товары</h2><div class="product-similar__grid">' +
+          simHtml +
+          "</div></section>"
+        : "") +
+      "</div>"
+    );
+  }
+
+  function wireProductReviewsUi(rootEl) {
+    if (!rootEl || rootEl.dataset.nsRevWired === "1") return;
+    rootEl.dataset.nsRevWired = "1";
+    var tabs = rootEl.querySelectorAll("[data-review-tab]");
+    var list = rootEl.querySelector("#productReviewsList");
+    if (!tabs.length || !list) return;
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var mode = tab.getAttribute("data-review-tab") || "all";
+        tabs.forEach(function (t) {
+          t.classList.toggle("is-active", t === tab);
+        });
+        list.querySelectorAll(".product-review").forEach(function (row) {
+          var tone = row.getAttribute("data-review-tone") || "";
+          var show = mode === "all" || (mode === "pos" && tone === "pos") || (mode === "neg" && tone === "neg");
+          row.hidden = !show;
+        });
+      });
+    });
+  }
+
+  function initMarketProduct(data) {
+    var root = document.getElementById("productPageRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    var bal = document.querySelector(".js-balance-value");
+    if (bal && u) bal.textContent = formatRubForViewer(data, u.username, u.balanceRub || 0, {});
+    renderMarketRecentPanel(data);
+    wireDemoWalletUi(data);
+    if (!window.__nightstoreMarketFxBound) {
+      window.__nightstoreMarketFxBound = true;
+      window.addEventListener("nightstore-currency-changed", function () {
+        var d = window.NightStoreData;
+        if (!d) return;
+        var us = sessionUser(d);
+        var b = document.querySelector(".js-balance-value");
+        if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
+        renderMarketRecentPanel(d);
+      });
+    }
+    var pid = null;
+    try {
+      pid = new URLSearchParams(location.search).get("id");
+    } catch (e4) {
+      pid = null;
+    }
+    var p = pid ? findProductById(data, pid) : null;
+    if (!p) {
+      document.title = "Товар не найден — Night Store";
+      root.innerHTML =
+        '<div class="sidebar-card product-miss"><h1 class="product-miss__h1">Лот не найден</h1><p>Вернитесь в <a href="market.html">каталог</a> или проверьте ссылку.</p></div>';
+      return;
+    }
+    pushMarketRecentView(p.id);
+    renderMarketRecentPanel(data);
+    try {
+      document.title = String(p.title).slice(0, 72) + " — Night Store";
+    } catch (e5) {
+      document.title = "Товар — Night Store";
+    }
+    var catEl = document.getElementById("productBreadcrumbCat");
+    var titEl = document.getElementById("productBreadcrumbTitle");
+    if (catEl) catEl.textContent = marketCategoryLabelRu(p.category);
+    if (titEl) titEl.textContent = String(p.title).length > 48 ? String(p.title).slice(0, 45) + "…" : p.title;
+    root.innerHTML = renderMarketProductDetail(data, p);
+    wireProductReviewsUi(root);
+    root.querySelectorAll(".js-product-buy-demo, .js-product-cart-demo").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        window.alert("Демо: оплата и доставка лота не выполняются.");
+      });
+    });
+    root.querySelectorAll(".product-review__av, .product-hero__av").forEach(function (im) {
+      var seed = im.getAttribute("data-avatar-seed");
+      if (seed) attachAvatarFallback(im, seed);
     });
   }
 
@@ -3043,11 +3586,13 @@
           "<span>👁 " +
           formatIntRu(th.views != null ? th.views : 0) +
           "</span>" +
-          "<span>💬 " +
+          "<span class=\"feed-footer-stat\">" +
+          ICON_NS_COMMENT_TINY +
+          " " +
           formatIntRu(repliesCount) +
           "</span>" +
           "<span>" +
-          escapeHtml(th.date || "") +
+          escapeHtml(formatStoredOrTs(th.ts, th.date)) +
           "</span></div></div>"
         );
       })
@@ -3751,7 +4296,7 @@
                     "</a>"
                   : "<span>" + escapeHtml(c.author || "") + "</span>") +
                 "</strong> · " +
-                escapeHtml(c.date || "") +
+                escapeHtml(formatStoredOrTs(c.id, c.date)) +
                 "</div>" +
                 '<div class="wall-comment__body">' +
                 escapeHtml(c.body || "").replace(/\n/g, "<br/>") +
@@ -3789,7 +4334,7 @@
                 "</a>"
               : "<span>" + escapeHtml(p.author || "") + "</span>") +
             "</strong> · " +
-            escapeHtml(p.date || "") +
+            escapeHtml(formatStoredOrTs(p.id, p.date)) +
             "</div>" +
             '<div class="wall-post-card__head-actions">' +
             '<button type="button" class="wall-post-card__report" data-wall-report-post="' +
@@ -3807,7 +4352,9 @@
             String(p.id) +
             '" aria-pressed="' +
             (v === "up" ? "true" : "false") +
-            '"><span class="wall-vote-btn__i">👍</span> <span data-wall-lc>' +
+            '"><span class="wall-vote-btn__i">' +
+            ICON_NS_VOTE_UP +
+            "</span> <span data-wall-lc>" +
             formatIntRu(p.likes || 0) +
             "</span></button>" +
             '<button type="button" class="wall-vote-btn wall-vote-btn--down' +
@@ -3816,7 +4363,9 @@
             String(p.id) +
             '" aria-pressed="' +
             (v === "down" ? "true" : "false") +
-            '"><span class="wall-vote-btn__i">👎</span> <span data-wall-dc>' +
+            '"><span class="wall-vote-btn__i">' +
+            ICON_NS_VOTE_DOWN +
+            "</span> <span data-wall-dc>" +
             formatIntRu(p.dislikes || 0) +
             "</span></button></div>" +
             '<details class="wall-post-card__thread">' +
@@ -4766,7 +5315,8 @@
     var prizeWrap = document.querySelector(".js-profile-prize-wrap");
     if (prizeWrap && isOwn) {
       var ackHi = getProfileCouponAckLevel(u.username);
-      prizeWrap.classList.toggle("profile-level-widget__prize-full--reward-new", u.level > ackHi);
+      var lvl = Math.max(0, Math.floor(Number(u && u.level) || 0));
+      prizeWrap.classList.toggle("profile-level-widget__prize-full--reward-new", lvl > ackHi);
     }
     var rewardModal = document.getElementById("nsProfileRewardModal");
     var couponBtn = document.querySelector(".js-profile-coupon-btn");
@@ -4788,16 +5338,17 @@
         });
         if (!fresh) return;
         var ack = getProfileCouponAckLevel(fresh.username);
-        var wasNew = fresh.level > ack;
+        var freshLvl = Math.max(0, Math.floor(Number(fresh && fresh.level) || 0));
+        var wasNew = freshLvl > ack;
         var msg = wasNew
-          ? "Поздравляем! У вас " + fresh.level + " уровень! Награда — купон за уровень."
-          : "У вас " + fresh.level + " уровень. Купон за уровень активен.";
+          ? "Поздравляем! У вас " + freshLvl + " уровень! Награда — купон за уровень."
+          : "У вас " + freshLvl + " уровень. Купон за уровень активен.";
         var mEl = rewardModal.querySelector(".js-ns-level-reward-msg");
         if (mEl) mEl.textContent = msg;
         rewardModal.classList.add("is-open");
         rewardModal.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
-        setProfileCouponAckLevel(fresh.username, fresh.level);
+        setProfileCouponAckLevel(fresh.username, freshLvl);
         var pw = document.querySelector(".js-profile-prize-wrap");
         if (pw) pw.classList.remove("profile-level-widget__prize-full--reward-new");
       };
@@ -4898,7 +5449,7 @@
           '">' +
           escapeHtml(owner.username) +
           "</a> " +
-          escapeHtml(th.date || "") +
+          escapeHtml(formatStoredOrTs(th.ts, th.date)) +
           " · " +
           formatIntRu(th.views || 0) +
           " просмотров";
@@ -4946,7 +5497,7 @@
         }
       }
       var dateFoot = document.getElementById("topicPageDate");
-      if (dateFoot) dateFoot.textContent = th.date || "";
+      if (dateFoot) dateFoot.textContent = formatStoredOrTs(th.ts, th.date);
 
       var cl = document.getElementById("topicCountLikes");
       var cd = document.getElementById("topicCountDislikes");
@@ -5016,7 +5567,7 @@
                 '"/>' +
                 whoLine +
                 '<span class="topic-reply-card__date">' +
-                escapeHtml(r.date || "") +
+                escapeHtml(formatStoredOrTs(r.ts, r.date)) +
                 "</span></div>" +
                 '<div class="topic-reply-card__body">' +
                 escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
@@ -6325,6 +6876,7 @@
     var gated = {
       forum: 1,
       market: 1,
+      "market-product": 1,
       "market-sell-manual": 1,
       profile: 1,
       topic: 1,
@@ -6852,7 +7404,9 @@
         prods.forEach(function (p) {
           var title = escapeHtml(String(p.title || p.name || p.label || "Товар"));
           rows.push(
-            '<a class="header-search-dd__row header-search-dd__row--lot" href="market.html"><span class="header-search-dd__badge">Маркет</span><span>' +
+            '<a class="header-search-dd__row header-search-dd__row--lot" href="market-product.html?id=' +
+              encodeURIComponent(String(p.id)) +
+              '"><span class="header-search-dd__badge">Маркет</span><span>' +
               title +
               "</span></a>"
           );
@@ -6914,7 +7468,212 @@
     }
   }
 
+  var nsFieldInvalidBound = {
+    panel: null,
+    msg: null,
+    target: null,
+    onScroll: null,
+    onResize: null,
+    onInput: null,
+    onDocDown: null,
+    onEsc: null,
+  };
+
+  function nsFieldInvalidMessage(el) {
+    var v = el.validity;
+    if (!v) return "Проверьте значение в поле.";
+    if (v.valueMissing) {
+      var tag = (el.tagName || "").toLowerCase();
+      if (tag === "select") return "Выберите значение в списке.";
+      return "Заполните это поле.";
+    }
+    if (v.typeMismatch) {
+      var typ = String(el.getAttribute("type") || "").toLowerCase();
+      if (typ === "email") return "Укажите корректный e-mail.";
+      if (typ === "url") return "Укажите корректный адрес ссылки.";
+      return "Неверный формат.";
+    }
+    if (v.tooShort) {
+      var minL = el.minLength;
+      if (minL > 0) return "Не меньше " + minL + " символов.";
+      return "Слишком короткое значение.";
+    }
+    if (v.tooLong) return "Слишком длинное значение.";
+    if (v.rangeUnderflow || v.rangeOverflow) return "Число вне допустимого диапазона.";
+    if (v.stepMismatch) return "Некорректный шаг числа.";
+    if (v.badInput) return "Введите корректное число.";
+    if (v.patternMismatch) return "Значение не подходит под шаблон.";
+    return "Проверьте значение в поле.";
+  }
+
+  function hideNsFieldInvalidPanel() {
+    var st = nsFieldInvalidBound;
+    if (st.panel && !st.panel.hidden) {
+      st.panel.hidden = true;
+      st.panel.classList.remove("is-open");
+    }
+    if (st.onScroll) {
+      window.removeEventListener("scroll", st.onScroll, true);
+      st.onScroll = null;
+    }
+    if (st.onResize) {
+      window.removeEventListener("resize", st.onResize);
+      st.onResize = null;
+    }
+    if (st.onInput && st.target) {
+      st.target.removeEventListener("input", st.onInput);
+      st.target.removeEventListener("change", st.onInput);
+    }
+    st.onInput = null;
+    if (st.onDocDown) {
+      document.removeEventListener("mousedown", st.onDocDown, true);
+      st.onDocDown = null;
+    }
+    if (st.onEsc) {
+      document.removeEventListener("keydown", st.onEsc);
+      st.onEsc = null;
+    }
+    st.target = null;
+  }
+
+  function positionNsFieldInvalidPanel() {
+    var st = nsFieldInvalidBound;
+    var el = st.target;
+    var panel = st.panel;
+    if (!el || !panel || panel.hidden) return;
+    var r = el.getBoundingClientRect();
+    var pw = Math.max(panel.offsetWidth, 200);
+    var left = r.left + r.width / 2 - pw / 2;
+    left = Math.max(10, Math.min(left, window.innerWidth - pw - 10));
+    var top = r.bottom + 8;
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+    var ph = panel.offsetHeight || 44;
+    if (top + ph > window.innerHeight - 8 && r.top > ph + 16) {
+      panel.style.top = Math.max(8, r.top - ph - 8) + "px";
+    }
+  }
+
+  function showNsFieldInvalidPanel(el) {
+    hideNsFieldInvalidPanel();
+    var st = nsFieldInvalidBound;
+    if (!st.panel) {
+      var p = document.createElement("div");
+      p.id = "nsFieldInvalidPanel";
+      p.className = "ns-field-invalid-panel";
+      p.setAttribute("role", "alert");
+      p.innerHTML = '<p class="ns-field-invalid-panel__msg"></p>';
+      document.body.appendChild(p);
+      st.panel = p;
+      st.msg = p.querySelector(".ns-field-invalid-panel__msg");
+    }
+    st.target = el;
+    st.msg.textContent = nsFieldInvalidMessage(el);
+    st.panel.hidden = false;
+    st.panel.classList.add("is-open");
+    st.onScroll = function () {
+      positionNsFieldInvalidPanel();
+    };
+    st.onResize = st.onScroll;
+    window.addEventListener("scroll", st.onScroll, true);
+    window.addEventListener("resize", st.onResize);
+    st.onInput = function () {
+      try {
+        if (el.checkValidity()) hideNsFieldInvalidPanel();
+      } catch (err) {
+        /* ignore */
+      }
+    };
+    el.addEventListener("input", st.onInput);
+    el.addEventListener("change", st.onInput);
+    st.onDocDown = function (ev) {
+      var t = ev.target;
+      if (t === el || (el.contains && el.contains(t))) return;
+      if (st.panel && (t === st.panel || st.panel.contains(t))) return;
+      hideNsFieldInvalidPanel();
+    };
+    document.addEventListener("mousedown", st.onDocDown, true);
+    st.onEsc = function (ev) {
+      if (ev.key === "Escape") hideNsFieldInvalidPanel();
+    };
+    document.addEventListener("keydown", st.onEsc);
+    requestAnimationFrame(function () {
+      positionNsFieldInvalidPanel();
+      requestAnimationFrame(positionNsFieldInvalidPanel);
+    });
+  }
+
+  function initNsFieldInvalidPanel() {
+    if (document.body.dataset.nsFieldInvalidInit) return;
+    document.body.dataset.nsFieldInvalidInit = "1";
+    document.addEventListener(
+      "invalid",
+      function (ev) {
+        var el = ev.target;
+        if (!el || typeof el.matches !== "function") return;
+        if (!el.matches("input, select, textarea")) return;
+        if (el.type === "hidden" || el.disabled) return;
+        if (el.closest && el.closest("[data-ns-native-invalid]")) return;
+        ev.preventDefault();
+        var rects = el.getClientRects();
+        if (!rects || !rects.length) return;
+        var br = el.getBoundingClientRect();
+        if (br.width < 1 && br.height < 1) return;
+        showNsFieldInvalidPanel(el);
+      },
+      true
+    );
+  }
+
+  function closeAllNsHints() {
+    document.querySelectorAll(".ns-hint__popover").forEach(function (p) {
+      p.hidden = true;
+    });
+    document.querySelectorAll(".ns-hint__btn[aria-expanded='true']").forEach(function (b) {
+      b.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function initNsHintPopovers() {
+    if (document.body.dataset.nsHintInit) return;
+    document.body.dataset.nsHintInit = "1";
+    document.addEventListener(
+      "mousedown",
+      function (ev) {
+        if (!ev.target.closest) return;
+        if (ev.target.closest(".ns-hint")) return;
+        closeAllNsHints();
+      },
+      true
+    );
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape") closeAllNsHints();
+    });
+    document.addEventListener(
+      "click",
+      function (ev) {
+        var btn = ev.target.closest && ev.target.closest(".ns-hint__btn");
+        if (!btn) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        var wrap = btn.closest(".ns-hint");
+        if (!wrap) return;
+        var pop = wrap.querySelector(".ns-hint__popover");
+        if (!pop) return;
+        var wasClosed = pop.hidden;
+        closeAllNsHints();
+        if (wasClosed) {
+          pop.hidden = false;
+          btn.setAttribute("aria-expanded", "true");
+        }
+      },
+      true
+    );
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    initNsHintPopovers();
+    initNsFieldInvalidPanel();
     var page = document.body.getAttribute("data-page") || "";
     var firebaseWait = window.NSFirebaseReady || Promise.resolve(null);
 
@@ -6950,6 +7709,7 @@
           else if (page === "verify-email") initVerifyEmailPage(data);
           else if (page === "forum") initForum(data);
           else if (page === "market") initMarket(data);
+          else if (page === "market-product") initMarketProduct(data);
           else if (page === "market-sell-manual") initMarketSellManualPage(data);
           else if (page === "profile") initProfile(data);
           else if (page === "topic") initTopic(data);
