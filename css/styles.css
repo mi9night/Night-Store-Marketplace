@@ -2128,10 +2128,10 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
 .wall-poll {
   margin-top: 12px;
   padding: 14px 16px 12px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(165deg, rgba(30, 42, 72, 0.95) 0%, rgba(18, 24, 44, 0.98) 100%);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(165deg, rgba(36, 30, 52, 0.98) 0%, rgba(18, 16, 28, 0.99) 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
 .wall-poll__desc {
