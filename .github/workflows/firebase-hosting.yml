@@ -1,0 +1,52 @@
+# Автодеплой Firebase Hosting при push в main.
+#
+# Настройка (один раз):
+# 1) Google Cloud Console → выбери проект night-store-401e8 → IAM → Service Accounts → Create.
+# 2) Роли: "Firebase Hosting Admin" (или Editor на время отладки).
+# 3) Keys → Add key → JSON — скачай файл.
+# 4) GitHub репозиторий → Settings → Secrets and variables → Actions → New repository secret.
+#    Имя: FIREBASE_SERVICE_ACCOUNT
+#    Значение: весь текст JSON ключа (как есть, многострочный).
+# 5) После следующего push в main workflow задеплоит сайт — и агенту достаточно делать git push.
+#
+# Без секрета job упадёт с понятной ошибкой — это нормально, пока секрет не добавлен.
+
+name: Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Write service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT}" ]; then
+            echo "::error::Добавь в GitHub секрет FIREBASE_SERVICE_ACCOUNT (JSON ключ сервисного аккаунта). См. комментарий в .github/workflows/firebase-hosting.yml"
+            exit 1
+          fi
+          printf '%s\n' "${FIREBASE_SERVICE_ACCOUNT}" > "${GITHUB_WORKSPACE}/firebase-sa.json"
+
+      - name: Deploy Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-sa.json
+        run: npx --yes firebase-tools@13.29.1 deploy --only hosting --project night-store-401e8 --non-interactive
+
+      - name: Remove key file
+        if: always()
+        run: rm -f "${GITHUB_WORKSPACE}/firebase-sa.json"

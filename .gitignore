@@ -7,3 +7,5 @@ Night-Store-Marketplace/
 node_modules/
 .wrangler/
 dist/
+firebase-sa.json
+*-firebase-sa.json
