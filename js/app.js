@@ -934,133 +934,6 @@
     });
   }
 
-  function closeDemoManualLotModal() {
-    var m = document.getElementById("nsDemoManualLotModal");
-    if (m) {
-      m.classList.remove("is-open");
-      m.setAttribute("aria-hidden", "true");
-    }
-    document.body.classList.remove("modal-open");
-  }
-
-  function ensureDemoManualLotModal() {
-    if (document.getElementById("nsDemoManualLotModal")) return;
-    var cats = [
-      { v: "steam", l: "Steam" },
-      { v: "telegram", l: "Telegram" },
-      { v: "gift", l: "Гифты" },
-      { v: "roblox", l: "Roblox" },
-      { v: "minecraft", l: "Minecraft" },
-    ];
-    var opts = cats
-      .map(function (c) {
-        return '<option value="' + escapeHtml(c.v) + '">' + escapeHtml(c.l) + "</option>";
-      })
-      .join("");
-    var wrap = document.createElement("div");
-    wrap.id = "nsDemoManualLotRoot";
-    wrap.innerHTML =
-      '<div class="modal" id="nsDemoManualLotModal" aria-hidden="true">' +
-      '<div class="modal__backdrop" data-ns-manual-lot-close="1"></div>' +
-      '<div class="modal__panel demo-manual-lot-panel" role="dialog" aria-modal="true" aria-labelledby="nsDemoManualLotTitle">' +
-      '<div class="modal__head">' +
-      '<h2 id="nsDemoManualLotTitle">Лот вручную</h2>' +
-      '<button type="button" class="modal__close" data-ns-manual-lot-close="1" aria-label="Закрыть">×</button></div>' +
-      '<div class="modal__body">' +
-      '<p class="demo-wallet-hint">Объявление появится в каталоге на этом устройстве (localStorage).</p>' +
-      '<label class="demo-wallet-label" for="nsManualLotTitle">Заголовок</label>' +
-      '<input type="text" class="demo-wallet-input" id="nsManualLotTitle" maxlength="120" placeholder="Например: Steam аккаунт" />' +
-      '<label class="demo-wallet-label" for="nsManualLotCat">Категория</label>' +
-      '<select class="demo-wallet-input" id="nsManualLotCat">' +
-      opts +
-      "</select>" +
-      '<label class="demo-wallet-label" for="nsManualLotPrice">Цена, ₽</label>' +
-      '<input type="number" class="demo-wallet-input" id="nsManualLotPrice" min="1" max="99999999" step="1" value="100" />' +
-      '<label class="demo-wallet-label" for="nsManualLotDesc">Описание (необязательно)</label>' +
-      '<textarea class="demo-wallet-input demo-manual-lot-ta" id="nsManualLotDesc" rows="3" maxlength="2000" placeholder="Кратко опишите лот"></textarea>' +
-      "</div>" +
-      '<div class="modal__foot">' +
-      '<button type="button" class="btn-secondary" data-ns-manual-lot-close="1">Отмена</button>' +
-      '<button type="button" class="btn-primary" id="nsManualLotSubmit">Опубликовать в каталоге</button>' +
-      "</div></div></div>";
-    document.body.appendChild(wrap);
-    wrap.querySelectorAll("[data-ns-manual-lot-close]").forEach(function (el) {
-      el.addEventListener("click", closeDemoManualLotModal);
-    });
-    if (!window.__nsManualLotEscBound) {
-      window.__nsManualLotEscBound = true;
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        var m = document.getElementById("nsDemoManualLotModal");
-        if (!m || !m.classList.contains("is-open")) return;
-        closeDemoManualLotModal();
-      });
-    }
-    document.getElementById("nsManualLotSubmit").addEventListener("click", function () {
-      if (!window.NightStoreData) return;
-      var d = window.NightStoreData;
-      var me = sessionUser(d);
-      if (!me) {
-        window.alert("Войдите, чтобы создать лот.");
-        return;
-      }
-      var title = String((document.getElementById("nsManualLotTitle") || {}).value || "").trim();
-      if (!title) {
-        window.alert("Введите заголовок.");
-        return;
-      }
-      var catEl = document.getElementById("nsManualLotCat");
-      var cat = catEl ? catEl.value : "steam";
-      var price = Math.max(1, Math.floor(Number((document.getElementById("nsManualLotPrice") || {}).value) || 0));
-      var desc = String((document.getElementById("nsManualLotDesc") || {}).value || "").trim();
-      var pid = "manual_" + Date.now();
-      var product = {
-        id: pid,
-        title: title,
-        price: price,
-        category: cat,
-        sellerId: me.id,
-        posted: formatThreadDate(),
-        badges: ["Ручной лот"],
-        _demoNote: desc,
-      };
-      if (!d.products) d.products = [];
-      d.products.unshift(product);
-      var store = loadLocalMarketProducts();
-      store.unshift(product);
-      saveLocalMarketProducts(store);
-      syncMarketCatalogTotal(d);
-      closeDemoManualLotModal();
-      if (document.body.getAttribute("data-page") === "market") {
-        refreshMarketView(d);
-      }
-      window.alert("Лот добавлен в каталог (демо, только в этом браузере).");
-    });
-  }
-
-  function openDemoManualLotModal(data) {
-    if (data._sessionGuest || !sessionUser(data)) {
-      window.alert("Войдите, чтобы выставить лот.");
-      return;
-    }
-    ensureDemoManualLotModal();
-    var m = document.getElementById("nsDemoManualLotModal");
-    if (m) {
-      m.classList.add("is-open");
-      m.setAttribute("aria-hidden", "false");
-      document.body.classList.add("modal-open");
-    }
-    var ti = document.getElementById("nsManualLotTitle");
-    if (ti) ti.value = "";
-    var pr = document.getElementById("nsManualLotPrice");
-    if (pr) pr.value = "100";
-    var de = document.getElementById("nsManualLotDesc");
-    if (de) de.value = "";
-    setTimeout(function () {
-      if (ti) ti.focus();
-    }, 20);
-  }
-
   /** Лимит длины data URL для встраиваемых картинок в темах/стене (JPEG/WebP). */
   var MAX_DATA_IMAGE_URL_LEN = 600000;
   /** Лимит для GIF-аватара (анимация не проходит через canvas). */
@@ -2833,22 +2706,6 @@
     }
 
     wireDemoWalletUi(data);
-    var mhb = document.querySelector(".market-header-bar");
-    if (mhb && !mhb.dataset.nsManualLotWired) {
-      mhb.dataset.nsManualLotWired = "1";
-      mhb.addEventListener("click", function (e) {
-        var tr = e.target.closest("[data-market-manual-lot]");
-        if (!tr || !mhb.contains(tr)) return;
-        e.preventDefault();
-        openDemoManualLotModal(data);
-        var dd = tr.closest(".dropdown-wrap");
-        if (dd) {
-          dd.classList.remove("is-open");
-          var tb = dd.querySelector("[data-dropdown-toggle]");
-          if (tb) tb.setAttribute("aria-expanded", "false");
-        }
-      });
-    }
   }
 
   function formatThreadDate() {
@@ -2861,6 +2718,104 @@
     } catch (e) {
       return String(new Date().toISOString()).slice(0, 10);
     }
+  }
+
+  function manualLotMarketCategories() {
+    return [
+      { v: "steam", l: "Steam" },
+      { v: "telegram", l: "Telegram (TG)" },
+      { v: "fortnite", l: "Fortnite" },
+      { v: "riot", l: "Riot Games" },
+      { v: "ea", l: "EA" },
+      { v: "ubisoft", l: "Ubisoft" },
+      { v: "minecraft", l: "Minecraft" },
+      { v: "supercell", l: "Supercell" },
+      { v: "roblox", l: "Roblox" },
+      { v: "wot", l: "World of Tanks" },
+      { v: "warthunder", l: "War Thunder" },
+      { v: "epic", l: "Epic Games" },
+      { v: "gift", l: "Гифты" },
+      { v: "tarkov", l: "Escape from Tarkov" },
+      { v: "rockstar", l: "Rockstar" },
+      { v: "discord", l: "Discord" },
+      { v: "tiktok", l: "TikTok" },
+      { v: "instagram", l: "Instagram" },
+      { v: "ai", l: "AI / сервисы" },
+      { v: "bnet", l: "Battle.net" },
+      { v: "vpn", l: "VPN" },
+      { v: "xiaomi", l: "Xiaomi" },
+      { v: "warface", l: "Warface" },
+      { v: "other", l: "Другое" },
+    ];
+  }
+
+  function manualLotCategoryOptionsHtml() {
+    return manualLotMarketCategories()
+      .map(function (c) {
+        return '<option value="' + escapeHtml(c.v) + '">' + escapeHtml(c.l) + "</option>";
+      })
+      .join("");
+  }
+
+  function publishManualMarketListing(data, fields) {
+    var me = sessionUser(data);
+    if (!me) return null;
+    var title = String(fields && fields.title != null ? fields.title : "").trim();
+    if (!title) return null;
+    var price = Math.floor(Number(fields && fields.price) || 0);
+    if (!isFinite(price) || price < 1) return null;
+    var cat = String((fields && fields.category) || "other").trim() || "other";
+    var desc = String((fields && fields.description) || "").trim();
+    var acc = String((fields && fields.accountData) || "").trim();
+    var pid = "manual_" + Date.now();
+    var product = {
+      id: pid,
+      title: title,
+      price: price,
+      category: cat,
+      sellerId: me.id,
+      posted: formatThreadDate(),
+      badges: ["Ручной лот"],
+      _demoNote: desc,
+      _demoAccountData: acc,
+    };
+    if (!data.products) data.products = [];
+    data.products.unshift(product);
+    var store = loadLocalMarketProducts();
+    store.unshift(product);
+    saveLocalMarketProducts(store);
+    syncMarketCatalogTotal(data);
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-currency-changed"));
+    } catch (e) {}
+    return pid;
+  }
+
+  function initMarketSellManualPage(data) {
+    var sel = document.getElementById("mslCategory");
+    if (sel && !sel.dataset.nsFilled) {
+      sel.dataset.nsFilled = "1";
+      sel.innerHTML = manualLotCategoryOptionsHtml();
+    }
+    var form = document.getElementById("mslForm");
+    if (!form || form.dataset.nsWired === "1") return;
+    form.dataset.nsWired = "1";
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!sessionUser(data)) return;
+      var pid = publishManualMarketListing(data, {
+        title: (document.getElementById("mslTitle") || {}).value,
+        price: (document.getElementById("mslPrice") || {}).value,
+        description: (document.getElementById("mslDesc") || {}).value,
+        accountData: (document.getElementById("mslAccount") || {}).value,
+        category: (document.getElementById("mslCategory") || {}).value,
+      });
+      if (!pid) {
+        window.alert("Укажите название лота и цену не менее 1 ₽.");
+        return;
+      }
+      window.location.href = "market.html";
+    });
   }
 
   function threadStorageKey(username) {
@@ -6013,7 +5968,17 @@
       return true;
     }
     if (page === "help") return true;
-    var gated = { forum: 1, market: 1, profile: 1, topic: 1, notifications: 1, moderation: 1, settings: 1, support: 1 };
+    var gated = {
+      forum: 1,
+      market: 1,
+      "market-sell-manual": 1,
+      profile: 1,
+      topic: 1,
+      notifications: 1,
+      moderation: 1,
+      settings: 1,
+      support: 1,
+    };
     if (!gated[page]) return true;
     var u = sessionUser(data);
     if (!u || data._sessionGuest) {
@@ -6631,6 +6596,7 @@
           else if (page === "verify-email") initVerifyEmailPage(data);
           else if (page === "forum") initForum(data);
           else if (page === "market") initMarket(data);
+          else if (page === "market-sell-manual") initMarketSellManualPage(data);
           else if (page === "profile") initProfile(data);
           else if (page === "topic") initTopic(data);
           else if (page === "notifications") initNotificationsSettings();

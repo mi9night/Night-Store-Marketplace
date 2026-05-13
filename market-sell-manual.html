@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Лот вручную — Night Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body data-page="market-sell-manual">
+  <div class="app-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="btn-back" href="market.html" style="flex-shrink:0">← К маркету</a>
+        <a class="brand" href="market.html">
+          <img src="assets/logo.svg" width="36" height="36" alt="" />
+          <span>Night <strong>Store</strong></span>
+        </a>
+        <div class="header-search" style="max-width:400px;opacity:0.5;pointer-events:none">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" placeholder="Поиск на маркете…" disabled />
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <div class="dropdown-wrap" data-dropdown>
+            <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
+              <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
+              <span class="hide-mobile js-user-name">…</span>
+            </button>
+            <div class="dropdown-panel">
+              <a href="profile.html">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
+              <a href="help.html">Поддержка 24/7</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="breadcrumbs">
+      <a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span>Лот вручную</span>
+    </nav>
+
+    <main class="msl-page">
+      <div class="sidebar-card msl-card">
+        <h1 class="msl-card__h1">Новый лот вручную</h1>
+        <p class="msl-card__lead">
+          Демо: объявление сохраняется в каталоге только в этом браузере (localStorage). Реальные сделки не оформляются.
+        </p>
+        <form id="mslForm" class="msl-form" autocomplete="off">
+          <label class="demo-wallet-label" for="mslCategory">Категория</label>
+          <select class="demo-wallet-input" id="mslCategory" name="category" required></select>
+
+          <label class="demo-wallet-label" for="mslTitle">Название лота</label>
+          <input type="text" class="demo-wallet-input" id="mslTitle" name="title" maxlength="120" required placeholder="Кратко, что продаёте" />
+
+          <label class="demo-wallet-label" for="mslDesc">Описание</label>
+          <textarea class="demo-wallet-input demo-manual-lot-ta" id="mslDesc" name="description" rows="4" maxlength="4000" placeholder="Состояние, что входит в поставку и т.д."></textarea>
+
+          <label class="demo-wallet-label" for="mslPrice">Цена, ₽</label>
+          <input type="number" class="demo-wallet-input" id="mslPrice" name="price" min="1" max="99999999" step="1" value="100" required inputmode="numeric" />
+
+          <label class="demo-wallet-label" for="mslAccount">Данные аккаунта / поставки</label>
+          <textarea class="demo-wallet-input demo-manual-lot-ta" id="mslAccount" name="account" rows="5" maxlength="8000" placeholder="Логин, заметки для покупателя, ссылки на смену почты — только для демо, не вводите настоящие пароли в проде"></textarea>
+          <p class="msl-card__warn">В демо-версии данные хранятся открытым текстом в памяти браузера. Для реального маркета нужен защищённый бэкенд.</p>
+
+          <div class="msl-form__actions">
+            <a class="btn-secondary" href="market.html" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;width:auto;padding:10px 18px">Отмена</a>
+            <button type="submit" class="btn-primary" style="width:auto;padding:10px 22px">Опубликовать на маркете</button>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <footer class="site-footer">Night Store · лот вручную</footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
