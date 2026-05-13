@@ -19,36 +19,36 @@
           <span>Night <strong>Store</strong></span>
         </a>
         <nav class="nav-main" aria-label="Основное меню">
-          <a href="market.html">Маркет</a>
-          <a href="help.html">Статьи</a>
-          <a href="help.html">Гарант</a>
-          <a href="help.html">Соц. сети</a>
+          <a href="market.html" data-i18n="nav.market">Маркет</a>
+          <a href="help.html" data-i18n="nav.articles">Статьи</a>
+          <a href="help.html" data-i18n="nav.guarantee">Гарант</a>
+          <a href="help.html" data-i18n="nav.social">Соц. сети</a>
           <div class="dropdown-wrap" data-dropdown>
-            <button type="button" class="nav-more-btn" data-dropdown-toggle aria-expanded="false">Другое ▾</button>
+            <button type="button" class="nav-more-btn" data-dropdown-toggle aria-expanded="false" data-i18n="nav.more">Другое ▾</button>
             <div class="dropdown-panel">
-              <a href="help.html">FAQ</a>
-              <a href="help.html">Правила</a>
-              <a href="profile.html">Пользователи</a>
+              <a href="help.html" data-i18n="nav.faq">FAQ</a>
+              <a href="help.html" data-i18n="nav.rules">Правила</a>
+              <a href="profile.html" data-i18n="nav.users">Пользователи</a>
             </div>
           </div>
         </nav>
         <div class="header-search">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="search" placeholder="Поиск..." autocomplete="off" />
+          <input type="search" data-i18n-placeholder="search.forum" placeholder="Поиск..." autocomplete="off" />
         </div>
         <div class="header-actions">
-          <button type="button" class="icon-btn" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
-          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <button type="button" class="icon-btn" data-i18n-aria="aria.messages" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" data-i18n-aria="aria.notifications" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
               <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
               <span class="hide-mobile js-user-name">…</span>
             </button>
             <div class="dropdown-panel">
-              <a href="profile.html">Профиль</a>
-              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
-              <a href="market.html">Мой маркет</a>
-              <a href="help.html">Помощь</a>
+              <a href="profile.html" data-i18n="hdr.profile">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden data-i18n="hdr.mod">Модерация</a>
+              <a href="market.html" data-i18n="hdr.mymarket">Мой маркет</a>
+              <a href="help.html" data-i18n="hdr.help">Помощь</a>
             </div>
           </div>
         </div>
@@ -56,25 +56,14 @@
     </header>
 
     <nav class="breadcrumbs" aria-label="Навигация">
-      <a href="index.html">Форум</a> / <span>Обсуждения</span>
+      <a href="index.html" data-i18n="bc.forum">Форум</a> / <span id="forumBreadcrumbLeaf">Обсуждения</span>
     </nav>
 
     <main class="layout-forum">
       <aside class="sidebar-forum">
         <div class="sidebar-card">
-          <button type="button" class="btn-primary" id="forumIndexCreateBtn">Создать тему</button>
-          <div class="nav-section-title">Навигация</div>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Все обсуждения</a>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Мои темы</a>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a2 2 0 01-2-2H2V3zM22 3h-6a4 4 0 00-4 4v14a2 2 0 012-2h8V3z"/></svg>Закладки</a>
-          <div class="nav-section-title">Основная категория</div>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>Торговля</a>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/></svg>Работа и услуги</a>
-          <a class="side-link" href="market.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>Маркет Night Store</a>
-          <div class="nav-section-title">Игровая категория</div>
-          <a class="side-link has-dot" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Counter-Strike 2</a>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>Dota 2</a>
-          <a class="side-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>Valorant</a>
+          <button type="button" class="btn-primary" id="forumIndexCreateBtn" data-i18n="forum.create">Создать тему</button>
+          <div id="forumSidebarNav"></div>
         </div>
         <div class="sidebar-card mini-profile">
           <img class="avatar-lg js-sidebar-avatar" src="" alt="" width="72" height="72" loading="lazy" />
@@ -109,7 +98,7 @@
     </main>
 
     <footer class="site-footer">
-      © Night Store. <a href="help.html">Помощь</a> · <a href="market.html">Маркет</a>
+      © Night Store. <a href="help.html" data-i18n="footer.help">Помощь</a> · <a href="market.html" data-i18n="footer.market">Маркет</a>
     </footer>
   </div>
 

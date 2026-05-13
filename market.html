@@ -14,140 +14,140 @@
   <div class="app-shell">
     <header class="site-header">
       <div class="header-inner">
-        <a class="btn-back" href="index.html" style="flex-shrink:0">← На форум</a>
+        <a class="btn-back" href="index.html" style="flex-shrink:0" data-i18n="forum.back">← На форум</a>
         <a class="brand" href="market.html">
           <img src="assets/logo.svg" width="36" height="36" alt="" />
           <span>Night <strong>Store</strong></span>
         </a>
         <div class="header-search" style="max-width:400px">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="search" placeholder="Поиск по маркету..." />
+          <input type="search" data-i18n-placeholder="search.market" placeholder="Поиск по маркету..." />
         </div>
         <div class="header-actions">
-          <button type="button" class="icon-btn icon-btn--cart icon-btn--cart-ns" aria-label="Корзина" aria-expanded="false" data-market-cart-toggle><span class="cart-ns-glyph" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span></button>
-          <button type="button" class="icon-btn" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
-          <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--cart icon-btn--cart-ns" data-i18n-aria="aria.cart" aria-label="Корзина" aria-expanded="false" data-market-cart-toggle><span class="cart-ns-glyph" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span></button>
+          <button type="button" class="icon-btn" data-i18n-aria="aria.messages" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button type="button" class="icon-btn icon-btn--notify" data-i18n-aria="aria.notifications" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
               <img class="avatar avatar-img js-user-avatar" src="" alt="" width="30" height="30" loading="lazy" />
               <span class="hide-mobile js-user-name">…</span>
             </button>
             <div class="dropdown-panel">
-              <a href="profile.html">Профиль</a>
-              <a href="moderation.html" class="js-header-mod-link" hidden>Модерация</a>
-              <a href="help.html">Поддержка 24/7</a>
+              <a href="profile.html" data-i18n="hdr.profile">Профиль</a>
+              <a href="moderation.html" class="js-header-mod-link" hidden data-i18n="hdr.mod">Модерация</a>
+              <a href="help.html" data-i18n="hdr.support247">Поддержка 24/7</a>
             </div>
           </div>
         </div>
       </div>
     </header>
 
-    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span>Поиск</span></nav>
+    <nav class="breadcrumbs"><a href="index.html" data-i18n="bc.forum">Форум</a> / <a href="market.html" data-i18n="bc.market">Маркет</a> / <span data-i18n="bc.search">Поиск</span></nav>
 
     <main class="layout-market">
       <aside class="sidebar-market">
         <div class="sidebar-card market-currency-card">
-          <div class="market-currency-card__title">Валюта каталога</div>
-          <p class="market-currency-card__hint">В каталоге цены указаны в рублях. Пересчёт в другие валюты — в настройках профиля (демо).</p>
-          <a class="btn-secondary market-currency-card__btn" href="settings.html">Настройки</a>
+          <div class="market-currency-card__title" data-i18n="market.currency_title">Валюта каталога</div>
+          <p class="market-currency-card__hint" data-i18n="market.currency_hint">В каталоге цены указаны в рублях. Пересчёт в другие валюты — в настройках профиля (демо).</p>
+          <a class="btn-secondary market-currency-card__btn" href="settings.html" data-i18n="market.currency_btn">Настройки</a>
         </div>
 
         <div class="balance-widget">
           <div class="row">
-            <span style="color:var(--text-muted)">Баланс</span>
+            <span style="color:var(--text-muted)" data-i18n="market.balance">Баланс</span>
             <span class="balance js-balance-value">0 ₽</span>
           </div>
           <div class="balance-actions">
-            <button type="button" data-demo-wallet="topup">Пополнить</button>
-            <button type="button" data-demo-wallet="withdraw">Вывести</button>
-            <button type="button" data-demo-wallet="transfer">Перевод</button>
+            <button type="button" data-demo-wallet="topup" data-i18n="mega.topup">Пополнить</button>
+            <button type="button" data-demo-wallet="withdraw" data-i18n="mega.withdraw">Вывести</button>
+            <button type="button" data-demo-wallet="transfer" data-i18n="mega.transfer">Перевести</button>
           </div>
         </div>
 
         <div class="sidebar-card market-side-nav">
-          <div class="nav-section-title">Маркет</div>
-          <a class="side-link" href="market-my-products.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>Мои товары</a>
-          <a class="side-link" href="market-purchases.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Мои операции</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Избранное</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Метки</a>
+          <div class="nav-section-title" data-i18n="market.nav_title">Маркет</div>
+          <a class="side-link" href="market-my-products.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span data-i18n="market.my_products">Мои товары</span></a>
+          <a class="side-link" href="market-purchases.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg><span data-i18n="market.my_purchases">Мои покупки</span></a>
+          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span data-i18n="market.my_ops">Мои операции</span></a>
+          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span data-i18n="market.favorites">Избранное</span></a>
+          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span data-i18n="market.tags">Метки</span></a>
         </div>
 
         <div class="sidebar-card market-side-nav market-side-nav--muted">
-          <div class="nav-section-title">Сервис</div>
-          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Правила и гарантии</a>
-          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Советы и гайды</a>
-          <a class="side-link" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 008.6 15a1.65 1.65 0 00-1-1.51V12a2 2 0 012-2h.09A1.65 1.65 0 0011 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 11c.36.95.36 1.99 0 2.95z"/></svg>Настройки</a>
-          <a class="side-link" href="tickets.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>Тикеты</a>
+          <div class="nav-section-title" data-i18n="market.svc">Сервис</div>
+          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span data-i18n="market.rules">Правила и гарантии</span></a>
+          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span data-i18n="market.guides">Советы и гайды</span></a>
+          <a class="side-link" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 008.6 15a1.65 1.65 0 00-1-1.51V12a2 2 0 012-2h.09A1.65 1.65 0 0011 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 11c.36.95.36 1.99 0 2.95z"/></svg><span data-i18n="market.settings">Настройки</span></a>
+          <a class="side-link" href="tickets.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg><span data-i18n="market.tickets">Тикеты</span></a>
         </div>
 
         <div class="sidebar-card market-recent-card">
-          <div class="nav-section-title">Недавно просмотрено</div>
+          <div class="nav-section-title" data-i18n="market.recent">Недавно просмотрено</div>
           <div id="marketRecentRoot" class="market-recent-root" aria-live="polite"></div>
         </div>
 
         <div class="tool-panel">
-          <h4>Получить код с почты</h4>
-          <input type="text" placeholder="Почта от аккаунта" />
-          <input type="text" placeholder="Логин от аккаунта" />
-          <button type="button" class="btn-primary" style="margin-top:4px">Получить код</button>
+          <h4 data-i18n="market.tool_code_title">Получить код с почты</h4>
+          <input type="text" data-i18n-placeholder="market.tool_code_email_ph" placeholder="Почта от аккаунта" />
+          <input type="text" data-i18n-placeholder="market.tool_code_login_ph" placeholder="Логин от аккаунта" />
+          <button type="button" class="btn-primary" style="margin-top:4px" data-i18n="market.tool_code_btn">Получить код</button>
         </div>
 
         <div class="tool-panel">
-          <h4>Получить письма</h4>
-          <input type="text" placeholder="Почта:пароль" />
-          <button type="button" class="btn-primary" style="margin-top:4px">Получить письма</button>
+          <h4 data-i18n="market.tool_mailin_title">Получить письма</h4>
+          <input type="text" data-i18n-placeholder="market.tool_mailin_ph" placeholder="Почта:пароль" />
+          <button type="button" class="btn-primary" style="margin-top:4px" data-i18n="market.tool_mailin_btn">Получить письма</button>
         </div>
       </aside>
 
       <div class="market-main">
         <div class="market-header-bar">
           <div class="dropdown-wrap" data-dropdown>
-            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Продать ▾</button>
+            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle data-i18n="market.sell">Продать ▾</button>
             <div class="dropdown-panel">
-              <a href="market-sell-manual.html">Лот вручную</a>
-              <button type="button" class="dropdown-panel__solo" disabled title="Скоро">API-выгрузка</button>
+              <a href="market-sell-manual.html" data-i18n="market.sell_manual">Лот вручную</a>
+              <button type="button" class="dropdown-panel__solo" disabled data-i18n="market.api_export" data-i18n-title="market.soon" title="Скоро">API-выгрузка</button>
             </div>
           </div>
           <div class="dropdown-wrap" data-dropdown>
-            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Массовый залив ▾</button>
+            <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle data-i18n="market.bulk">Массовый залив ▾</button>
             <div class="dropdown-panel">
-              <button type="button" class="dropdown-panel__solo" disabled title="Скоро">Документация</button>
+              <button type="button" class="dropdown-panel__solo" disabled data-i18n="market.docs" data-i18n-title="market.soon" title="Скоро">Документация</button>
             </div>
           </div>
           <span class="market-lang-strip js-market-lang-strip" aria-live="polite">₽ RUB · Русский</span>
         </div>
 
-        <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 12px">Последние поиски и сохранённые фильтры.</p>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 12px" data-i18n="market.hint_bar">Последние поиски и сохранённые фильтры.</p>
         <div class="tag-cloud" id="tagCloudRoot" style="margin-bottom:18px"></div>
 
-        <section class="category-section" aria-label="Категории площадок">
-          <h2 class="category-section__title">Категории</h2>
+        <section class="category-section" data-i18n-aria="market.cat_aria" aria-label="Категории площадок">
+          <h2 class="category-section__title" data-i18n="market.cat_title">Категории</h2>
           <div class="category-grid" id="categoryGrid">
-            <button type="button" class="category-tile" data-cat="steam" title="Steam" style="--tile:#171a21"><span class="category-tile__abbr">Steam</span></button>
-            <button type="button" class="category-tile" data-cat="telegram" title="Telegram" style="--tile:#229ED9"><span class="category-tile__abbr">TG</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="fortnite" title="Fortnite" style="--tile:#2f2d52"><span class="category-tile__abbr">FN</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="riot" title="Riot" style="--tile:#d53235"><span class="category-tile__abbr">Riot</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="ea" title="EA" style="--tile:#ff4747"><span class="category-tile__abbr">EA</span></button>
-            <button type="button" class="category-tile" data-cat="ubisoft" title="Ubisoft" style="--tile:#0070ff"><span class="category-tile__abbr">UBI</span></button>
-            <button type="button" class="category-tile" data-cat="minecraft" title="Minecraft" style="--tile:#5b8731"><span class="category-tile__abbr">MC</span></button>
-            <button type="button" class="category-tile" data-cat="supercell" title="Supercell" style="--tile:#1e3264"><span class="category-tile__abbr">SC</span></button>
-            <button type="button" class="category-tile" data-cat="roblox" title="Roblox" style="--tile:#e2231a"><span class="category-tile__abbr">RB</span></button>
-            <button type="button" class="category-tile" data-cat="wot" title="World of Tanks" style="--tile:#451a03"><span class="category-tile__abbr">WoT</span></button>
-            <button type="button" class="category-tile" data-cat="warthunder" title="War Thunder" style="--tile:#2a2419"><span class="category-tile__abbr">WT</span></button>
-            <button type="button" class="category-tile" data-cat="epic" title="Epic Games" style="--tile:#2b2b2b"><span class="category-tile__abbr">Epic</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="gift" title="Гифты" style="--tile:#3d2a4f"><span class="category-tile__abbr">Gift</span></button>
-            <button type="button" class="category-tile" data-cat="tarkov" title="Escape from Tarkov" style="--tile:#24211d"><span class="category-tile__abbr">EFT</span></button>
-            <button type="button" class="category-tile category-tile--dark" data-cat="rockstar" title="Rockstar" style="--tile:#fcaf17"><span class="category-tile__abbr">R*</span></button>
-            <button type="button" class="category-tile" data-cat="discord" title="Discord" style="--tile:#5865F2"><span class="category-tile__abbr">DC</span></button>
-            <button type="button" class="category-tile" data-cat="tiktok" title="TikTok" style="--tile:#010101"><span class="category-tile__abbr">TT</span></button>
-            <button type="button" class="category-tile" data-cat="instagram" title="Instagram" style="--tile:linear-gradient(45deg,#f58529,#dd2a7b,#8134af)"><span class="category-tile__abbr">IG</span><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="ai" title="AI / сервисы" style="--tile:#1e293b"><span class="category-tile__abbr">AI</span></button>
-            <button type="button" class="category-tile" data-cat="bnet" title="Battle.net" style="--tile:#0074e0"><span class="category-tile__abbr">Bnet</span></button>
-            <button type="button" class="category-tile" data-cat="vpn" title="VPN" style="--tile:#0d3b2e"><span class="category-tile__abbr">VPN</span></button>
-            <button type="button" class="category-tile" data-cat="xiaomi" title="Xiaomi" style="--tile:#ff6700"><span class="category-tile__abbr">Mi</span></button>
-            <button type="button" class="category-tile" data-cat="warface" title="Warface" style="--tile:#4a5568"><span class="category-tile__abbr">WF</span><span class="category-tile__warn category-tile__warn--red" aria-hidden="true"></span></button>
-            <button type="button" class="category-tile" data-cat="other" title="Другое" style="--tile:#2a2635"><span class="category-tile__abbr">…</span></button>
+            <button type="button" class="category-tile" data-cat="steam" title="Steam" style="--tile:#171a21"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/steam.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="telegram" title="Telegram" style="--tile:#229ED9"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/telegram.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="fortnite" title="Fortnite" style="--tile:#2f2d52"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/fortnite.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="riot" title="Riot Games" style="--tile:#d53235"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/riotgames.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="ea" title="EA" style="--tile:#ff4747"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/ea.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="ubisoft" title="Ubisoft" style="--tile:#0070ff"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/ubisoft.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="minecraft" title="Minecraft" style="--tile:#5b8731"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/minecraft.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="supercell" title="Supercell" style="--tile:#1e3264"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/supercell.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="roblox" title="Roblox" style="--tile:#e2231a"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/roblox.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="wot" title="World of Tanks" style="--tile:#451a03"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/wot.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="warthunder" title="War Thunder" style="--tile:#2a2419"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/warthunder.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="epic" title="Epic Games" style="--tile:#2b2b2b"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/epicgames.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="gift" title="Гифты" style="--tile:#3d2a4f"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/gift.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="tarkov" title="Escape from Tarkov" style="--tile:#24211d"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/tarkov.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile category-tile--dark" data-cat="rockstar" title="Rockstar Games" style="--tile:#fcaf17"><img class="category-tile__logo category-tile__logo--darkbg" src="https://unpkg.com/simple-icons@11.6.0/icons/rockstargames.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="discord" title="Discord" style="--tile:#5865F2"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/discord.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="tiktok" title="TikTok" style="--tile:#010101"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/tiktok.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="instagram" title="Instagram" style="--tile:linear-gradient(45deg,#f58529,#dd2a7b,#8134af)"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/instagram.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--yellow" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="ai" title="AI / сервисы" style="--tile:#1e293b"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/googlegemini.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="bnet" title="Battle.net" style="--tile:#0074e0"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/battledotnet.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="vpn" title="VPN" style="--tile:#0d3b2e"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/nordvpn.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="xiaomi" title="Xiaomi" style="--tile:#ff6700"><img class="category-tile__logo" src="https://unpkg.com/simple-icons@11.6.0/icons/xiaomi.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
+            <button type="button" class="category-tile" data-cat="warface" title="Warface" style="--tile:#4a5568"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/warface.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /><span class="category-tile__warn category-tile__warn--red" aria-hidden="true"></span></button>
+            <button type="button" class="category-tile" data-cat="other" title="Другое" style="--tile:#2a2635"><img class="category-tile__logo category-tile__logo--native" src="assets/categories/other.svg" width="40" height="40" loading="lazy" alt="" decoding="async" /></button>
           </div>
         </section>
 
@@ -210,7 +210,7 @@
       </div>
     </main>
 
-    <footer class="site-footer">Night Store · маркет</footer>
+    <footer class="site-footer" data-i18n="market.footer_line">Night Store · маркет</footer>
   </div>
 
   <div class="modal" id="marketFiltersModal" aria-hidden="true">

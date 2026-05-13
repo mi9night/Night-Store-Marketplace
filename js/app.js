@@ -245,6 +245,91 @@
       var cls = "wall-post-inline-img" + (isGif ? " wall-post-inline-img--gif" : "");
       return push('<img src="' + escapeHtml(url) + '" class="' + cls + '" alt="" loading="lazy" referrerpolicy="no-referrer" />');
     });
+    function listItemsToHtml(inner, ordered) {
+      var parts = String(inner || "").split(/\[\*\]/);
+      var items = [];
+      parts.forEach(function (chunk) {
+        var t = chunk.trim();
+        if (t) items.push("<li>" + escapeHtml(t).replace(/\n/g, "<br/>") + "</li>");
+      });
+      if (!items.length) return "";
+      var tg = ordered ? "ol" : "ul";
+      return '<' + tg + ' class="wall-list">' + items.join("") + "</" + tg + ">";
+    }
+    s = s.replace(/\[list=1\]([\s\S]*?)\[\/list\]/gi, function (_, inner) {
+      var h = listItemsToHtml(inner, true);
+      return h ? push(h) : arguments[0];
+    });
+    s = s.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, function (_, inner) {
+      var h = listItemsToHtml(inner, false);
+      return h ? push(h) : arguments[0];
+    });
+    s = s.replace(/\[gallery\]\s*(https?:\/\/[^\s\[\]|]+)\s*\|\s*(https?:\/\/[^\s\[\]|]+)\s*\[\/gallery\]/gi, function (_, u1, u2) {
+      if (!/^https?:\/\//i.test(u1) || !/^https?:\/\//i.test(u2)) return arguments[0];
+      return push(
+        '<div class="wall-gallery">' +
+          '<img src="' +
+          escapeHtml(u1) +
+          '" class="wall-post-inline-img" alt="" loading="lazy" referrerpolicy="no-referrer"/>' +
+          '<img src="' +
+          escapeHtml(u2) +
+          '" class="wall-post-inline-img" alt="" loading="lazy" referrerpolicy="no-referrer"/>' +
+          "</div>"
+      );
+    });
+    s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\]([\s\S]*?)\[\/url\]/gi, function (_, href, inner) {
+      if (!/^https?:\/\//i.test(href)) return arguments[0];
+      return push(
+        '<a href="' +
+          escapeHtml(href) +
+          '" target="_blank" rel="noopener noreferrer nofollow" class="wall-post-link">' +
+          escapeHtml(inner).replace(/\n/g, "<br/>") +
+          "</a>"
+      );
+    });
+    s = s.replace(/\[color=#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\]([\s\S]*?)\[\/color\]/gi, function (_, hex, inner) {
+      return push(
+        '<span class="wall-color" style="color:#' +
+          escapeHtml(hex) +
+          '">' +
+          escapeHtml(inner).replace(/\n/g, "<br/>") +
+          "</span>"
+      );
+    });
+    s = s.replace(/\[size=((?:\d{1,2}px)|(?:\d{1,3}%))\]([\s\S]*?)\[\/size\]/gi, function (_, szRaw, inner) {
+      var sz = String(szRaw || "").trim();
+      var ok = false;
+      var px = /^(\d{1,2})px$/i.exec(sz);
+      if (px) {
+        var n = parseInt(px[1], 10);
+        ok = n >= 8 && n <= 48;
+      }
+      var pc = /^(\d{1,3})%$/i.exec(sz);
+      if (pc) {
+        var m = parseInt(pc[1], 10);
+        ok = m >= 70 && m <= 200;
+      }
+      if (!ok) return arguments[0];
+      return push(
+        '<span class="wall-size" style="font-size:' +
+          escapeHtml(sz) +
+          '">' +
+          escapeHtml(inner).replace(/\n/g, "<br/>") +
+          "</span>"
+      );
+    });
+    s = s.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, function (_, inner) {
+      return push("<strong>" + escapeHtml(inner).replace(/\n/g, "<br/>") + "</strong>");
+    });
+    s = s.replace(/\[i\]([\s\S]*?)\[\/i\]/gi, function (_, inner) {
+      return push("<em>" + escapeHtml(inner).replace(/\n/g, "<br/>") + "</em>");
+    });
+    s = s.replace(/\[u\]([\s\S]*?)\[\/u\]/gi, function (_, inner) {
+      return push("<u>" + escapeHtml(inner).replace(/\n/g, "<br/>") + "</u>");
+    });
+    s = s.replace(/\[s\]([\s\S]*?)\[\/s\]/gi, function (_, inner) {
+      return push("<del>" + escapeHtml(inner).replace(/\n/g, "<br/>") + "</del>");
+    });
     s = escapeHtml(s).replace(/\n/g, "<br/>");
     tok.forEach(function (html, i) {
       s = s.split("~~~NSW" + i + "~~~").join(html);
@@ -1227,7 +1312,271 @@
   var SUPPORT_THREADS_KEY = "nightstore_support_threads_v1";
   var MARKET_PURCHASES_KEY = "nightstore_market_purchases_v1";
   var USER_LANG_KEY = "nightstore_user_lang_v1";
+  var GUEST_LANG_KEY = "nightstore_guest_lang_v1";
   var DM_THREADS_KEY = "nightstore_dm_threads_v1";
+
+  var NS_UI = {
+    ru: {
+      "nav.market": "Маркет",
+      "nav.articles": "Статьи",
+      "nav.guarantee": "Гарант",
+      "nav.social": "Соц. сети",
+      "nav.more": "Другое ▾",
+      "nav.faq": "FAQ",
+      "nav.rules": "Правила",
+      "nav.users": "Пользователи",
+      "hdr.profile": "Профиль",
+      "hdr.mod": "Модерация",
+      "hdr.mymarket": "Мой маркет",
+      "hdr.help": "Помощь",
+      "hdr.support247": "Поддержка 24/7",
+      "search.forum": "Поиск...",
+      "search.market": "Поиск по маркету...",
+      "aria.cart": "Корзина",
+      "aria.messages": "Сообщения",
+      "aria.notifications": "Уведомления",
+      "footer.help": "Помощь",
+      "footer.market": "Маркет",
+      "guest.login": "Войти",
+      "guest.register": "Регистрация",
+      "forum.back": "← На форум",
+      "bc.forum": "Форум",
+      "bc.market": "Маркет",
+      "bc.search": "Поиск",
+      "forum.create": "Создать тему",
+      "forum.bc_all": "Все обсуждения",
+      "forum.nav_block": "Навигация",
+      "forum.board_unknown": "Раздел",
+      "forum.all_threads": "Все обсуждения",
+      "forum.my_threads": "Мои темы",
+      "forum.bookmarks": "Закладки",
+      "forum.market_link": "Маркет Night Store",
+      "forum.empty_all": "В ленте пока нет тем — создайте свою через «Создать тему» или в",
+      "forum.empty_board": "В этом разделе пока нет тем.",
+      "forum.empty_create": "Создать тему",
+      "forum.empty_show_all": "показать все разделы",
+      "forum.empty_profile_link": "профиле",
+      "mega.balance": "Баланс",
+      "mega.bal_toggle": "Показать или скрыть баланс",
+      "mega.fx_toggle": "Валюта отображения",
+      "mega.topup": "Пополнить",
+      "mega.withdraw": "Вывести",
+      "mega.transfer": "Перевести",
+      "mega.switch_title": "Войти в @{name} — текущий аккаунт окажется в этой строке для обратного переключения",
+      "mega.switch_aria": "Войти в связанный аккаунт @{name}",
+      "mega.my_products": "Мои товары",
+      "mega.my_purchases": "Мои покупки",
+      "mega.my_topics": "Мои темы",
+      "mega.messages": "Мои сообщения",
+      "mega.tickets": "Мои тикеты",
+      "mega.bookmarks": "Мои закладки",
+      "mega.faq": "FAQ",
+      "mega.lang": "Язык",
+      "mega.settings": "Настройки",
+      "mega.logout": "Выйти",
+      "mega.support": "Тикеты",
+      "mega.mod": "Модерация",
+      "mega.fx_foot": "Курсы обновляются не чаще одного раза в сутки",
+      "mega.fx_catalog_rub": "Каталог хранит цены в ₽",
+      "mega.fx_unavail": "курс недоступен",
+      "settings.lang_saved": "Язык сохранён.",
+      "settings.login_to_save": "Войдите, чтобы сохранить язык.",
+      "market.cat_title": "Категории",
+      "market.recent": "Недавно просмотрено",
+      "market.nav_title": "Маркет",
+      "market.svc": "Сервис",
+      "market.currency_title": "Валюта каталога",
+      "market.currency_hint": "В каталоге цены указаны в рублях. Пересчёт в другие валюты — в настройках профиля (демо).",
+      "market.currency_btn": "Настройки",
+      "market.balance": "Баланс",
+      "market.rules": "Правила и гарантии",
+      "market.guides": "Советы и гайды",
+      "market.settings": "Настройки",
+      "market.tickets": "Тикеты",
+      "market.sell": "Продать ▾",
+      "market.sell_manual": "Лот вручную",
+      "market.soon": "Скоро",
+      "market.bulk": "Массовый залив ▾",
+      "market.hint_bar": "Последние поиски и сохранённые фильтры.",
+      "market.my_products": "Мои товары",
+      "market.my_purchases": "Мои покупки",
+      "market.my_ops": "Мои операции",
+      "market.favorites": "Избранное",
+      "market.tags": "Метки",
+      "market.api_export": "API-выгрузка",
+      "market.docs": "Документация",
+      "market.tool_code_title": "Получить код с почты",
+      "market.tool_code_email_ph": "Почта от аккаунта",
+      "market.tool_code_login_ph": "Логин от аккаунта",
+      "market.tool_code_btn": "Получить код",
+      "market.tool_mailin_title": "Получить письма",
+      "market.tool_mailin_ph": "Почта:пароль",
+      "market.tool_mailin_btn": "Получить письма",
+      "market.cat_aria": "Категории площадок",
+      "market.footer_line": "Night Store · маркет",
+    },
+    en: {
+      "nav.market": "Market",
+      "nav.articles": "Articles",
+      "nav.guarantee": "Escrow",
+      "nav.social": "Social",
+      "nav.more": "More ▾",
+      "nav.faq": "FAQ",
+      "nav.rules": "Rules",
+      "nav.users": "Users",
+      "hdr.profile": "Profile",
+      "hdr.mod": "Moderation",
+      "hdr.mymarket": "My market",
+      "hdr.help": "Help",
+      "hdr.support247": "24/7 support",
+      "search.forum": "Search…",
+      "search.market": "Search the market…",
+      "aria.cart": "Cart",
+      "aria.messages": "Messages",
+      "aria.notifications": "Notifications",
+      "footer.help": "Help",
+      "footer.market": "Market",
+      "guest.login": "Log in",
+      "guest.register": "Sign up",
+      "forum.back": "← Forum",
+      "bc.forum": "Forum",
+      "bc.market": "Market",
+      "bc.search": "Search",
+      "forum.create": "New topic",
+      "forum.bc_all": "All discussions",
+      "forum.nav_block": "Navigation",
+      "forum.board_unknown": "Section",
+      "forum.all_threads": "All discussions",
+      "forum.my_threads": "My topics",
+      "forum.bookmarks": "Bookmarks",
+      "forum.market_link": "Night Store market",
+      "forum.empty_all": "No topics yet — use “New topic” or your",
+      "forum.empty_board": "No topics in this section yet.",
+      "forum.empty_create": "Create topic",
+      "forum.empty_show_all": "show all sections",
+      "forum.empty_profile_link": "profile",
+      "mega.balance": "Balance",
+      "mega.bal_toggle": "Show or hide balance",
+      "mega.fx_toggle": "Display currency",
+      "mega.topup": "Top up",
+      "mega.withdraw": "Withdraw",
+      "mega.transfer": "Transfer",
+      "mega.switch_title": "Sign in as @{name} — your current account moves here to switch back",
+      "mega.switch_aria": "Sign in to linked account @{name}",
+      "mega.my_products": "My listings",
+      "mega.my_purchases": "My purchases",
+      "mega.my_topics": "My topics",
+      "mega.messages": "Messages",
+      "mega.tickets": "Tickets",
+      "mega.bookmarks": "Bookmarks",
+      "mega.faq": "FAQ",
+      "mega.lang": "Language",
+      "mega.settings": "Settings",
+      "mega.logout": "Log out",
+      "mega.support": "Tickets",
+      "mega.mod": "Moderation",
+      "mega.fx_foot": "Rates update at most once per day",
+      "mega.fx_catalog_rub": "Catalog prices are stored in ₽",
+      "mega.fx_unavail": "rate unavailable",
+      "settings.lang_saved": "Language saved.",
+      "settings.login_to_save": "Log in to save language.",
+      "market.cat_title": "Categories",
+      "market.recent": "Recently viewed",
+      "market.nav_title": "Market",
+      "market.svc": "Service",
+      "market.currency_title": "Catalog currency",
+      "market.currency_hint": "Prices in the catalog are in rubles. Other currencies in profile settings (demo).",
+      "market.currency_btn": "Settings",
+      "market.balance": "Balance",
+      "market.rules": "Rules & guarantees",
+      "market.guides": "Tips & guides",
+      "market.settings": "Settings",
+      "market.tickets": "Tickets",
+      "market.sell": "Sell ▾",
+      "market.sell_manual": "Manual listing",
+      "market.soon": "Soon",
+      "market.bulk": "Bulk upload ▾",
+      "market.hint_bar": "Recent searches and saved filters.",
+      "market.my_products": "My listings",
+      "market.my_purchases": "My purchases",
+      "market.my_ops": "My activity",
+      "market.favorites": "Favorites",
+      "market.tags": "Tags",
+      "market.api_export": "API export",
+      "market.docs": "Documentation",
+      "market.tool_code_title": "Get code from email",
+      "market.tool_code_email_ph": "Account email",
+      "market.tool_code_login_ph": "Account login",
+      "market.tool_code_btn": "Get code",
+      "market.tool_mailin_title": "Fetch mail",
+      "market.tool_mailin_ph": "email:password",
+      "market.tool_mailin_btn": "Fetch mail",
+      "market.cat_aria": "Platform categories",
+      "market.footer_line": "Night Store · market",
+    },
+  };
+
+  function getUiLang(data) {
+    data = data || window.NightStoreData;
+    var u = data && sessionUser(data);
+    if (u && !(data && data._sessionGuest)) return loadUserLangPref(u.username);
+    return loadUserLangPref("");
+  }
+
+  function nsTr(data, key) {
+    var lang = getUiLang(data);
+    var row = NS_UI[lang];
+    var t = row && row[key];
+    if (t != null && String(t) !== "") return t;
+    var fb = NS_UI.ru && NS_UI.ru[key];
+    return fb != null ? fb : String(key || "");
+  }
+
+  function applyDomI18n(data) {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n");
+      if (!key) return;
+      el.textContent = nsTr(data, key);
+    });
+    document.querySelectorAll("[data-i18n-html]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n-html");
+      if (!key) return;
+      el.innerHTML = nsTr(data, key);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n-placeholder");
+      if (key) el.setAttribute("placeholder", nsTr(data, key));
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n-aria");
+      if (key) el.setAttribute("aria-label", nsTr(data, key));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n-title");
+      if (key) el.setAttribute("title", nsTr(data, key));
+    });
+  }
+
+  function refreshAllUiLang(data, pageId) {
+    if (!data) return;
+    try {
+      document.documentElement.lang = getUiLang(data) === "en" ? "en" : "ru";
+    } catch (eR) {
+      /* ignore */
+    }
+    applyDomI18n(data);
+    paintMarketLangStrip(data);
+    if (data._sessionGuest || !sessionUser(data)) paintGuestAuthDropdown(data);
+    else paintUserMegaMenu(data);
+    if (pageId === "forum") initForum(data);
+  }
+
+  document.addEventListener("nightstore-lang-changed", function () {
+    var d0 = window.NightStoreData;
+    if (!d0) return;
+    var pg = document.body.getAttribute("data-page") || "";
+    refreshAllUiLang(d0, pg);
+  });
   var PRODUCT_ADMIN_CODES_KEY = "nightstore_product_admin_codes_v1";
   var PRODUCT_MOD_NOTES_KEY = "nightstore_product_mod_notes_v1";
   var BANNED_USERNAMES_KEY = "nightstore_banned_usernames_v1";
@@ -1722,6 +2071,14 @@
     });
   }
 
+  function userByUsername(data, username) {
+    var n = String(username || "").toLowerCase();
+    if (!n) return null;
+    return (data.users || []).find(function (u) {
+      return u && String(u.username || "").toLowerCase() === n;
+    });
+  }
+
   function sessionUser(data) {
     if (data._sessionGuest) return null;
     if (!data.sessionUserId) return null;
@@ -1729,7 +2086,8 @@
     return u || null;
   }
 
-  function paintGuestAuthDropdown() {
+  function paintGuestAuthDropdown(data) {
+    data = data || window.NightStoreData;
     var wrap = null;
     document.querySelectorAll(".header-actions .dropdown-wrap").forEach(function (w) {
       if (w.querySelector("button.user-pill")) wrap = w;
@@ -1739,8 +2097,11 @@
     if (!panel) return;
     panel.className = "dropdown-panel user-mega user-mega--guest";
     panel.innerHTML =
-      '<a class="user-mega__guest-login btn-primary" href="login.html">Войти</a>' +
-      '<a class="user-mega__guest-reg btn-secondary" href="register.html">Регистрация</a>';
+      '<a class="user-mega__guest-login btn-primary" href="login.html">' +
+      escapeHtml(nsTr(data, "guest.login")) +
+      '</a><a class="user-mega__guest-reg btn-secondary" href="register.html">' +
+      escapeHtml(nsTr(data, "guest.register")) +
+      "</a>";
     document.querySelectorAll(".js-header-mod-link").forEach(function (el) {
       el.hidden = true;
     });
@@ -1749,9 +2110,9 @@
   function applySessionUser(data) {
     var u = sessionUser(data);
     if (data._sessionGuest || !u) {
-      paintGuestAuthDropdown();
+      paintGuestAuthDropdown(data);
       try {
-        document.documentElement.lang = "ru";
+        document.documentElement.lang = loadUserLangPref("") === "en" ? "en" : "ru";
       } catch (eLangG) {
         /* ignore */
       }
@@ -1768,7 +2129,7 @@
     });
     var profHref = "profile.html?user=" + encodeURIComponent(u.username);
     document.querySelectorAll("header.site-header .dropdown-panel > a[href='profile.html']").forEach(function (a) {
-      if (a.textContent.trim() === "Профиль") a.setAttribute("href", profHref);
+      a.setAttribute("href", profHref);
     });
     document.querySelectorAll(".js-user-avatar").forEach(function (el) {
       el.src = u.avatar;
@@ -1814,11 +2175,13 @@
     var balTxt = formatRubForViewer(data, u.username, u.balanceRub || 0, { hideBalance: hideBal });
     var curSel = loadUserCurrencyPref(u.username);
     var fxUpdatedTs = data._fxUpdated || 0;
+    var loc = getUiLang(data) === "en" ? "en-US" : "ru-RU";
     var fxFoot =
-      '<div class="user-mega__fx-foot">Курсы обновляются не чаще одного раза в сутки' +
+      '<div class="user-mega__fx-foot">' +
+      escapeHtml(nsTr(data, "mega.fx_foot")) +
       (fxUpdatedTs
         ? " · " +
-          new Date(fxUpdatedTs).toLocaleString("ru-RU", {
+          new Date(fxUpdatedTs).toLocaleString(loc, {
             day: "numeric",
             month: "short",
             hour: "2-digit",
@@ -1831,10 +2194,10 @@
       var rubPerOne = mult > 0 ? 1 / mult : 0;
       var hint =
         o.code === "RUB"
-          ? "Каталог хранит цены в ₽"
+          ? nsTr(data, "mega.fx_catalog_rub")
           : mult != null && mult > 0
             ? "1 " + o.code + " ≈ " + (rubPerOne >= 1 ? formatIntRu(Math.round(rubPerOne)) : rubPerOne.toFixed(2)) + " ₽"
-            : "курс недоступен";
+            : nsTr(data, "mega.fx_unavail");
       var picked = o.code === curSel ? " is-picked" : "";
       var check = o.code === curSel ? '<span class="user-mega__fx-check" aria-hidden="true">✓</span>' : "";
       return (
@@ -1859,18 +2222,20 @@
     var myProf = "profile.html?user=" + encodeURIComponent(u.username);
     var curLang = loadUserLangPref(u.username);
     var grid = [
-      { href: "market-my-products.html", label: "Мои товары", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
-      { href: "market-purchases.html", label: "Мои покупки", icon: "M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6" },
-      { href: myProf + "#create-thread", label: "Мои темы", icon: "M4 6h16M4 12h16M4 18h7" },
-      { href: "messages.html", label: "Мои сообщения", icon: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" },
-      { href: "tickets.html", label: "Мои тикеты", icon: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-      { href: "bookmarks.html", label: "Мои закладки", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
-      { href: "help.html", label: "FAQ", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+      { href: "market-my-products.html", key: "mega.my_products", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
+      { href: "market-purchases.html", key: "mega.my_purchases", icon: "M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6" },
+      { href: myProf + "#create-thread", key: "mega.my_topics", icon: "M4 6h16M4 12h16M4 18h7" },
+      { href: "messages.html", key: "mega.messages", icon: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" },
+      { href: "tickets.html", key: "mega.tickets", icon: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+      { href: "bookmarks.html", key: "mega.bookmarks", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
+      { href: "help.html", key: "mega.faq", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
     ];
     var modStrip = mod
       ? '<a class="user-mega__mod-strip" href="moderation.html">' +
         iconSvg("M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z", 22) +
-        "<span>Модерация</span></a>"
+        "<span>" +
+        escapeHtml(nsTr(data, "mega.mod")) +
+        "</span></a>"
       : "";
     var gridHtml = grid
       .map(function (g) {
@@ -1880,7 +2245,7 @@
           '">' +
           iconSvg(g.icon, 22) +
           "<span>" +
-          escapeHtml(g.label) +
+          escapeHtml(nsTr(data, g.key)) +
           "</span></a>"
         );
       })
@@ -1888,7 +2253,9 @@
     gridHtml +=
       '<button type="button" class="user-mega__tile user-mega__tile--lang" data-lang-cycle>' +
       iconSvg("M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M12 3a17 17 0 010 18", 22) +
-      "<span>Язык: " +
+      "<span>" +
+      escapeHtml(nsTr(data, "mega.lang")) +
+      ": " +
       escapeHtml(marketLangLabel(curLang)) +
       "</span></button>";
 
@@ -1899,13 +2266,9 @@
         '<button type="button" class="user-mega__second" data-switch-user="' +
         escapeHtml(lu.id) +
         '" title="' +
-        escapeHtml(
-          "Войти в @" +
-            lu.username +
-            " — текущий аккаунт окажется в этой строке для обратного переключения"
-        ) +
+        escapeHtml(nsTr(data, "mega.switch_title").replace("{name}", lu.username)) +
         '" aria-label="' +
-        escapeHtml("Войти в связанный аккаунт @" + lu.username) +
+        escapeHtml(nsTr(data, "mega.switch_aria").replace("{name}", lu.username)) +
         '"><span class="user-mega__second-avwrap"><img src="' +
         escapeHtml(lu.avatar) +
         '" alt="" width="40" height="40" loading="lazy"/>' +
@@ -1925,7 +2288,9 @@
     var supportHtml =
       '<a class="user-mega__support-block" href="tickets.html">' +
       iconSvg("M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z", 20) +
-      "<span>Тикеты</span></a>";
+      "<span>" +
+      escapeHtml(nsTr(data, "mega.support")) +
+      "</span></a>";
 
     panel.className = "dropdown-panel user-mega";
     panel.innerHTML =
@@ -1935,21 +2300,37 @@
       encodeURIComponent(u.username) +
       '">' +
       escapeHtml(u.username) +
-      '</a></div><div class="user-mega__balance"><div class="user-mega__balance-label">Баланс</div><div class="user-mega__balance-row"><button type="button" class="user-mega__bal-eye" data-bal-toggle aria-label="Показать или скрыть баланс">' +
+      '</a></div><div class="user-mega__balance"><div class="user-mega__balance-label">' +
+      escapeHtml(nsTr(data, "mega.balance")) +
+      '</div><div class="user-mega__balance-row"><button type="button" class="user-mega__bal-eye" data-bal-toggle aria-label="' +
+      escapeHtml(nsTr(data, "mega.bal_toggle")) +
+      '">' +
       iconEyeBalanceSvg() +
       '</button><span class="user-mega__bal-val" data-bal-val>' +
       escapeHtml(balTxt) +
-      '</span><button type="button" class="user-mega__fx-toggle" data-fx-toggle aria-expanded="false" aria-label="Валюта отображения"><span class="user-mega__fx-chev" aria-hidden="true">▾</span></button></div><div class="user-mega__fx-menu" data-fx-menu hidden>' +
+      '</span><button type="button" class="user-mega__fx-toggle" data-fx-toggle aria-expanded="false" aria-label="' +
+      escapeHtml(nsTr(data, "mega.fx_toggle")) +
+      '"><span class="user-mega__fx-chev" aria-hidden="true">▾</span></button></div><div class="user-mega__fx-menu" data-fx-menu hidden>' +
       fxRows +
       fxFoot +
-      '</div><div class="user-mega__bal-actions"><button type="button" class="user-mega__bal-btn user-mega__bal-btn--plus" data-demo-wallet="topup">Пополнить</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="withdraw">Вывести</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="transfer">Перевести</button></div></div><div class="user-mega__grid">' +
+      '</div><div class="user-mega__bal-actions"><button type="button" class="user-mega__bal-btn user-mega__bal-btn--plus" data-demo-wallet="topup">' +
+      escapeHtml(nsTr(data, "mega.topup")) +
+      '</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="withdraw">' +
+      escapeHtml(nsTr(data, "mega.withdraw")) +
+      '</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="transfer">' +
+      escapeHtml(nsTr(data, "mega.transfer")) +
+      '</button></div></div><div class="user-mega__grid">' +
       gridHtml +
       "</div>" +
       modStrip +
       supportHtml +
       '<div class="user-mega__accounts">' +
       secondHtml +
-      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> Настройки</a><button type="button" class="user-mega__logout" data-logout aria-label="Выйти">' +
+      '</div><div class="user-mega__foot"><a class="user-mega__settings" href="settings.html"><span class="user-mega__set-i" aria-hidden="true">⚙</span> ' +
+      escapeHtml(nsTr(data, "mega.settings")) +
+      '</a><button type="button" class="user-mega__logout" data-logout aria-label="' +
+      escapeHtml(nsTr(data, "mega.logout")) +
+      '">' +
       iconSvg("M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1", 20) +
       "</button></div>";
 
@@ -2008,8 +2389,6 @@
         e.stopPropagation();
         var next = loadUserLangPref(u.username) === "en" ? "ru" : "en";
         saveUserLangPref(u.username, next);
-        paintUserMegaMenu(data);
-        paintMarketLangStrip(data);
       });
     }
     var lo = panel.querySelector("[data-logout]");
@@ -2292,6 +2671,21 @@
     }
   }
 
+  function nsSupportTicketPublicCode(id) {
+    var s = String(id || "ns");
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) {
+      h = Math.imul(h, 33) ^ s.charCodeAt(i);
+    }
+    var alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    var out = "";
+    for (var j = 0; j < 7; j++) {
+      out += alphabet[(h >>> 0) % alphabet.length];
+      h = Math.imul(h, 48271) + j + 1;
+    }
+    return out;
+  }
+
   function loadProductAdminCodes() {
     try {
       var o = JSON.parse(localStorage.getItem(PRODUCT_ADMIN_CODES_KEY) || "{}");
@@ -2389,6 +2783,16 @@
         hour: "2-digit",
         minute: "2-digit",
       });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function formatTicketDate(ts) {
+    try {
+      var d = new Date(Number(ts) || 0);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
     } catch (e) {
       return "";
     }
@@ -3019,16 +3423,57 @@
     if (sMsg && u) sMsg.textContent = formatIntRu(u.messages);
     if (sideAvatar && u) attachAvatarFallback(sideAvatar, u.username);
 
-    var posts = data.forumPosts || [];
+    var boardQ = "";
+    try {
+      boardQ = new URLSearchParams(location.search).get("board") || "";
+    } catch (eFq) {
+      boardQ = "";
+    }
+    boardQ = String(boardQ || "").trim();
+
+    paintForumIndexSidebarNav(data, boardQ);
+
+    var bcLeaf = document.getElementById("forumBreadcrumbLeaf");
+    if (bcLeaf) {
+      bcLeaf.textContent = boardQ ? nsForumBoardLabel(boardQ, data) : nsTr(data, "forum.bc_all");
+    }
+
+    var allFeed = nsBuildForumFeedPosts(data);
+    var posts = boardQ ? allFeed.filter(function (p) { return String(p.board || "") === boardQ; }) : allFeed;
+
     if (!posts.length) {
-      root.innerHTML =
-        '<p class="threads-empty" style="margin:28px 0;text-align:center">В общей ленте пока нет тем — создайте свою в <a href="profile.html#create-thread">профиле</a>.</p>';
+      var emptyInner;
+      if (boardQ) {
+        emptyInner =
+          escapeHtml(nsTr(data, "forum.empty_board")) +
+          ' <a href="forum-new-thread.html?board=' +
+          encodeURIComponent(boardQ) +
+          '">' +
+          escapeHtml(nsTr(data, "forum.empty_create")) +
+          '</a> · <a href="index.html">' +
+          escapeHtml(nsTr(data, "forum.empty_show_all")) +
+          "</a>.";
+      } else {
+        emptyInner =
+          escapeHtml(nsTr(data, "forum.empty_all")) +
+          ' <a href="profile.html#create-thread">' +
+          escapeHtml(nsTr(data, "forum.empty_profile_link")) +
+          "</a>.";
+      }
+      root.innerHTML = '<p class="threads-empty" style="margin:28px 0;text-align:center">' + emptyInner + "</p>";
       return;
     }
 
     var html = posts
       .map(function (post) {
-        var author = userById(data, post.authorId) || u;
+        var author = userById(data, post.authorId) || (post.topicUser ? userByUsername(data, post.topicUser) : null) || u;
+        if (!author || !author.username) {
+          author = { username: post.topicUser || "user", avatar: dicebearAvatar(post.topicUser || "user"), id: post.authorId };
+        }
+        var boardDisp = post.board ? nsForumBoardLabel(post.board, data) : nsTr(data, "forum.board_unknown");
+        var topicUser = post.topicUser || author.username;
+        var topicId = post.topicId != null ? String(post.topicId) : String(post.ts || "");
+        var topicHref = "topic.html?user=" + encodeURIComponent(topicUser) + "&id=" + encodeURIComponent(topicId);
         return (
           '<article class="feed-card">' +
           '<div class="meta">' +
@@ -3047,11 +3492,14 @@
           '" class="feed-author-link">' +
           escapeHtml(author.username) +
           "</a></strong> · " +
-          escapeHtml(post.board) +
+          escapeHtml(boardDisp) +
           "</span></div>" +
           "<h2>" +
+          '<a class="feed-card__title-link" href="' +
+          topicHref +
+          '">' +
           escapeHtml(post.title) +
-          "</h2>" +
+          "</a></h2>" +
           "<p>" +
           escapeHtml(post.excerpt) +
           "</p>" +
@@ -3059,7 +3507,7 @@
           "<span>❤️ " +
           formatIntRu(post.likes) +
           "</span>" +
-          "<span class=\"feed-footer-stat\">" +
+          '<span class="feed-footer-stat">' +
           ICON_NS_COMMENT_TINY +
           " " +
           formatIntRu(post.comments) +
@@ -3076,71 +3524,226 @@
     });
   }
 
+  function nsForumIconSvg(kind) {
+    var k = String(kind || "folder");
+    var stroke = 'stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+    var paths = {
+      gift: '<path d="M20 12v10H4V12M2 7h20v5H2V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zm0 0h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>',
+      bag: '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>',
+      briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M2 13h20"/>',
+      scales: '<path d="M12 3v18M5 7l-2 5h6L7 7M17 7l-2 5h6l-2-5M5 12a3 3 0 006 0M13 12a3 3 0 006 0"/>',
+      question: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/>',
+      brain: '<path d="M12 5a3 3 0 00-3 3v1a3 3 0 106 0V8a3 3 0 00-3-3zM5 9a2 3 0 012-2.5M19 9a2 3 0 00-2-2.5M5 15a2 3 0 002 2.5M19 15a2 3 0 00-2 2.5M8 20h8"/>',
+      doc: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+      wrench: '<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>',
+      target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+      gun: '<path d="M4 16v2a2 2 0 002 2h2M4 16h4l10-10 2 2-10 10H4v-4l10-10M14 6l4 4"/>',
+      shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+      bolt: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+      island: '<path d="M2 20h20M5 20V10l4-4 4 4v10M15 20V8l4 4v8"/><path d="M9 6h6"/>',
+      diamond: '<path d="M12 2l8.5 10L12 22l-8.5-10L12 2z"/>',
+      car: '<path d="M5 17h14v-5l-2-5H7l-2 5v5zM3 17h2M19 17h2M7 17v-3h10v3"/>',
+      wheel: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>',
+      sparkle: '<path d="M12 3v3M12 18v3M4.5 7.5l2 2M17.5 17.5l2 2M3 12h3M18 12h3M4.5 16.5l2-2M17.5 6.5l2-2M12 8l1.5 4 4 1.5-4 1.5L12 17l-1.5-4-4-1.5 4-1.5L12 8z"/>',
+      lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>',
+      pickaxe: '<path d="M14.5 2.5l-9 9 3 3 9-9-3-3zM3 21l5-5M9 16l2 2"/>',
+      gamepad: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/>',
+      plane: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
+      monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+      phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+      chip: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
+      keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>',
+      brush: '<path d="M9.06 11.9l8.97-8.96a2.65 2.65 0 014 3.77l-8.98 8.98a2 2 0 01-2.83 0L9.06 14.9a2 2 0 010-2.83zM7 21l2-2"/>',
+      heart: '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
+      flask: '<path d="M9 3h6M10 9v11a2 2 0 002 2h0a2 2 0 002-2V9l4-4H6l4 4z"/>',
+      trend: '<path d="M3 17l6-6 4 4 8-8M14 7h7v7"/>',
+      cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.48L23 6H6"/>',
+      moon: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+      userplus: '<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 7a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6"/>',
+      list: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+      bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"/>',
+      folder: '<path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>',
+    };
+    var p = paths[k] || paths.folder;
+    return '<svg class="ns-forum-ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" ' + stroke + ">" + p + "</svg>";
+  }
+
   function nsForumBoardCatalog() {
     return [
       {
         title: "Основная категория",
+        titleEn: "Main category",
         items: [
-          { id: "freebies", label: "Халява", logo: "🎁" },
-          { id: "trade", label: "Торговля", logo: "🛍️" },
-          { id: "jobs", label: "Работа и услуги", logo: "💼" },
-          { id: "arbitrage", label: "Арбитраж", logo: "⚖️" },
+          { id: "freebies", label: "Халява", labelEn: "Freebies", icon: "gift" },
+          { id: "trade", label: "Торговля", labelEn: "Trading", icon: "bag" },
+          { id: "jobs", label: "Работа и услуги", labelEn: "Work & services", icon: "briefcase" },
+          { id: "arbitrage", label: "Арбитраж", labelEn: "Arbitration", icon: "scales" },
         ],
       },
       {
         title: "Тематическая категория",
+        titleEn: "Thematic category",
         items: [
-          { id: "thematic", label: "Тематические вопросы", logo: "❓" },
-          { id: "chatgpt", label: "Спроси у ChatGPT", logo: "🧠" },
-          { id: "articles", label: "Статьи", logo: "📄" },
-          { id: "software", label: "Софт", logo: "🛠️" },
+          { id: "thematic", label: "Тематические вопросы", labelEn: "Thematic Q&A", icon: "question" },
+          { id: "chatgpt", label: "Спроси у ChatGPT", labelEn: "Ask ChatGPT", icon: "brain" },
+          { id: "articles", label: "Статьи", labelEn: "Articles", icon: "doc" },
+          { id: "software", label: "Софт", labelEn: "Software", icon: "wrench" },
         ],
       },
       {
         title: "Игровая категория",
+        titleEn: "Games",
         items: [
-          { id: "pubg", label: "PUBG", logo: "🎯" },
-          { id: "cs2", label: "Counter-Strike 2", logo: "🔫" },
-          { id: "dota2", label: "Dota 2", logo: "🛡️" },
-          { id: "overwatch", label: "Overwatch", logo: "⚡" },
-          { id: "fortnite", label: "Fortnite", logo: "🏝️" },
-          { id: "valorant", label: "Valorant", logo: "◼️" },
-          { id: "gta", label: "GTA", logo: "🚗" },
-          { id: "wot", label: "World of Tanks", logo: "🛞" },
-          { id: "mihoyo", label: "miHoYo", logo: "✨" },
-          { id: "deadlock", label: "Deadlock", logo: "🔒" },
-          { id: "survival", label: "Survival игры", logo: "⛏️" },
-          { id: "games_other", label: "Остальные игры", logo: "🎮" },
+          { id: "pubg", label: "PUBG", labelEn: "PUBG", icon: "target" },
+          { id: "cs2", label: "Counter-Strike 2", labelEn: "Counter-Strike 2", icon: "gun" },
+          { id: "dota2", label: "Dota 2", labelEn: "Dota 2", icon: "shield" },
+          { id: "overwatch", label: "Overwatch", labelEn: "Overwatch", icon: "bolt" },
+          { id: "fortnite", label: "Fortnite", labelEn: "Fortnite", icon: "island" },
+          { id: "valorant", label: "Valorant", labelEn: "Valorant", icon: "diamond" },
+          { id: "gta", label: "GTA", labelEn: "GTA", icon: "car" },
+          { id: "wot", label: "World of Tanks", labelEn: "World of Tanks", icon: "wheel" },
+          { id: "mihoyo", label: "miHoYo", labelEn: "miHoYo", icon: "sparkle" },
+          { id: "deadlock", label: "Deadlock", labelEn: "Deadlock", icon: "lock" },
+          { id: "survival", label: "Survival игры", labelEn: "Survival games", icon: "pickaxe" },
+          { id: "games_other", label: "Остальные игры", labelEn: "Other games", icon: "gamepad" },
         ],
       },
       {
         title: "Общая категория",
+        titleEn: "General",
         items: [
-          { id: "offtopic", label: "Малая Оффтопка", logo: "✈️" },
-          { id: "pc", label: "Компьютеры", logo: "🖥️" },
-          { id: "phones", label: "Телефоны", logo: "📱" },
-          { id: "webdev", label: "Веб-разработка", logo: "💻" },
-          { id: "prog", label: "Программирование", logo: "⌨️" },
-          { id: "graphics", label: "Графика", logo: "🎨" },
-          { id: "forum_life", label: "Жизнь форума", logo: "💜" },
-          { id: "test_board", label: "Тестовый раздел", logo: "🧪" },
+          { id: "offtopic", label: "Малая Оффтопка", labelEn: "Small offtopic", icon: "plane" },
+          { id: "pc", label: "Компьютеры", labelEn: "PC", icon: "monitor" },
+          { id: "phones", label: "Телефоны", labelEn: "Phones", icon: "phone" },
+          { id: "webdev", label: "Веб-разработка", labelEn: "Web development", icon: "chip" },
+          { id: "prog", label: "Программирование", labelEn: "Programming", icon: "keyboard" },
+          { id: "graphics", label: "Графика", labelEn: "Graphics", icon: "brush" },
+          { id: "forum_life", label: "Жизнь форума", labelEn: "Forum life", icon: "heart" },
+          { id: "test_board", label: "Тестовый раздел", labelEn: "Test board", icon: "flask" },
         ],
       },
     ];
   }
 
-  function nsForumBoardLabel(boardId) {
+  function nsForumBoardLabel(boardId, data) {
     var bid = String(boardId || "");
+    var lang = data ? getUiLang(data) : "ru";
     var groups = nsForumBoardCatalog();
     for (var gi = 0; gi < groups.length; gi++) {
       var items = groups[gi].items || [];
       for (var ii = 0; ii < items.length; ii++) {
-        if (items[ii].id === bid) return items[ii].label;
+        if (items[ii].id === bid) {
+          if (lang === "en" && items[ii].labelEn) return items[ii].labelEn;
+          return items[ii].label;
+        }
       }
     }
-    if (bid === "user_custom") return "Пользовательский раздел";
-    if (bid.indexOf("trend_") === 0) return "Популярная тема";
-    return bid || "Раздел";
+    if (bid === "user_custom") return lang === "en" ? "Custom section" : "Пользовательский раздел";
+    if (bid.indexOf("trend_") === 0) return lang === "en" ? "Popular topic" : "Популярная тема";
+    if (bid) return bid;
+    return data ? nsTr(data, "forum.board_unknown") : "Раздел";
+  }
+
+  function nsBuildForumFeedPosts(data) {
+    var out = [];
+    var seen = {};
+    function dedupeKey(p) {
+      return String(p.topicUser || "") + "_" + String(p.topicId != null ? p.topicId : p.ts || "") + "_" + String(p.title || "");
+    }
+    function pushUnique(p) {
+      var k = dedupeKey(p);
+      if (seen[k]) return;
+      seen[k] = 1;
+      out.push(p);
+    }
+    (data.forumPosts || []).forEach(function (p) {
+      pushUnique({
+        authorId: p.authorId,
+        title: p.title || "",
+        excerpt: p.excerpt || "",
+        board: String(p.board || ""),
+        likes: Number(p.likes) || 0,
+        comments: Number(p.comments) || 0,
+        time: p.time || "",
+        ts: Number(p.ts) || 0,
+        topicUser: p.topicUser || p.authorUsername || "",
+        topicId: p.topicId != null ? String(p.topicId) : String(p.ts || ""),
+      });
+    });
+    var users = (data.users || []).slice();
+    var su = sessionUser(data);
+    if (su && su.username && !users.some(function (u) { return u && u.username === su.username; })) {
+      users.push(su);
+    }
+    users.forEach(function (user) {
+      if (!user || !user.username) return;
+      loadProfileThreads(user.username).forEach(function (th) {
+        var body = String(th.body || "").replace(/\s+/g, " ").trim();
+        var pr = String(th.prefix || "").trim();
+        var feedTitle = th.title || "(Без названия)";
+        if (pr) feedTitle = pr + " · " + feedTitle;
+        pushUnique({
+          authorId: user.id,
+          title: feedTitle,
+          excerpt: body.slice(0, 240) || "Тема",
+          board: String(th.board || ""),
+          likes: Number(th.likes) || 0,
+          comments: Array.isArray(th.replies) ? th.replies.length : Number(th.comments) || 0,
+          time: th.date || formatNotifTime(th.ts || 0),
+          ts: Number(th.ts) || 0,
+          topicUser: user.username,
+          topicId: String(th.ts),
+        });
+      });
+    });
+    out.sort(function (a, b) {
+      return (Number(b.ts) || 0) - (Number(a.ts) || 0);
+    });
+    return out;
+  }
+
+  function paintForumIndexSidebarNav(data, activeBoardId) {
+    var nav = document.getElementById("forumSidebarNav");
+    if (!nav) return;
+    var ab = String(activeBoardId || "").trim();
+    function sideLink(href, label, iconKind, isActive) {
+      var cls = "side-link" + (isActive ? " is-active" : "");
+      return (
+        '<a class="' +
+        cls +
+        '" href="' +
+        href +
+        '"><span class="side-link__ico">' +
+        nsForumIconSvg(iconKind) +
+        "</span>" +
+        escapeHtml(label) +
+        "</a>"
+      );
+    }
+    var parts = [];
+    parts.push('<div class="nav-section-title">' + escapeHtml(nsTr(data, "forum.nav_block")) + "</div>");
+    parts.push(sideLink("index.html", nsTr(data, "forum.all_threads"), "list", !ab));
+    parts.push(sideLink("profile.html#create-thread", nsTr(data, "forum.my_threads"), "userplus", false));
+    parts.push(sideLink("bookmarks.html", nsTr(data, "forum.bookmarks"), "bookmark", false));
+    nsForumBoardCatalog().forEach(function (group) {
+      var gTitle = getUiLang(data) === "en" && group.titleEn ? group.titleEn : group.title;
+      parts.push('<div class="nav-section-title">' + escapeHtml(gTitle) + "</div>");
+      (group.items || []).forEach(function (it) {
+        var href = "index.html?board=" + encodeURIComponent(it.id);
+        var lab = getUiLang(data) === "en" && it.labelEn ? it.labelEn : it.label;
+        parts.push(sideLink(href, lab, it.icon || "folder", ab === it.id));
+      });
+      if (group.title === "Основная категория") {
+        parts.push(
+          '<a class="side-link" href="market.html"><span class="side-link__ico">' +
+          nsForumIconSvg("cart") +
+          "</span>" +
+          escapeHtml(nsTr(data, "forum.market_link")) +
+          "</a>"
+        );
+      }
+    });
+    nav.innerHTML = parts.join("");
   }
 
   function nsForumPopularTiles(data) {
@@ -3148,13 +3751,13 @@
     var out = [];
     for (var i = 0; i < posts.length && out.length < 5; i++) {
       if (posts[i] && posts[i].title) {
-        out.push({ id: "trend_" + i, label: String(posts[i].title).slice(0, 72), logo: "🔥" });
+        out.push({ id: "trend_" + i, label: String(posts[i].title).slice(0, 72), icon: "trend" });
       }
     }
     var fb = [
-      { id: "trend_demo_market", label: "Обсуждения маркета Night Store", logo: "🛒" },
-      { id: "trend_demo_ui", label: "Интерфейс и идеи", logo: "✨" },
-      { id: "trend_demo_lounge", label: "Ночной лаунж", logo: "🌙" },
+      { id: "trend_demo_market", label: "Обсуждения маркета Night Store", icon: "cart" },
+      { id: "trend_demo_ui", label: "Интерфейс и идеи", icon: "sparkle" },
+      { id: "trend_demo_lounge", label: "Ночной лаунж", icon: "moon" },
     ];
     for (var j = 0; j < fb.length && out.length < 5; j++) {
       out.push(fb[j]);
@@ -3181,11 +3784,15 @@
     }
     var picked = null;
     function tileHtml(it) {
+      var logoInner = it.icon ? nsForumIconSvg(it.icon) : escapeHtml(it.logo || "📁");
+      var logoClass = "ns-forum-tile__logo" + (it.icon ? " ns-forum-tile__logo--svg" : "");
       return (
         '<button type="button" class="ns-forum-tile" data-forum-pick="' +
         escapeHtml(it.id) +
-        '"><span class="ns-forum-tile__logo" aria-hidden="true">' +
-        escapeHtml(it.logo || "📁") +
+        '"><span class="' +
+        logoClass +
+        '" aria-hidden="true">' +
+        logoInner +
         '</span><span class="ns-forum-tile__text">' +
         escapeHtml(it.label) +
         '</span><span class="ns-forum-tile__chev" aria-hidden="true">›</span></button>'
@@ -3274,6 +3881,194 @@
     }
   }
 
+  function forumRteWrapSelection(ta, openTag, closeTag) {
+    if (!ta) return;
+    openTag = String(openTag || "");
+    closeTag = String(closeTag != null ? closeTag : openTag);
+    var start = ta.selectionStart;
+    var end = ta.selectionEnd;
+    var val = ta.value;
+    var sel = val.slice(start, end);
+    ta.value = val.slice(0, start) + openTag + sel + closeTag + val.slice(end);
+    ta.focus();
+    if (sel) {
+      ta.selectionStart = start + openTag.length;
+      ta.selectionEnd = start + openTag.length + sel.length;
+    } else {
+      ta.selectionStart = start + openTag.length;
+      ta.selectionEnd = start + openTag.length;
+    }
+  }
+
+  function forumRteInsertAtCursor(ta, chunk) {
+    if (!ta) return;
+    chunk = String(chunk || "");
+    var start = ta.selectionStart;
+    var val = ta.value;
+    ta.value = val.slice(0, start) + chunk + val.slice(start);
+    ta.selectionStart = ta.selectionEnd = start + chunk.length;
+    ta.focus();
+  }
+
+  function forumRteListBb(ta, ordered) {
+    if (!ta) return;
+    var start = ta.selectionStart;
+    var end = ta.selectionEnd;
+    var val = ta.value;
+    var sel = val.slice(start, end);
+    var lines = sel
+      .split(/\r?\n/)
+      .map(function (x) {
+        return x.trim();
+      })
+      .filter(Boolean);
+    if (!lines.length) lines = ["Пункт списка"];
+    var inner = lines
+      .map(function (l) {
+        return "[*]" + l;
+      })
+      .join("");
+    var block = ordered ? "[list=1]" + inner + "[/list]" : "[list]" + inner + "[/list]";
+    ta.value = val.slice(0, start) + block + val.slice(end);
+    ta.focus();
+    ta.selectionStart = start + block.length;
+    ta.selectionEnd = start + block.length;
+  }
+
+  function forumRteClearBb(ta) {
+    if (!ta) return;
+    var start = ta.selectionStart;
+    var end = ta.selectionEnd;
+    var val = ta.value;
+    var sel = val.slice(start, end);
+    if (!sel) return;
+    var cleaned = sel
+      .replace(/\[b\]/gi, "")
+      .replace(/\[\/b\]/gi, "")
+      .replace(/\[i\]/gi, "")
+      .replace(/\[\/i\]/gi, "")
+      .replace(/\[u\]/gi, "")
+      .replace(/\[\/u\]/gi, "")
+      .replace(/\[s\]/gi, "")
+      .replace(/\[\/s\]/gi, "")
+      .replace(/\[url=[^\]]+\]/gi, "")
+      .replace(/\[\/url\]/gi, "")
+      .replace(/\[color=#[^\]]+\]/gi, "")
+      .replace(/\[\/color\]/gi, "")
+      .replace(/\[size=[^\]]+\]/gi, "")
+      .replace(/\[\/size\]/gi, "")
+      .replace(/\[align=(left|center|right)\]/gi, "")
+      .replace(/\[\/align\]/gi, "")
+      .replace(/\[list=1\]/gi, "")
+      .replace(/\[list\]/gi, "")
+      .replace(/\[\/list\]/gi, "")
+      .replace(/\[\*\]/gi, "")
+      .replace(/\[spoiler\]/gi, "")
+      .replace(/\[\/spoiler\]/gi, "")
+      .replace(/\[code\]/gi, "")
+      .replace(/\[\/code\]/gi, "")
+      .replace(/\[icode\]/gi, "")
+      .replace(/\[\/icode\]/gi, "")
+      .replace(/\[censor\]/gi, "")
+      .replace(/\[\/censor\]/gi, "")
+      .replace(/\[gallery\]/gi, "")
+      .replace(/\[\/gallery\]/gi, "")
+      .replace(/\[(img|gif)\]/gi, "")
+      .replace(/\[\/(img|gif)\]/gi, "");
+    ta.value = val.slice(0, start) + cleaned + val.slice(end);
+    ta.selectionStart = start;
+    ta.selectionEnd = start + cleaned.length;
+    ta.focus();
+  }
+
+  function buildForumNewThreadToolbarHtml() {
+    function svg(p) {
+      return (
+        '<svg class="fnt-rte-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        p +
+        "</svg>"
+      );
+    }
+    function btn(cmd, title, inner) {
+      return (
+        '<button type="button" class="fnt-rte-btn" data-fnt-rte="' +
+        cmd +
+        '" title="' +
+        title +
+        '" aria-label="' +
+        title +
+        '">' +
+        inner +
+        "</button>"
+      );
+    }
+    return (
+      '<div class="fnt-toolbar fnt-toolbar--rte">' +
+      btn(
+        "removeformat",
+        "Очистить форматирование",
+        svg('<path d="M16 6V4a2 2 0 00-2-2H9L7 6M4 6h16M6 6l-2 14h3.5m0 0L12 22l4.5-2M9.5 20H17"/><path d="M10 11v6M14 11v6"/>')
+      ) +
+      btn("bold", "Жирный", '<span class="fnt-rte-letter fnt-rte-letter--b">B</span>') +
+      btn("italic", "Курсив", '<span class="fnt-rte-letter fnt-rte-letter--i">I</span>') +
+      btn("strike", "Зачёркнутый", '<span class="fnt-rte-letter fnt-rte-letter--s">S</span>') +
+      btn(
+        "size",
+        "Размер текста",
+        svg('<path d="M4 7V4h16v3M9 20h6M12 4v16"/><path d="M10 4h4"/>')
+      ) +
+      btn(
+        "color",
+        "Цвет текста",
+        svg('<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/><path d="M12 6v12" stroke="#1a1624" stroke-width="1.2"/>')
+      ) +
+      btn(
+        "align",
+        "Выравнивание",
+        svg('<path d="M4 6h16M4 12h10M4 18h14"/>')
+      ) +
+      btn(
+        "list",
+        "Маркированный список",
+        svg('<path d="M9 6h12M9 12h12M9 18h12M5 6h.01M5 12h.01M5 18h.01"/>')
+      ) +
+      btn(
+        "list-ol",
+        "Нумерованный список",
+        svg('<path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 6h1l-1 2h2M3.5 12h2M4 18c.5 0 1-.5 1-1s-.5-1-1-1-1 .5-1 1 .5 1 1 1z"/>')
+      ) +
+      btn(
+        "url",
+        "Ссылка",
+        svg('<path d="M10 13a5 5 0 007.07 0l1.41-1.41a5 5 0 000-7.07 5 5 0 00-7.07 0L9 5"/><path d="M14 11a5 5 0 00-7.07 0L5.52 12.41a5 5 0 000 7.07 5 5 0 007.07 0L15 18"/>')
+      ) +
+      btn(
+        "img",
+        "Вложить изображение",
+        svg('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/>')
+      ) +
+      btn("gif", "GIF по ссылке", '<span class="fnt-rte-pill">GIF</span>') +
+      btn(
+        "emoji",
+        "Эмодзи",
+        svg('<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>')
+      ) +
+      btn(
+        "gallery",
+        "Галерея (2 изображения)",
+        svg('<rect x="2" y="6" width="12" height="10" rx="1"/><rect x="10" y="8" width="12" height="10" rx="1"/>')
+      ) +
+      btn("more", "Вставить код", svg('<path d="M12 5v14M5 12h14"/>')) +
+      btn(
+        "spoiler",
+        "Спойлер",
+        svg('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/><path d="M2 2l20 20"/>')
+      ) +
+      '<input type="file" id="fntFile" accept="image/*" multiple hidden />' +
+      "</div>"
+    );
+  }
+
   function initForumNewThreadPage(data) {
     var root = document.getElementById("forumNewThreadRoot");
     if (!root) return;
@@ -3306,7 +4101,7 @@
       paintMarketLangStrip(data);
       return;
     }
-    var bLabel = nsForumBoardLabel(board);
+    var bLabel = nsForumBoardLabel(board, data);
     var pendingFnt = [];
     root.innerHTML =
       '<nav class="breadcrumbs" style="margin-bottom:12px"><a href="index.html">Форум</a> / <span>' +
@@ -3316,17 +4111,12 @@
       '<h1 class="fnt-card__h1">Создать тему в разделе: ' +
       escapeHtml(bLabel) +
       "</h1>" +
-      '<label class="fnt-label" for="fntPrefix">Префикс</label><p class="mod-sub fnt-hint">Выберите подходящий префикс (демо).</p>' +
-      '<select id="fntPrefix" class="mod-search-input fnt-field"><option value="">Без префикса</option><option>Важно</option><option>Вопрос</option><option>Гайд</option></select>' +
+      '<label class="fnt-label" for="fntPrefix">Префикс</label><p class="mod-sub fnt-hint">Напишите префикс вручную или оставьте поле пустым.</p>' +
+      '<input type="text" id="fntPrefix" class="mod-search-input fnt-field" maxlength="80" placeholder="Например: Важно, Вопрос, Гайд…" autocomplete="off" />' +
       '<label class="fnt-label" for="fntTitle">Заголовок</label><p class="mod-sub fnt-hint">Сформулируйте в нескольких словах, о чём тема.</p>' +
       '<input type="text" id="fntTitle" class="mod-search-input fnt-field" maxlength="200" placeholder="Заголовок темы…" />' +
       '<label class="fnt-label" for="fntBody">Текст</label>' +
-      '<div class="fnt-toolbar">' +
-      '<button type="button" class="msgs-tb" id="fntEmoji" title="Эмодзи">😀</button>' +
-      '<button type="button" class="msgs-tb" id="fntImg" title="Фото">🖼</button>' +
-      '<button type="button" class="msgs-tb" id="fntGif" title="GIF">GIF</button>' +
-      '<input type="file" id="fntFile" accept="image/*" multiple hidden />' +
-      "</div>" +
+      buildForumNewThreadToolbarHtml() +
       '<div id="fntPending" class="msgs-pending" hidden></div>' +
       '<textarea id="fntBody" class="fnt-body" rows="10" maxlength="8000" placeholder="Текст темы…"></textarea>' +
       '<label class="fnt-label" for="fntTags">Метки</label><p class="mod-sub fnt-hint">Несколько меток через запятую.</p>' +
@@ -3335,8 +4125,93 @@
       '<button type="button" class="btn-primary" id="fntSubmit">Создать тему</button>' +
       '<button type="button" class="btn-secondary" id="fntPreview">Предварительный просмотр</button>' +
       "</div>" +
-      '<p class="mod-sub fnt-footnote">Тема сохранится локально в браузере и появится в вашем профиле.</p>' +
+      '<div id="fntPreviewWrap" class="fnt-preview-wrap" hidden>' +
+      '<div class="fnt-preview-bar">' +
+      '<span class="fnt-preview-label">Предварительный просмотр</span>' +
+      '<button type="button" class="fnt-preview-close" id="fntPreviewClose" aria-label="Закрыть предпросмотр">×</button>' +
+      "</div>" +
+      '<div id="fntPreviewInner" class="fnt-preview-inner"></div>' +
+      "</div>" +
       "</div>";
+
+    function fntPreviewImagesHtml(urls) {
+      return (urls || [])
+        .filter(function (src) {
+          return nsAllowedChatMediaSrc(src);
+        })
+        .map(function (src) {
+          return '<img class="topic-op__img" src="' + escapeHtml(src) + '" alt="" loading="lazy"/>';
+        })
+        .join("");
+    }
+
+    function paintFntPreview() {
+      var wrap = document.getElementById("fntPreviewWrap");
+      var inner = document.getElementById("fntPreviewInner");
+      if (!wrap || !inner) return;
+      var prefEl = document.getElementById("fntPrefix");
+      var prefixLabel = prefEl ? String(prefEl.value || "").trim() : "";
+      var titleEl = document.getElementById("fntTitle");
+      var bodyEl = document.getElementById("fntBody");
+      var tagsEl = document.getElementById("fntTags");
+      var title = titleEl ? titleEl.value.trim() : "";
+      var bodyRaw = bodyEl ? String(bodyEl.value || "").trim() : "";
+      var tagsStr = tagsEl ? tagsEl.value.trim() : "";
+      var imgs = fntPreviewImagesHtml(pendingFnt);
+      var metaBits = [escapeHtml(bLabel)];
+      if (prefixLabel) metaBits.push(escapeHtml(prefixLabel));
+      if (tagsStr) metaBits.push("метки: " + escapeHtml(tagsStr));
+      metaBits.push(escapeHtml(formatThreadDate()));
+      var metaLine = metaBits.join(" · ");
+      var bodyHtml;
+      if (bodyRaw) {
+        bodyHtml = formatWallPostHtml(bodyRaw);
+      } else if (imgs) {
+        bodyHtml = '<span class="topic-op__empty">Без текста — только вложения.</span>';
+      } else {
+        bodyHtml = '<span class="topic-op__empty">Текст темы не указан.</span>';
+      }
+      var imgBlock = imgs ? '<div class="topic-op__images">' + imgs + "</div>" : "";
+      inner.innerHTML =
+        '<h2 class="topic-page__title fnt-preview-thread-title">' +
+        (title
+          ? escapeHtml(title)
+          : '<span class="topic-op__empty">(без заголовка)</span>') +
+        "</h2>" +
+        '<p class="topic-page__meta fnt-preview-meta-line">' +
+        metaLine +
+        "</p>" +
+        '<article class="topic-op sidebar-card fnt-preview-op-card">' +
+        '<div class="topic-op__head">' +
+        '<img class="topic-op__avatar" src="' +
+        escapeHtml(avatarForUsername(data, u.username)) +
+        '" alt="" width="56" height="56" loading="lazy"/>' +
+        "<div>" +
+        '<span class="topic-op__author"><strong>' +
+        escapeHtml(u.username) +
+        "</strong></span> " +
+        '<span class="topic-op__badge">Автор</span>' +
+        "</div>" +
+        "</div>" +
+        '<div class="topic-op__body">' +
+        bodyHtml +
+        "</div>" +
+        imgBlock +
+        '<div class="topic-op__foot">' +
+        '<span class="topic-op__date">' +
+        escapeHtml(formatThreadDate()) +
+        "</span>" +
+        "</div>" +
+        "</article>";
+      wrap.hidden = false;
+      var av = inner.querySelector(".topic-op__avatar");
+      if (av) attachAvatarFallback(av, u.username);
+      try {
+        wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (eSc) {
+        /* ignore */
+      }
+    }
 
     function paintFntPending() {
       var pe = document.getElementById("fntPending");
@@ -3367,11 +4242,6 @@
       });
     }
 
-    document.getElementById("fntImg") &&
-      document.getElementById("fntImg").addEventListener("click", function () {
-        var fi = document.getElementById("fntFile");
-        if (fi) fi.click();
-      });
     document.getElementById("fntFile") &&
       document.getElementById("fntFile").addEventListener("change", function (e) {
         filesToDataUrlList(e.target.files, Math.max(0, 4 - pendingFnt.length), function (got) {
@@ -3382,28 +4252,148 @@
           paintFntPending();
         });
       });
-    document.getElementById("fntGif") &&
-      document.getElementById("fntGif").addEventListener("click", function () {
+    if (!root.dataset.nsForumRteWired) {
+      root.dataset.nsForumRteWired = "1";
+      root.addEventListener("click", function (ev) {
+      var rte = ev.target.closest("[data-fnt-rte]");
+      if (!rte || !root.contains(rte)) return;
+      ev.preventDefault();
+      var ta = document.getElementById("fntBody");
+      var cmd = rte.getAttribute("data-fnt-rte") || "";
+      if (cmd === "img") {
+        var fi = document.getElementById("fntFile");
+        if (fi) fi.click();
+        return;
+      }
+      if (!ta) return;
+      if (cmd === "removeformat") {
+        forumRteClearBb(ta);
+        return;
+      }
+      if (cmd === "bold") {
+        forumRteWrapSelection(ta, "[b]", "[/b]");
+        return;
+      }
+      if (cmd === "italic") {
+        forumRteWrapSelection(ta, "[i]", "[/i]");
+        return;
+      }
+      if (cmd === "strike") {
+        forumRteWrapSelection(ta, "[s]", "[/s]");
+        return;
+      }
+      if (cmd === "spoiler") {
+        forumRteWrapSelection(ta, "[spoiler]", "[/spoiler]");
+        return;
+      }
+      if (cmd === "size") {
+        var sz = window.prompt("Размер (8–48px или 70–200%, например 16px или 120%):", "120%");
+        if (sz == null) return;
+        sz = String(sz).trim();
+        forumRteWrapSelection(ta, "[size=" + sz + "]", "[/size]");
+        return;
+      }
+      if (cmd === "color") {
+        var hex = window.prompt("Цвет #RRGGBB или #RGB:", "#c4b5fd");
+        if (hex == null) return;
+        hex = String(hex).trim().replace(/^#/, "");
+        if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+          showNsToast("Неверный цвет.");
+          return;
+        }
+        forumRteWrapSelection(ta, "[color=#" + hex + "]", "[/color]");
+        return;
+      }
+      if (cmd === "align") {
+        var al = window.prompt("Выравнивание: left, center или right", "left");
+        if (al == null) return;
+        al = String(al).trim().toLowerCase();
+        if (al !== "left" && al !== "center" && al !== "right") {
+          showNsToast("Укажите left, center или right.");
+          return;
+        }
+        forumRteWrapSelection(ta, "[align=" + al + "]", "[/align]");
+        return;
+      }
+      if (cmd === "list") {
+        forumRteListBb(ta, false);
+        return;
+      }
+      if (cmd === "list-ol") {
+        forumRteListBb(ta, true);
+        return;
+      }
+      if (cmd === "url") {
+        var href = window.prompt("Адрес ссылки (https://):", "https://");
+        if (href == null) return;
+        href = String(href).trim();
+        if (!/^https?:\/\//i.test(href)) {
+          showNsToast("Нужна ссылка http(s).");
+          return;
+        }
+        var start = ta.selectionStart;
+        var end = ta.selectionEnd;
+        var val = ta.value;
+        var sel = val.slice(start, end);
+        var linkText = window.prompt("Текст ссылки:", sel || "ссылка");
+        if (linkText == null) return;
+        var lt = String(linkText).trim() || sel || "ссылка";
+        var chunk = "[url=" + href + "]" + lt + "[/url]";
+        ta.value = val.slice(0, start) + chunk + val.slice(end);
+        ta.selectionStart = ta.selectionEnd = start + chunk.length;
+        ta.focus();
+        return;
+      }
+      if (cmd === "gif") {
         var ul = window.prompt("Ссылка https на GIF или изображение:", "");
         var us = String(ul || "").trim();
-        if (us && nsAllowedChatMediaSrc(us) && pendingFnt.length < 4) {
-          pendingFnt.push(us);
-          paintFntPending();
-        } else if (us) {
+        if (!us) return;
+        if (!nsAllowedChatMediaSrc(us)) {
           showNsToast("Нужна корректная https-ссылка.");
+          return;
         }
-      });
-    document.getElementById("fntEmoji") &&
-      document.getElementById("fntEmoji").addEventListener("click", function () {
-        var ta = document.getElementById("fntBody");
+        forumRteInsertAtCursor(ta, "[gif]" + us + "[/gif]");
+        return;
+      }
+      if (cmd === "emoji") {
         var ch = window.prompt("Эмодзи:", "😀");
-        if (ta && ch) ta.value += ch.slice(0, 8);
-      });
+        if (ch) forumRteInsertAtCursor(ta, String(ch).slice(0, 8));
+        return;
+      }
+      if (cmd === "gallery") {
+        var u1 = window.prompt("Первое изображение (https):", "");
+        if (u1 == null) return;
+        u1 = String(u1).trim();
+        var u2 = window.prompt("Второе изображение (https):", "");
+        if (u2 == null) return;
+        u2 = String(u2).trim();
+        if (!/^https?:\/\//i.test(u1) || !/^https?:\/\//i.test(u2)) {
+          showNsToast("Нужны две ссылки https.");
+          return;
+        }
+        forumRteInsertAtCursor(ta, "[gallery]" + u1 + " | " + u2 + "[/gallery]");
+        return;
+      }
+      if (cmd === "more") {
+        var mode = window.prompt("Вставить: 1 — инлайн-код [icode], 2 — блок кода [code]", "1");
+        if (mode == null) return;
+        if (String(mode).trim() === "2") {
+          forumRteWrapSelection(ta, "[code]", "[/code]");
+        } else {
+          forumRteWrapSelection(ta, "[icode]", "[/icode]");
+        }
+        return;
+      }
+    });
+    }
     document.getElementById("fntPreview") &&
       document.getElementById("fntPreview").addEventListener("click", function () {
-        var t = document.getElementById("fntTitle");
-        var b = document.getElementById("fntBody");
-        window.alert((t && t.value ? t.value : "(без заголовка)") + "\n\n" + (b && b.value ? b.value.slice(0, 800) : ""));
+        paintFntPreview();
+      });
+    document.getElementById("fntPreviewClose") &&
+      document.getElementById("fntPreviewClose").addEventListener("click", function () {
+        var w = document.getElementById("fntPreviewWrap");
+        if (w) w.hidden = true;
       });
     document.getElementById("fntSubmit") &&
       document.getElementById("fntSubmit").addEventListener("click", function () {
@@ -4071,9 +5061,19 @@
   }
 
   function loadUserLangPref(username) {
+    var un = String(username || "").trim();
+    if (!un) {
+      try {
+        var g = localStorage.getItem(GUEST_LANG_KEY);
+        if (g === "en" || g === "ru") return g;
+      } catch (eG) {
+        /* ignore */
+      }
+      return "ru";
+    }
     try {
       var o = JSON.parse(localStorage.getItem(USER_LANG_KEY) || "{}");
-      var c = o[String(username || "")];
+      var c = o[un];
       if (c === "en" || c === "ru") return c;
     } catch (e) {
       /* ignore */
@@ -4082,35 +5082,36 @@
   }
 
   function saveUserLangPref(username, lang) {
-    var o = {};
-    try {
-      o = JSON.parse(localStorage.getItem(USER_LANG_KEY) || "{}");
-    } catch (e2) {
-      o = {};
+    var code = lang === "en" ? "en" : "ru";
+    var un = String(username || "").trim();
+    if (!un) {
+      try {
+        localStorage.setItem(GUEST_LANG_KEY, code);
+      } catch (eGuest) {
+        /* ignore */
+      }
+    } else {
+      var o = {};
+      try {
+        o = JSON.parse(localStorage.getItem(USER_LANG_KEY) || "{}");
+      } catch (e2) {
+        o = {};
+      }
+      o[un] = code;
+      try {
+        localStorage.setItem(USER_LANG_KEY, JSON.stringify(o));
+      } catch (e3) {
+        /* ignore */
+      }
     }
-    o[String(username || "")] = lang === "en" ? "en" : "ru";
     try {
-      localStorage.setItem(USER_LANG_KEY, JSON.stringify(o));
-    } catch (e3) {
-      /* ignore */
-    }
-    try {
-      document.documentElement.lang = o[String(username || "")] === "en" ? "en" : "ru";
+      document.documentElement.lang = code === "en" ? "en" : "ru";
     } catch (e4) {
       /* ignore */
     }
     try {
       window.dispatchEvent(new CustomEvent("nightstore-lang-changed"));
     } catch (e5) {
-      /* ignore */
-    }
-    try {
-      var d0 = window.NightStoreData;
-      if (d0) {
-        paintMarketLangStrip(d0);
-        paintUserMegaMenu(d0);
-      }
-    } catch (e6) {
       /* ignore */
     }
   }
@@ -4122,8 +5123,9 @@
   function paintMarketLangStrip(data) {
     document.querySelectorAll(".js-market-lang-strip").forEach(function (el) {
       var u = sessionUser(data);
-      if (!u) {
-        el.textContent = "₽ RUB · " + marketLangLabel("ru");
+      var lang = getUiLang(data);
+      if (!u || data._sessionGuest) {
+        el.textContent = "₽ RUB · " + marketLangLabel(lang);
         return;
       }
       var cur = loadUserCurrencyPref(u.username);
@@ -4789,6 +5791,10 @@
     th.board = String(th.board || "");
     if (th.tags == null) th.tags = "";
     th.tags = String(th.tags || "");
+    if (th.prefix == null) th.prefix = "";
+    th.prefix = String(th.prefix || "")
+      .trim()
+      .slice(0, 80);
     if (!Array.isArray(th.images)) th.images = [];
     else
       th.images = th.images.filter(isDataImageUrl).slice(0, 8);
@@ -4868,12 +5874,14 @@
           "&id=" +
           encodeURIComponent(String(th.ts));
         var repliesCount = Array.isArray(th.replies) ? th.replies.length : th.comments || 0;
+        var pr = String(th.prefix || "").trim();
+        var titleLine = pr ? pr + " · " + (th.title || "") : th.title || "";
         return (
           '<div class="feed-card profile-thread-item">' +
           '<a class="profile-thread-item__title profile-thread-item__link" href="' +
           href +
           '">' +
-          escapeHtml(th.title) +
+          escapeHtml(titleLine) +
           "</a>" +
           '<div class="feed-footer profile-thread-item__meta">' +
           "<span>👁 " +
@@ -6741,12 +7749,17 @@
 
     function paint(th) {
       if (!th) return;
-      document.title = th.title + " — Night Store";
+      var prefixDisp = String(th.prefix || "").trim();
+      document.title = (prefixDisp ? prefixDisp + " — " : "") + th.title + " — Night Store";
       var h1 = document.getElementById("topicPageTitle");
       if (h1) h1.textContent = th.title;
       var meta = document.getElementById("topicPageMeta");
       if (meta) {
+        var prefixHtml = prefixDisp
+          ? 'Префикс: <span class="topic-meta__accent">' + escapeHtml(prefixDisp) + "</span> · "
+          : "";
         meta.innerHTML =
+          prefixHtml +
           "Тема в разделе <a href=\"index.html\" class=\"topic-meta__accent\">Темы форума</a> · создана пользователем " +
           '<a class="topic-meta__accent" href="profile.html?user=' +
           encodeURIComponent(owner.username) +
@@ -6761,7 +7774,10 @@
       var bcUser = document.querySelector(".js-topic-bc-user");
       if (bcUser) bcUser.textContent = owner.username;
       var bcTitle = document.querySelector(".js-topic-bc-title");
-      if (bcTitle) bcTitle.textContent = th.title.length > 48 ? th.title.slice(0, 45) + "…" : th.title;
+      if (bcTitle) {
+        var bcFull = prefixDisp ? prefixDisp + " · " + th.title : th.title;
+        bcTitle.textContent = bcFull.length > 48 ? bcFull.slice(0, 45) + "…" : bcFull;
+      }
       var bcProf = document.querySelector(".js-topic-bc-profile");
       if (bcProf) bcProf.setAttribute("href", "profile.html?user=" + encodeURIComponent(owner.username));
 
@@ -6782,7 +7798,7 @@
       var hasIm = th.images && th.images.length;
       if (bodyEl) {
         if (b) {
-          bodyEl.innerHTML = escapeHtml(b).replace(/\n/g, "<br/>");
+          bodyEl.innerHTML = formatWallPostHtml(b);
         } else if (hasIm) {
           bodyEl.innerHTML = '<span class="topic-op__empty">Без текста — только вложения.</span>';
         } else {
@@ -6873,9 +7889,7 @@
                 '<span class="topic-reply-card__date">' +
                 escapeHtml(formatStoredOrTs(r.ts, r.date)) +
                 "</span></div>" +
-                '<div class="topic-reply-card__body">' +
-                escapeHtml(r.body || "").replace(/\n/g, "<br/>") +
-                "</div>" +
+                '<div class="topic-reply-card__body">' + formatWallPostHtml(r.body || "") + "</div>" +
                 gal +
                 act +
                 "</article>"
@@ -8051,6 +9065,35 @@
     paint();
   }
 
+  function wireTicketsPageChrome(root) {
+    if (!root || root.__nsTicketsChrome) return;
+    root.__nsTicketsChrome = 1;
+    root.addEventListener("click", function (e) {
+      var set = e.target.closest("[data-tickets-settings]");
+      if (set && root.contains(set)) {
+        e.preventDefault();
+        showNsToast("Раздел в разработке.");
+        return;
+      }
+      var cp = e.target.closest("[data-ticket-copy]");
+      if (cp && root.contains(cp)) {
+        var txt = cp.getAttribute("data-ticket-copy") || "";
+        if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
+          window.navigator.clipboard.writeText(txt).then(
+            function () {
+              showNsToast("Скопировано");
+            },
+            function () {
+              window.prompt("Копировать:", txt);
+            }
+          );
+        } else {
+          window.prompt("Копировать:", txt);
+        }
+      }
+    });
+  }
+
   function initSupportPage(data) {
     var root = document.getElementById("ticketsPageRoot") || document.getElementById("supportPageRoot");
     if (!root) return;
@@ -8064,6 +9107,7 @@
       return;
     }
     var selId = root.getAttribute("data-sup-sel") || "";
+    wireTicketsPageChrome(root);
     if (root.__nsSupPend == null) root.__nsSupPend = [];
 
     function paintSupTicketPending() {
@@ -8141,6 +9185,15 @@
     function supportNewFormFields() {
       if (isTickets) {
         return (
+          '<label class="sr-only" for="supNewCat">Категория</label>' +
+          '<div class="sup-form__label">Категория</div>' +
+          '<select id="supNewCat" class="mod-search-input sup-form__field">' +
+          "<option>Технические вопросы</option>" +
+          "<option>Финансы и баланс</option>" +
+          "<option>Маркет и сделки</option>" +
+          "<option>Аккаунт и доступ</option>" +
+          "<option>Другое</option>" +
+          "</select>" +
           '<label class="sr-only" for="supNewSub">Тема</label>' +
           '<div class="sup-form__label">Тема</div>' +
           '<input type="text" id="supNewSub" class="mod-search-input sup-form__field" maxlength="120" placeholder="Заголовок…" />' +
@@ -8191,7 +9244,7 @@
           ? th0.status === "resolved"
             ? "Решён"
             : th0.status === "closed"
-              ? "Закрыт"
+              ? "Закрыто"
               : "Активен"
           : th0.status === "resolved"
             ? "Решено"
@@ -8232,7 +9285,15 @@
       function bindSupportPage() {
         root.querySelectorAll("[data-sup-pick]").forEach(function (b) {
           b.addEventListener("click", function () {
-            selId = b.getAttribute("data-sup-pick") || "";
+            var pick = b.getAttribute("data-sup-pick") || "";
+            if (isTickets && pick && pick === selId) {
+              selId = "";
+              root.removeAttribute("data-sup-sel");
+              root.removeAttribute("data-sup-compose");
+              paintSup();
+              return;
+            }
+            selId = pick;
             root.setAttribute("data-sup-sel", selId);
             root.removeAttribute("data-sup-compose");
             paintSup();
@@ -8243,15 +9304,17 @@
           nb.addEventListener("click", function () {
             var s = document.getElementById("supNewSub");
             var t = document.getElementById("supNewBody");
+            var c = document.getElementById("supNewCat");
             var sub = s ? s.value.trim() : "";
             var body = t ? t.value.trim() : "";
+            var cat = c && c.value ? String(c.value).trim() : "Технические вопросы";
             if (!sub || !body) {
               window.alert(isTickets ? "Укажите тему и текст тикета." : "Укажите тему и текст.");
               return;
             }
             var all = loadSupportThreads();
             var id = "sup_" + Date.now();
-            all.unshift({
+            var newTh = {
               id: id,
               userId: me.id,
               username: me.username,
@@ -8260,7 +9323,9 @@
               created: Date.now(),
               updated: Date.now(),
               messages: [{ role: "user", author: me.username, body: body, ts: Date.now() }],
-            });
+            };
+            if (isTickets) newTh.category = cat;
+            all.unshift(newTh);
             saveSupportThreads(all);
             selId = id;
             root.setAttribute("data-sup-sel", selId);
@@ -8306,7 +9371,10 @@
         if (cancelCompose) {
           cancelCompose.addEventListener("click", function () {
             root.removeAttribute("data-sup-compose");
-            if (threads.length) {
+            if (isTickets) {
+              selId = "";
+              root.removeAttribute("data-sup-sel");
+            } else if (threads.length) {
               selId = threads[0].id;
               root.setAttribute("data-sup-sel", selId);
             }
@@ -8316,6 +9384,26 @@
       }
 
       if (!threads.length) {
+        if (isTickets) {
+          root.innerHTML =
+            '<div class="tickets-page">' +
+            '<div class="tickets-hero">' +
+            '<div class="tickets-hero__text">' +
+            '<h1 class="tickets-hero__h1">Ваши тикеты</h1>' +
+            '<p class="mod-sub tickets-hero__sub">Здесь вы можете отправлять и отслеживать ваши запросы</p>' +
+            "</div></div>" +
+            '<div class="sidebar-card tickets-compose-card tickets-compose-card--solo">' +
+            '<h2 class="mod-h2">Создать тикет</h2>' +
+            supportNewFormFields() +
+            "</div>" +
+            '<div class="tickets-foot">' +
+            '<span class="tickets-foot__stat">Показано тикетов: 0 из 0</span>' +
+            '<button type="button" class="tickets-foot__link" data-tickets-settings>Настройки отображения тикетов поддержки</button>' +
+            "</div></div>";
+          bindSupportPage();
+          paintSupTicketPending();
+          return;
+        }
         root.innerHTML =
           '<div class="support-solo">' +
           '<div class="support-solo__head">' +
@@ -8340,9 +9428,22 @@
       }
 
       if (!compose) {
-        if (!selId || !threads.some(function (x) {
-          return x.id === selId;
-        })) {
+        if (isTickets) {
+          if (
+            selId &&
+            !threads.some(function (x) {
+              return x.id === selId;
+            })
+          ) {
+            selId = "";
+            root.removeAttribute("data-sup-sel");
+          }
+        } else if (
+          !selId ||
+          !threads.some(function (x) {
+            return x.id === selId;
+          })
+        ) {
           selId = threads[0].id;
           root.setAttribute("data-sup-sel", selId);
         }
@@ -8353,6 +9454,118 @@
             return x.id === selId;
           })
         : null;
+
+      if (isTickets && threads.length) {
+        function nsTicketStatusBadge(th) {
+          if (th.status === "resolved") return { text: "Решён", cls: "tickets-badge--resolved" };
+          if (th.status === "closed") return { text: "Закрыто", cls: "tickets-badge--closed" };
+          return { text: "Активен", cls: "tickets-badge--open" };
+        }
+        function ticketsExtraFieldsHtml(th) {
+          var ef = th.extraFields;
+          if (!ef || typeof ef !== "object") return "";
+          var keys = Object.keys(ef);
+          if (!keys.length) return "";
+          return (
+            '<div class="tickets-extra-fields">' +
+            keys
+              .map(function (k) {
+                var val = String(ef[k] == null ? "" : ef[k]);
+                return (
+                  '<div class="tickets-field-row">' +
+                  '<div class="tickets-field-row__lab">' +
+                  escapeHtml(k) +
+                  '</div><div class="tickets-field-row__val"><code>' +
+                  escapeHtml(val) +
+                  '</code><button type="button" class="tickets-field-copy" data-ticket-copy="' +
+                  escapeHtml(val) +
+                  '" title="Копировать" aria-label="Копировать">⎘</button></div></div>'
+                );
+              })
+              .join("") +
+            "</div>"
+          );
+        }
+        function ticketDetailHtml(th) {
+          return '<div class="tickets-row__detail-inner">' + ticketsExtraFieldsHtml(th) + chatHtmlFor(th) + "</div>";
+        }
+        var n = threads.length;
+        var heroTickets =
+          '<div class="tickets-hero">' +
+          '<div class="tickets-hero__text">' +
+          '<h1 class="tickets-hero__h1">Ваши тикеты</h1>' +
+          '<p class="mod-sub tickets-hero__sub">Здесь вы можете отправлять и отслеживать ваши запросы</p>' +
+          '</div><button type="button" class="btn-primary tickets-hero__cta" data-sup-new>Создать тикет</button></div>';
+        var composeBlock = compose
+          ? '<div class="sidebar-card tickets-compose-card">' +
+            '<div class="tickets-compose-head">' +
+            '<h2 class="mod-h2">Создать тикет</h2>' +
+            '<button type="button" class="btn-secondary" data-sup-compose-cancel>Отмена</button></div>' +
+            '<p class="mod-sub tickets-compose-hint">После отправки тикет появится в списке ниже.</p>' +
+            supportNewFormFields() +
+            "</div>"
+          : "";
+        var ticketsRows = threads
+          .map(function (th) {
+            var code = nsSupportTicketPublicCode(th.id);
+            var cat = th.category || "Технические вопросы";
+            var pub = "[#" + code + "] — " + String(th.subject || "Тикет");
+            var meta =
+              escapeHtml(th.username || me.username) +
+              " · " +
+              escapeHtml(formatTicketDate(th.created || th.updated)) +
+              " · " +
+              escapeHtml(cat);
+            var stb = nsTicketStatusBadge(th);
+            var msgs = th.messages || [];
+            var repN = msgs.length;
+            var lastM = repN ? msgs[repN - 1] : null;
+            var lastWhoHtml = lastM
+              ? lastM.role === "staff"
+                ? '<span class="tickets-last--staff">Поддержка</span>'
+                : '<span class="tickets-last--user">' + escapeHtml(lastM.author || th.username || "Вы") + "</span>"
+              : '<span class="tickets-last--mute">—</span>';
+            var lastWhen = lastM ? formatNotifTime(lastM.ts || 0) : "—";
+            var isSel = th.id === selId && !compose;
+            return (
+              '<div class="tickets-row-wrap' +
+              (isSel ? " is-expanded" : "") +
+              '"><button type="button" class="tickets-row' +
+              (isSel ? " is-active" : "") +
+              '" data-sup-pick="' +
+              escapeHtml(th.id) +
+              '"><span class="tickets-row__main"><span class="tickets-row__title">' +
+              escapeHtml(pub) +
+              '</span><span class="tickets-row__meta">' +
+              meta +
+              '</span></span><span class="tickets-row__side"><span class="tickets-badge ' +
+              stb.cls +
+              '">' +
+              escapeHtml(stb.text) +
+              '</span><span class="tickets-row__replies"><span class="tickets-row__replies-lab">Ответы: ' +
+              repN +
+              "</span><span class=\"tickets-row__last\">" +
+              lastWhoHtml +
+              " · " +
+              escapeHtml(lastWhen) +
+              "</span></span></span></button>" +
+              (isSel ? '<div class="tickets-row__detail">' + ticketDetailHtml(th) + "</div>" : "") +
+              "</div>"
+            );
+          })
+          .join("");
+        var foot =
+          '<div class="tickets-foot"><span class="tickets-foot__stat">Показано тикетов: 1–' +
+          n +
+          " из " +
+          n +
+          '</span><button type="button" class="tickets-foot__link" data-tickets-settings>Настройки отображения тикетов поддержки</button></div>';
+        root.innerHTML =
+          '<div class="tickets-page">' + heroTickets + composeBlock + '<div class="tickets-list sidebar-card">' + ticketsRows + "</div>" + foot + "</div>";
+        bindSupportPage();
+        paintSupTicketPending();
+        return;
+      }
 
       var left = threads
         .map(function (th) {
@@ -9037,14 +10250,14 @@
       if (b.dataset.nsLangWired === "1") return;
       b.dataset.nsLangWired = "1";
       b.addEventListener("click", function () {
-        if (!u || data._sessionGuest) {
-          showNsToast("Войдите, чтобы сохранить язык.");
-          return;
-        }
         var code = b.getAttribute("data-lang-set");
-        saveUserLangPref(u.username, code === "en" ? "en" : "ru");
-        showNsToast("Язык: " + marketLangLabel(loadUserLangPref(u.username)));
-        paintMarketLangStrip(data);
+        if (u && !data._sessionGuest) {
+          saveUserLangPref(u.username, code === "en" ? "en" : "ru");
+          showNsToast(nsTr(data, "settings.lang_saved") + " " + marketLangLabel(loadUserLangPref(u.username)));
+        } else {
+          saveUserLangPref("", code === "en" ? "en" : "ru");
+          showNsToast(nsTr(data, "settings.lang_saved") + " " + marketLangLabel(loadUserLangPref("")));
+        }
       });
     });
   }
@@ -9929,7 +11142,6 @@
           if (page === "login") initLoginPage(data);
           else if (page === "register") initRegisterPage(data);
           else if (page === "verify-email") initVerifyEmailPage(data);
-          else if (page === "forum") initForum(data);
           else if (page === "forum-new-thread") initForumNewThreadPage(data);
           else if (page === "market") initMarket(data);
           else if (page === "market-product") initMarketProduct(data);
@@ -9945,6 +11157,7 @@
           else if (page === "bookmarks") initBookmarksPage(data);
           else if (page === "settings") initSettingsPage(data);
           if (page === "help") initHelp();
+          refreshAllUiLang(data, page);
         });
       })
       .catch(function (err) {
