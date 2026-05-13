@@ -76,7 +76,7 @@
                     <span class="profile-xp-line__cur js-profile-xp-cur">0</span>
                     <span class="profile-xp-line__unit"> XP</span>
                     <span class="profile-xp-line__sep">/</span>
-                    <span class="js-profile-xp-cap">1000</span>
+                    <span class="profile-xp-line__cap js-profile-xp-cap">1000</span>
                   </div>
                 </div>
               </div>
@@ -84,24 +84,24 @@
                 <div class="profile-level-widget__next-xp js-profile-xp-to-next">1000 XP</div>
                 <div class="profile-level-widget__next-sub js-profile-level-next">до 2 LVL</div>
               </div>
-              <div class="profile-level-widget__prize">
-                <span class="profile-level-widget__prize-tag">+ приз</span>
-                <div class="profile-level-widget__prize-body">
-                  <span class="profile-level-widget__prize-ico" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <ellipse cx="8" cy="7" rx="2" ry="2.5" />
-                      <ellipse cx="16" cy="7" rx="2" ry="2.5" />
-                      <ellipse cx="5.5" cy="12" rx="1.8" ry="2.2" />
-                      <ellipse cx="18.5" cy="12" rx="1.8" ry="2.2" />
-                      <ellipse cx="12" cy="14.5" rx="3.6" ry="4.2" transform="rotate(-12 12 14.5)" />
-                    </svg>
-                  </span>
-                  <span>Купон</span>
-                </div>
-              </div>
             </div>
             <div class="profile-level-bar" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" aria-label="Прогресс до следующего уровня">
               <div class="profile-level-bar__fill js-profile-xp-fill"></div>
+            </div>
+            <div class="profile-level-widget__prize-full">
+              <span class="profile-level-widget__prize-tag">+ приз</span>
+              <div class="profile-level-widget__prize-body" role="status" aria-label="Награда за уровень">
+                <span class="profile-level-widget__prize-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="8" cy="7" rx="2" ry="2.5" />
+                    <ellipse cx="16" cy="7" rx="2" ry="2.5" />
+                    <ellipse cx="5.5" cy="12" rx="1.8" ry="2.2" />
+                    <ellipse cx="18.5" cy="12" rx="1.8" ry="2.2" />
+                    <ellipse cx="12" cy="14.5" rx="3.6" ry="4.2" transform="rotate(-12 12 14.5)" />
+                  </svg>
+                </span>
+                <span>Купон</span>
+              </div>
             </div>
           </div>
           <details style="margin-top:14px;color:var(--text-muted);font-size:0.85rem">
@@ -291,11 +291,11 @@
                   </div>
                 </div>
                 <div id="wallPendingPreview" class="attach-preview" hidden></div>
+                <div id="wallPollDraft" class="wall-poll-draft" hidden></div>
                 <div class="wall-composer__actions">
                   <button type="button" class="btn-primary wall-publish-btn" id="wallPublishBtn">Опубликовать</button>
                   <button type="button" class="btn-secondary wall-poll-btn" id="wallPollBtn">Добавить голосование</button>
                 </div>
-                <div id="wallPollDraft" class="wall-poll-draft" hidden></div>
               </div>
             </div>
 

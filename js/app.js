@@ -3153,8 +3153,8 @@
         '"' +
         formDataChoice +
         ">" +
-        descHtml +
         kindRow +
+        descHtml +
         '<div class="wall-poll__q">' +
         escapeHtml(pol.question) +
         '</div><div class="wall-poll__choices">' +
@@ -3175,32 +3175,34 @@
         var cnt = countFor(c.id);
         var pct = total ? Math.round((cnt / total) * 100) : 0;
         var mine = my === c.id ? " wall-poll-row--mine" : "";
+        var chk =
+          my === c.id
+            ? '<span class="wall-poll-row__tg-check" aria-hidden="true"></span>'
+            : '<span class="wall-poll-row__tg-check wall-poll-row__tg-check--empty" aria-hidden="true"></span>';
         return (
-          '<div class="wall-poll-row wall-poll-row--result' +
+          '<div class="wall-poll-row wall-poll-row--result wall-poll-row--result-tg' +
           mine +
-          '"><div class="wall-poll-row__bar" style="width:' +
+          '"><div class="wall-poll-row__tg-line">' +
+          chk +
+          '<span class="wall-poll-row__pct">' +
           pct +
-          '%"></div><span class="wall-poll-row__text">' +
+          '%</span><span class="wall-poll-row__text">' +
           escapeHtml(c.text) +
-          '</span><span class="wall-poll-row__meta">' +
-          formatIntRu(cnt) +
-          " · " +
+          '</span></div><div class="wall-poll-row__bar-track"><div class="wall-poll-row__bar" style="width:' +
           pct +
-          "%</span></div>"
+          '%"></div></div></div>'
         );
       })
       .join("");
     return (
       '<div class="wall-poll wall-poll--results">' +
-      descHtml +
       kindRow +
+      descHtml +
       '<div class="wall-poll__q">' +
       escapeHtml(pol.question) +
       '</div><div class="wall-poll__choices wall-poll__choices--results">' +
       resultRows +
-      '</div><p class="wall-poll__foot">Голосов: ' +
-      formatIntRu(total) +
-      '</p><button type="button" class="wall-poll-reopen" data-wall-poll-reopen data-post-id="' +
+      '</div><button type="button" class="wall-poll-reopen" data-wall-poll-reopen data-post-id="' +
       String(p.id) +
       '">Изменить голос</button></div>'
     );
@@ -3356,39 +3358,128 @@
     var wallPollReopenId = null;
     var pollDraftEl = document.getElementById("wallPollDraft");
 
+    function syncWallPollDraftFromDom() {
+      if (!pollDraftEl || pollDraftEl.hidden) return;
+      var root = pollDraftEl.querySelector("[data-wall-poll-tg-draft]");
+      if (!root || !wallPendingPoll) return;
+      var qIn = root.querySelector("[data-poll-field=\"q\"]");
+      var dIn = root.querySelector("[data-poll-field=\"desc\"]");
+      wallPendingPoll.question = qIn ? String(qIn.value || "") : "";
+      wallPendingPoll.description = dIn ? String(dIn.value || "").trim() : "";
+      if (wallPendingPoll.description.length > 240) {
+        wallPendingPoll.description = wallPendingPoll.description.slice(0, 240);
+        if (dIn) dIn.value = wallPendingPoll.description;
+      }
+      var opts = root.querySelectorAll("[data-poll-field=\"opt\"]");
+      wallPendingPoll.choices = Array.prototype.map.call(opts, function (inp, i) {
+        return {
+          id: "c" + i,
+          text: String(inp.value || ""),
+        };
+      });
+    }
+
     function paintPollDraft() {
       if (!pollDraftEl) return;
-      var pol = wallPendingPoll ? normalizeWallPoll(wallPendingPoll) : null;
-      if (!pol) {
+      if (!wallPendingPoll) {
         pollDraftEl.innerHTML = "";
         pollDraftEl.hidden = true;
         return;
       }
+      if (!Array.isArray(wallPendingPoll.choices) || wallPendingPoll.choices.length < 2) {
+        wallPendingPoll.choices = [
+          { id: "c0", text: "" },
+          { id: "c1", text: "" },
+        ];
+      }
       pollDraftEl.hidden = false;
-      var descLine = pol.description
-        ? '<div class="wall-poll-draft__desc">' + escapeHtml(pol.description) + "</div>"
-        : "";
+      var q = escapeHtml(String(wallPendingPoll.question || ""));
+      var desc = escapeHtml(String(wallPendingPoll.description || ""));
+      var choices = wallPendingPoll.choices || [];
+      var optsHtml = choices
+        .map(function (c, i) {
+          var val = escapeHtml(String(c.text != null ? c.text : ""));
+          var rm =
+            choices.length > 2
+              ? '<button type="button" class="wall-poll-tg-draft__opt-rm" data-poll-opt-rm="' +
+                i +
+                '" title="Удалить вариант" aria-label="Удалить вариант">×</button>'
+              : "";
+          return (
+            '<div class="wall-poll-tg-draft__opt">' +
+            '<span class="wall-poll-tg-draft__cb" aria-hidden="true"></span>' +
+            '<input type="text" class="wall-poll-tg-draft__opt-input" data-poll-field="opt" data-poll-idx="' +
+            i +
+            '" maxlength="120" placeholder="Ответ" value="' +
+            val +
+            '" />' +
+            rm +
+            "</div>"
+          );
+        })
+        .join("");
+      var addHidden = choices.length >= 6 ? " hidden" : "";
       pollDraftEl.innerHTML =
-        '<div class="wall-poll-draft__inner">' +
-        '<span class="wall-poll-draft__label">Опрос к посту</span>' +
-        descLine +
-        '<strong class="wall-poll-draft__q">' +
-        escapeHtml(pol.question) +
-        "</strong>" +
-        '<span class="wall-poll-draft__opts">' +
-        pol.choices
-          .map(function (c) {
-            return escapeHtml(c.text);
-          })
-          .join(" · ") +
-        '</span><button type="button" class="btn-secondary wall-poll-draft__rm" data-wall-poll-draft-clear>Убрать опрос</button></div>';
-      var rm = pollDraftEl.querySelector("[data-wall-poll-draft-clear]");
-      if (rm) {
-        rm.onclick = function () {
+        '<div class="wall-poll-tg-draft" data-wall-poll-tg-draft>' +
+        '<div class="wall-poll-tg-draft__tag">Опрос</div>' +
+        '<input type="text" class="wall-poll-tg-draft__q" data-poll-field="q" maxlength="500" placeholder="Вопрос" value="' +
+        q +
+        '" />' +
+        '<input type="text" class="wall-poll-tg-draft__sub" data-poll-field="desc" maxlength="240" placeholder="Пояснение (необязательно)" value="' +
+        desc +
+        '" />' +
+        '<div class="wall-poll-tg-draft__opts">' +
+        optsHtml +
+        "</div>" +
+        '<button type="button" class="wall-poll-tg-draft__add' +
+        addHidden +
+        '" data-poll-add-opt>+ Добавить ответ</button>' +
+        '<button type="button" class="wall-poll-tg-draft__clear" data-wall-poll-draft-clear>Убрать опрос</button>' +
+        "</div>";
+    }
+
+    if (pollDraftEl && !pollDraftEl.dataset.wallPollDraftWired) {
+      pollDraftEl.dataset.wallPollDraftWired = "1";
+      pollDraftEl.addEventListener("input", function () {
+        syncWallPollDraftFromDom();
+      });
+      pollDraftEl.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest("[data-wall-poll-draft-clear]")) {
+          e.preventDefault();
           wallPendingPoll = null;
           paintPollDraft();
-        };
-      }
+          return;
+        }
+        if (t.closest("[data-poll-add-opt]")) {
+          e.preventDefault();
+          if (!wallPendingPoll) return;
+          syncWallPollDraftFromDom();
+          if ((wallPendingPoll.choices || []).length >= 6) return;
+          wallPendingPoll.choices.push({
+            id: "c" + (wallPendingPoll.choices || []).length,
+            text: "",
+          });
+          paintPollDraft();
+          var inputs = pollDraftEl.querySelectorAll(".wall-poll-tg-draft__opt-input");
+          var last = inputs[inputs.length - 1];
+          if (last) last.focus();
+          return;
+        }
+        var rmBtn = t.closest("[data-poll-opt-rm]");
+        if (rmBtn) {
+          e.preventDefault();
+          if (!wallPendingPoll) return;
+          syncWallPollDraftFromDom();
+          var idx = Number(rmBtn.getAttribute("data-poll-opt-rm"));
+          if (!wallPendingPoll.choices || wallPendingPoll.choices.length <= 2) return;
+          if (idx >= 0 && idx < wallPendingPoll.choices.length) {
+            wallPendingPoll.choices.splice(idx, 1);
+          }
+          paintPollDraft();
+        }
+      });
     }
 
     var state = {
@@ -3508,6 +3599,15 @@
           var avSrc = escapeHtml(avatarForUsername(data, p.author));
           var v = viewerName && p.voteByUser && p.voteByUser[viewerName];
           var nComm = wallVisibleCommentCount(p);
+          var canDelPost =
+            isMod ||
+            (!!viewerName && viewerName === String(p.author || "")) ||
+            isWallOwner;
+          var postDelBtn = canDelPost
+            ? '<button type="button" class="wall-post-card__del" data-wall-post-del="' +
+              String(p.id) +
+              '">Удалить</button>'
+            : "";
           var commentsHtml = (p.comments || [])
             .filter(function (c) {
               return c && !c.deleted;
@@ -3582,9 +3682,12 @@
             "</strong> · " +
             escapeHtml(p.date || "") +
             "</div>" +
+            '<div class="wall-post-card__head-actions">' +
             '<button type="button" class="wall-post-card__report" data-wall-report-post="' +
             String(p.id) +
-            '">Пожаловаться</button></div>' +
+            '">Пожаловаться</button>' +
+            (postDelBtn ? '<span class="wall-post-card__act-sep" aria-hidden="true">·</span>' + postDelBtn : "") +
+            "</div></div>" +
             bodyHtml +
             gallery +
             pollBlock +
@@ -4011,8 +4114,15 @@
       pubBtn.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
+        syncWallPollDraftFromDom();
         var text = ta.value.trim();
         var pollSnap = wallPendingPoll ? normalizeWallPoll(wallPendingPoll) : null;
+        if (wallPendingPoll && !pollSnap) {
+          window.alert(
+            "Укажите вопрос опроса и минимум два непустых варианта ответа (до 6)."
+          );
+          return;
+        }
         if (!text && !wallPendingImages.length && !pollSnap) {
           ta.focus();
           return;
@@ -4084,6 +4194,29 @@
               kind: "wall_post_report",
             });
             window.alert("Жалоба отправлена модераторам.");
+            return;
+          }
+
+          if (btn.hasAttribute("data-wall-post-del")) {
+            ev.preventDefault();
+            var pidDel = btn.getAttribute("data-wall-post-del");
+            var pstDel = allRaw().find(function (x) {
+              return String(x.id) === String(pidDel);
+            });
+            if (!session || !pstDel) return;
+            var mayModPost = canModerate(data, session);
+            var isPostAuthor = String(session.username || "") === String((pstDel && pstDel.author) || "");
+            var isWallOwnerPost =
+              !!profileUser &&
+              String(session.username || "") === String(profileUser.username || "");
+            if (!(isPostAuthor || mayModPost || isWallOwnerPost)) return;
+            if (!window.confirm("Удалить это сообщение со стены? Его можно снова увидеть в фильтре «Удалённые сообщения».")) {
+              return;
+            }
+            updateWallPost(profileUser.username, pidDel, function (pp) {
+              pp.deleted = true;
+            });
+            paint();
             return;
           }
 
@@ -4265,42 +4398,24 @@
           e.preventDefault();
           e.stopPropagation();
           closeWallEditorFlyouts();
-          var q = window.prompt("Вопрос голосования", "");
-          if (q == null) return;
-          q = String(q).trim();
-          if (!q) {
-            window.alert("Введите текст вопроса.");
-            return;
-          }
-          var descPoll = window.prompt("Описание к опросу (необязательно)", "");
-          if (descPoll == null) return;
-          descPoll = String(descPoll).trim();
-          if (descPoll.length > 240) descPoll = descPoll.slice(0, 240);
-          var rawOpts = window.prompt(
-            "Варианты ответа (от 2 до 6), каждый с новой строки",
-            "Да\nНет"
-          );
-          if (rawOpts == null) return;
-          var lines = String(rawOpts)
-            .split(/\r?\n/)
-            .map(function (s) {
-              return String(s).trim();
-            })
-            .filter(Boolean)
-            .slice(0, 6);
-          if (lines.length < 2) {
-            window.alert("Нужно минимум два непустых варианта.");
+          if (wallPendingPoll) {
+            paintPollDraft();
+            var fq = pollDraftEl && pollDraftEl.querySelector("[data-poll-field=\"q\"]");
+            if (fq) fq.focus();
             return;
           }
           wallPendingPoll = {
-            question: q,
-            description: descPoll,
-            choices: lines.map(function (text, i) {
-              return { id: "c" + i, text: text };
-            }),
+            question: "",
+            description: "",
+            choices: [
+              { id: "c0", text: "" },
+              { id: "c1", text: "" },
+            ],
             votes: {},
           };
           paintPollDraft();
+          var qEl = pollDraftEl && pollDraftEl.querySelector("[data-poll-field=\"q\"]");
+          if (qEl) qEl.focus();
         });
       }
     }
