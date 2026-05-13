@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Профильные темы: чтение для всех, запись открыта (демо без бэкенда).
+    // Для продакшена привяжите к Firebase Auth и проверяйте владельца.
+    match /ns_profile_threads_v1/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

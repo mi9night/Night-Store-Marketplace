@@ -126,14 +126,19 @@
 
       <div class="profile-main">
       <div class="sidebar-card profile-main-card">
-        <div class="profile-name-row">
-          <h1 class="profile-h1 profile-h1--linked"><a class="profile-title-link js-profile-h1" href="profile.html">…</a></h1>
-          <span class="profile-mod-badge" id="profileModBadge" hidden title="Модератор Night Store" aria-label="Модератор">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>MOD</span>
-          </span>
+        <div class="profile-card-bar">
+          <div class="profile-card-bar__left">
+            <div class="profile-name-row">
+              <h1 class="profile-h1 profile-h1--linked"><a class="profile-title-link js-profile-h1" href="profile.html">…</a></h1>
+              <span class="profile-mod-badge" id="profileModBadge" hidden title="Модератор Night Store" aria-label="Модератор">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>MOD</span>
+              </span>
+            </div>
+            <p class="status-line js-profile-status">…</p>
+          </div>
+          <a href="profile-edit.html" class="btn-secondary profile-edit-profile-btn" id="profileEditBtn" hidden>Редактировать профиль</a>
         </div>
-        <p class="status-line js-profile-status">…</p>
         <div class="info-grid">
           <div class="info-item"><span class="info-item__label">Регистрация</span><span class="info-item__value js-reg">—</span></div>
           <div class="info-item info-item--nid">
@@ -167,9 +172,8 @@
         <h2 class="section-title" id="user-topics">Ваши темы</h2>
         <div id="create-thread" class="new-thread-card">
           <h3 class="new-thread-card__title">Новая тема</h3>
-          <p class="new-thread-hint" style="margin-top:0">Выберите раздел форума — откроется полноценный редактор (как на форуме).</p>
+          <p class="new-thread-hint" style="margin-top:0">Выберите раздел форума — откроется полноценный редактор.</p>
           <button type="button" class="btn-primary" id="forumOpenSectionPickerBtn" style="margin-top:10px;width:auto;padding:10px 20px">Создать тему</button>
-          <p class="new-thread-hint">Темы хранятся в браузере (localStorage) на этом устройстве.</p>
         </div>
         <div id="profileThreadsRoot"></div>
 

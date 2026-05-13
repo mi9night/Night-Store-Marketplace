@@ -1301,6 +1301,8 @@
   var PENDING_REG_KEY = "nightstore_pending_reg_v1";
   var EMAIL_CODES_KEY = "nightstore_email_codes_v1";
   var LINKED_ACCOUNTS_KEY = "nightstore_linked_accounts_v1";
+  var USERNAME_RENAME_COOLDOWN_KEY = "nightstore_username_rename_ts_v1";
+  var USERNAME_RENAME_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   var HIDE_BALANCE_KEY = "nightstore_hide_balance_v1";
   var PUBLIC_NID_MAP_KEY = "nightstore_public_numeric_id_map_v1";
   var PUBLIC_NID_NEXT_KEY = "nightstore_public_numeric_id_next_v1";
@@ -2671,6 +2673,90 @@
     }
   }
 
+  function notifyModeratorsNewSupportTicket(data, th) {
+    if (!data || !th) return;
+    var code = nsSupportTicketPublicCode(th.id);
+    var head = "[#" + code + "] — " + String(th.subject || "Тикет");
+    var mods = (data.users || []).filter(function (u) {
+      return u && canModerate(data, u);
+    });
+    if (!mods.length) return;
+    var ts = Date.now();
+    mods.forEach(function (m) {
+      if (!m.username) return;
+      pushNotification(m.username, {
+        id: "sup_new_" + th.id + "_" + m.username + "_" + ts,
+        tab: "moderation",
+        read: false,
+        ts: ts,
+        title: "Новый тикет поддержки",
+        detail: "@" + String(th.username || "") + ": " + head.slice(0, 200),
+        link: "moderation.html",
+        kind: "support",
+      });
+    });
+    try {
+      updateNotifyBadge(data);
+    } catch (eN) {
+      /* ignore */
+    }
+  }
+
+  function notifyUserSupportStaffReply(data, th, replyBody) {
+    if (!data || !th || !th.username) return;
+    var prev = String(replyBody || "").trim().slice(0, 220);
+    pushNotification(th.username, {
+      id: "sup_reply_" + th.id + "_" + Date.now(),
+      tab: "support",
+      read: false,
+      ts: Date.now(),
+      title: "Ответ поддержки по тикету",
+      detail: prev || "Откройте тикет, чтобы прочитать ответ.",
+      link: "tickets.html",
+      kind: "support",
+    });
+    try {
+      updateNotifyBadge(data);
+    } catch (eR) {
+      /* ignore */
+    }
+  }
+
+  function notifyModeratorsSupportUserFollowUp(data, th, bodyPreview) {
+    if (!data || !th) return;
+    var code = nsSupportTicketPublicCode(th.id);
+    var mods = (data.users || []).filter(function (u) {
+      return u && canModerate(data, u);
+    });
+    if (!mods.length) return;
+    var ts = Date.now();
+    var det =
+      "@" +
+      String(th.username || "") +
+      " [#" +
+      code +
+      "]: " +
+      String(bodyPreview || "").trim().slice(0, 180);
+    mods.forEach(function (m) {
+      if (!m.username) return;
+      pushNotification(m.username, {
+        id: "sup_usr_" + th.id + "_" + m.username + "_" + ts,
+        tab: "moderation",
+        read: false,
+        ts: ts,
+        title: "Пользователь дополнил тикет",
+        detail: det,
+        link: "moderation.html",
+        kind: "support",
+      });
+    });
+    try {
+      updateNotifyBadge(data);
+    } catch (eF) {
+      /* ignore */
+    }
+  }
+
   function nsSupportTicketPublicCode(id) {
     var s = String(id || "ns");
     var h = 5381;
@@ -2929,7 +3015,8 @@
           k === "wall_post_report" ||
           k === "wall_comment_report" ||
           k === "topic_report" ||
-          k === "topic_reply_report"
+          k === "topic_reply_report" ||
+          k === "support"
         );
       }
       if (tab === "themes") {
@@ -3269,27 +3356,89 @@
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Сообщения");
     panel.innerHTML =
-      '<div class="msgs-dropdown__head">' +
-      '<a class="msgs-dropdown__all" href="messages.html">Показать все переписки</a>' +
+      '<a class="msgs-dropdown__all" href="messages.html">Открыть страницу сообщений</a>' +
+      '<div class="msgs-dd-bar">' +
+      '<input type="search" class="msgs-dd-search" placeholder="Поиск" id="msgsDdSearch" autocomplete="off" />' +
       '<div class="msgs-dropdown__icons">' +
+      '<a class="msgs-ico-btn" href="messages.html" title="Переписки" aria-label="Переписки">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>' +
       '<button type="button" class="msgs-ico-btn" data-dm-markread title="Прочитано" aria-label="Отметить прочитанным">' +
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></button>' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></button>' +
+      '<a class="msgs-ico-btn" href="tickets.html" title="Поддержка" aria-label="Поддержка">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1h18z"/></svg></a>' +
+      '<a class="msgs-ico-btn" href="notifications.html" title="Уведомления" aria-label="Уведомления">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>' +
       '<a class="msgs-ico-btn" href="bookmarks.html" title="Закладки" aria-label="Закладки">' +
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></a>' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></a>' +
       "</div></div>" +
+      '<div class="msgs-dd-tabs" role="tablist">' +
+      [
+        { k: "all", t: "Все" },
+        { k: "new", t: "Новые" },
+        { k: "conv", t: "Беседы" },
+        { k: "market", t: "Маркет" },
+      ]
+        .map(function (row) {
+          return (
+            '<button type="button" class="msgs-dd-tab" data-dd-msgs-tab="' +
+            row.k +
+            '">' +
+            escapeHtml(row.t) +
+            "</button>"
+          );
+        })
+        .join("") +
+      "</div>" +
       '<div class="msgs-dropdown__body js-msgs-dd-list"></div>';
 
     wrap.appendChild(panel);
     var listEl = panel.querySelector(".js-msgs-dd-list");
 
+    function ddTabKey() {
+      var t = "all";
+      try {
+        t = sessionStorage.getItem("ns_msgs_tab") || "all";
+      } catch (eT) {
+        t = "all";
+      }
+      return t;
+    }
+
+    function ddSearchVal() {
+      try {
+        return String(sessionStorage.getItem("ns_msgs_side_q") || "").trim().toLowerCase();
+      } catch (eQ) {
+        return "";
+      }
+    }
+
+    function syncDdTabsAndSearch() {
+      var dk = ddTabKey();
+      panel.querySelectorAll("[data-dd-msgs-tab]").forEach(function (b) {
+        b.classList.toggle("is-active", b.getAttribute("data-dd-msgs-tab") === dk);
+      });
+      var sIn = document.getElementById("msgsDdSearch");
+      if (!sIn) return;
+      var raw = "";
+      try {
+        raw = sessionStorage.getItem("ns_msgs_side_q") || "";
+      } catch (eR) {
+        raw = "";
+      }
+      if (document.activeElement !== sIn) sIn.value = raw;
+    }
+
     function paintMsgsDd() {
       var d = window.NightStoreData || data;
       var u = sessionUser(d);
+      syncDdTabsAndSearch();
       if (!u || !listEl) {
         listEl.innerHTML = '<p class="msgs-dropdown__empty">Войдите, чтобы видеть переписки.</p>';
         return;
       }
-      var threads = dmThreadsForUser(u.username).slice(0, 8);
+      var allTh = dmThreadsForUser(u.username);
+      var tabbed = dmFilterThreadsByTab(allTh, ddTabKey(), u.username);
+      var threads = dmFilterThreadsBySearch(tabbed, ddSearchVal(), u.username).slice(0, 14);
       if (!threads.length) {
         listEl.innerHTML = '<p class="msgs-dropdown__empty">Нет сообщений</p>';
         return;
@@ -3313,7 +3462,7 @@
             '">' +
             '<img class="msgs-dd-row__av" src="' +
             escapeHtml(av) +
-            '" alt="" width="36" height="36"/>' +
+            '" alt="" width="40" height="40" loading="lazy"/>' +
             '<div class="msgs-dd-row__mid"><div class="msgs-dd-row__name">' +
             escapeHtml(other) +
             '</div><div class="msgs-dd-row__prev">' +
@@ -3336,15 +3485,41 @@
 
     window.__nsMsgsDdRepaint = paintMsgsDd;
 
+    if (!panel.dataset.nsDdWired) {
+      panel.dataset.nsDdWired = "1";
+      var sSearch = document.getElementById("msgsDdSearch");
+      if (sSearch) {
+        sSearch.addEventListener("input", function () {
+          try {
+            sessionStorage.setItem("ns_msgs_side_q", sSearch.value);
+          } catch (eS) {
+            /* ignore */
+          }
+          paintMsgsDd();
+        });
+      }
+      panel.addEventListener("click", function (e) {
+        var tb = e.target.closest("[data-dd-msgs-tab]");
+        if (tb && panel.contains(tb)) {
+          var k = tb.getAttribute("data-dd-msgs-tab") || "all";
+          try {
+            sessionStorage.setItem("ns_msgs_tab", k);
+          } catch (eK) {
+            /* ignore */
+          }
+          paintMsgsDd();
+          e.stopPropagation();
+          return;
+        }
+        e.stopPropagation();
+      });
+    }
+
     panel.querySelector("[data-dm-markread]") &&
       panel.querySelector("[data-dm-markread]").addEventListener("click", function (e) {
         e.stopPropagation();
         showNsToast("В демо статусы прочтения не хранятся.");
       });
-
-    panel.addEventListener("click", function (e) {
-      e.stopPropagation();
-    });
     wrap.addEventListener("click", function (e) {
       e.stopPropagation();
     });
@@ -5765,6 +5940,81 @@
     return "nightstore_threads_" + encodeURIComponent(username || "guest");
   }
 
+  var NS_PROFILE_THREADS_COL = "ns_profile_threads_v1";
+
+  function profileThreadsDocRef(username) {
+    if (!window.NSFirestoreDb) return null;
+    var id = String(username || "guest").replace(/\//g, "_");
+    if (id.length > 700) id = id.slice(0, 700);
+    try {
+      return window.NSFirestoreDb.collection(NS_PROFILE_THREADS_COL).doc(id);
+    } catch (eRef) {
+      return null;
+    }
+  }
+
+  function pushProfileThreadsToFirestore(username, threads) {
+    var ref = profileThreadsDocRef(username);
+    if (!ref || typeof firebase === "undefined" || !firebase.firestore) return;
+    try {
+      ref
+        .set(
+          {
+            v: 1,
+            ownerUsername: username,
+            items: threads,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: false }
+        )
+        .catch(function (ePush) {
+          console.error("[Night Store] Firestore threads save:", ePush);
+        });
+    } catch (eSet) {
+      console.error("[Night Store] Firestore threads save:", eSet);
+    }
+  }
+
+  function pullProfileThreadsFromFirestore(username, done) {
+    var ref = profileThreadsDocRef(username);
+    var local = loadProfileThreads(username);
+    if (!ref) {
+      done(local);
+      return;
+    }
+    ref
+      .get()
+      .then(function (snap) {
+        var loc = loadProfileThreads(username);
+        if (snap.exists) {
+          var d = snap.data() || {};
+          var remote = Array.isArray(d.items) ? d.items : [];
+          remote.forEach(normalizeThread);
+          if (remote.length) {
+            saveProfileThreads(username, remote);
+            done(remote);
+            return;
+          }
+          if (loc.length) {
+            pushProfileThreadsToFirestore(username, loc);
+            done(loc);
+            return;
+          }
+          saveProfileThreads(username, []);
+          done([]);
+          return;
+        }
+        if (loc.length) {
+          pushProfileThreadsToFirestore(username, loc);
+        }
+        done(loc);
+      })
+      .catch(function (ePull) {
+        console.error("[Night Store] Firestore threads pull:", ePull);
+        done(loadProfileThreads(username));
+      });
+  }
+
   function wallStorageKey(username) {
     return "nightstore_wall_" + encodeURIComponent(username || "guest");
   }
@@ -5851,6 +6101,7 @@
     } catch (e) {
       /* quota */
     }
+    pushProfileThreadsToFirestore(username, threads);
   }
 
   function renderProfileThreads(root, threads, opts) {
@@ -5862,7 +6113,7 @@
         '<p class="threads-empty">' +
         (isOwn
           ? "Пока нет тем — создайте первую формой выше."
-          : "У пользователя пока нет тем в этом браузере.") +
+          : "У пользователя пока нет тем.") +
         "</p>";
       return;
     }
@@ -7417,6 +7668,329 @@
     }
   }
 
+  function loadUsernameRenameCooldownMap() {
+    try {
+      var o = JSON.parse(localStorage.getItem(USERNAME_RENAME_COOLDOWN_KEY) || "{}");
+      return o && typeof o === "object" ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveUsernameRenameCooldownMap(map) {
+    try {
+      localStorage.setItem(USERNAME_RENAME_COOLDOWN_KEY, JSON.stringify(map || {}));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function msUntilUsernameChangeAllowed(userId) {
+    var m = loadUsernameRenameCooldownMap();
+    var last = Number(m[String(userId)]) || 0;
+    if (!last) return 0;
+    return Math.max(0, last + USERNAME_RENAME_INTERVAL_MS - Date.now());
+  }
+
+  function markUsernameRenameApplied(userId) {
+    var m = loadUsernameRenameCooldownMap();
+    m[String(userId)] = Date.now();
+    saveUsernameRenameCooldownMap(m);
+  }
+
+  function migrateJsonMapLocalKey(storageKey, oldKey, newKey) {
+    if (!oldKey || !newKey || oldKey === newKey) return;
+    try {
+      var o = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      if (!o || typeof o !== "object" || !Object.prototype.hasOwnProperty.call(o, oldKey)) return;
+      if (Object.prototype.hasOwnProperty.call(o, newKey)) return;
+      o[newKey] = o[oldKey];
+      delete o[oldKey];
+      localStorage.setItem(storageKey, JSON.stringify(o));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function maybeRenameLocalStoragePrefixedKeys(oldUsername, newUsername) {
+    var ou = String(oldUsername || "").trim();
+    var nu = String(newUsername || "").trim();
+    if (!ou || !nu || ou === nu) return;
+    function move(getKeyFn) {
+      try {
+        var lo = getKeyFn(ou);
+        var ln = getKeyFn(nu);
+        if (localStorage.getItem(lo) != null && localStorage.getItem(ln) == null) {
+          localStorage.setItem(ln, localStorage.getItem(lo));
+          localStorage.removeItem(lo);
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    move(threadStorageKey);
+    move(wallStorageKey);
+    move(notifStorageKey);
+    move(subsStorageKey);
+  }
+
+  function rewriteDmThreadsForUsernameRename(oldName, newName) {
+    var all = loadDmThreads();
+    var touched = false;
+    all.forEach(function (th) {
+      if (!th) return;
+      if (th.users && th.users.length) {
+        var ix = th.users.indexOf(oldName);
+        if (ix !== -1) {
+          th.users[ix] = newName;
+          touched = true;
+        }
+        if (th.users[0] && th.users[1]) th.pairKey = dmPairKey(th.users[0], th.users[1]);
+      }
+      (th.messages || []).forEach(function (m) {
+        if (m.from === oldName) {
+          m.from = newName;
+          touched = true;
+        }
+        if (m.to === oldName) {
+          m.to = newName;
+          touched = true;
+        }
+      });
+    });
+    if (touched) {
+      saveDmThreads(all);
+      try {
+        window.dispatchEvent(new CustomEvent("nightstore-dm-changed"));
+      } catch (e2) {
+        /* ignore */
+      }
+    }
+  }
+
+  function rewriteSupportThreadsForUsernameRename(userId, oldName, newName) {
+    var list = loadSupportThreads();
+    var touched = false;
+    list.forEach(function (t) {
+      if (!t) return;
+      if (String(t.userId) === String(userId) && t.username === oldName) {
+        t.username = newName;
+        touched = true;
+      }
+      (t.messages || []).forEach(function (m) {
+        if (m.author === oldName) {
+          m.author = newName;
+          touched = true;
+        }
+      });
+    });
+    if (touched) saveSupportThreads(list);
+  }
+
+  function migrateUsernameInLocalApp(data, userId, oldUsername, newUsername) {
+    var ou = String(oldUsername || "").trim();
+    var nu = String(newUsername || "").trim();
+    if (!ou || !nu || ou === nu) return;
+    maybeRenameLocalStoragePrefixedKeys(ou, nu);
+    migrateJsonMapLocalKey(USER_PREFS_KEY, ou, nu);
+    migrateJsonMapLocalKey(USER_LANG_KEY, ou, nu);
+    migrateJsonMapLocalKey(USER_CURRENCY_KEY, ou, nu);
+    try {
+      var mp = JSON.parse(localStorage.getItem(MARKET_PURCHASES_KEY) || "{}");
+      if (mp && typeof mp === "object" && Object.prototype.hasOwnProperty.call(mp, ou) && !Object.prototype.hasOwnProperty.call(mp, nu)) {
+        mp[nu] = mp[ou];
+        delete mp[ou];
+        localStorage.setItem(MARKET_PURCHASES_KEY, JSON.stringify(mp));
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    var stats = loadModUserStatsAll();
+    if (stats && stats[ou] != null && stats[nu] == null) {
+      stats[nu] = stats[ou];
+      delete stats[ou];
+      saveModUserStatsAll(stats);
+    }
+    var cMap = profileCouponAckMap();
+    if (cMap[ou] != null && cMap[nu] == null) {
+      cMap[nu] = cMap[ou];
+      delete cMap[ou];
+      saveProfileCouponAckMap(cMap);
+    }
+    var arr = loadRegisteredUsersRaw();
+    arr.forEach(function (r) {
+      if (r && String(r.id) === String(userId)) r.username = nu;
+    });
+    saveRegisteredUsersRaw(arr);
+    var uix = (data.users || []).findIndex(function (x) {
+      return x && String(x.id) === String(userId);
+    });
+    if (uix !== -1) {
+      data.users[uix].username = nu;
+      data.users[uix].avatar = resolvedAvatarUrl(data.users[uix].avatar, nu);
+    }
+    rewriteDmThreadsForUsernameRename(ou, nu);
+    rewriteSupportThreadsForUsernameRename(userId, ou, nu);
+    mergeLocalUserPrefs(data);
+  }
+
+  function formatProfileBirthdayDisplayRu(raw) {
+    if (!raw || raw === "—") return "—";
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw).trim());
+    if (!m) return String(raw);
+    try {
+      var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      if (isNaN(d.getTime())) return String(raw);
+      return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    } catch (e) {
+      return String(raw);
+    }
+  }
+
+  function genderLabelToSelectValue(label) {
+    var s = String(label || "").trim().toLowerCase();
+    if (s.indexOf("муж") !== -1) return "male";
+    if (s.indexOf("жен") !== -1) return "female";
+    return "";
+  }
+
+  function parseBirthdayForDateInput(raw) {
+    if (!raw || raw === "—") return "";
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw).trim());
+    if (m) return m[1] + "-" + m[2] + "-" + m[3];
+    return "";
+  }
+
+  function initProfileEditPage(data) {
+    var root = document.getElementById("profileEditPageRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    var bc = document.querySelector(".js-pe-bc-profile");
+    if (bc && u) bc.setAttribute("href", "profile.html?user=" + encodeURIComponent(u.username));
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите, чтобы редактировать профиль.</p>';
+      return;
+    }
+    var nextMs = msUntilUsernameChangeAllowed(u.id);
+    var nickLocked = nextMs > 0;
+    var days = Math.ceil(nextMs / (24 * 60 * 60 * 1000));
+    var hours = Math.ceil(nextMs / (60 * 60 * 1000));
+    var lockHint =
+      nickLocked && days > 1
+        ? "Никнейм можно сменить через " + days + " дн."
+        : nickLocked
+          ? "Никнейм можно сменить через " + Math.max(1, hours) + " ч."
+          : "";
+    var bIn = parseBirthdayForDateInput(u.birthday);
+    var gSel = genderLabelToSelectValue(u.gender);
+    root.innerHTML =
+      '<div class="sidebar-card">' +
+      '<h1 class="mod-h1">Редактирование профиля</h1>' +
+      '<p class="mod-sub">Данные сохраняются в аккаунте в браузере (демо).</p>' +
+      '<form class="profile-edit-form" id="peForm" autocomplete="off">' +
+      '<div class="profile-edit-form__row">' +
+      '<label class="profile-edit-form__label" for="peNick">Никнейм</label>' +
+      '<input type="text" id="peNick" class="mod-search-input" maxlength="20" required value="' +
+      escapeHtml(u.username) +
+      '"' +
+      (nickLocked ? " readonly" : "") +
+      " />" +
+      (nickLocked ? '<p class="profile-edit-form__hint">' + escapeHtml(lockHint) + "</p>" : "") +
+      '<p class="profile-edit-form__hint">2-20 символов: буквы (латиница или кириллица), цифры и подчёркивание. Не чаще одного раза в 7 дней.</p>' +
+      "</div>" +
+      '<div class="profile-edit-form__row">' +
+      '<label class="profile-edit-form__label" for="peBday">День рождения</label>' +
+      '<input type="date" id="peBday" class="mod-search-input" value="' +
+      escapeHtml(bIn) +
+      '" />' +
+      '<p class="profile-edit-form__hint">Необязательно.</p>' +
+      "</div>" +
+      '<div class="profile-edit-form__row">' +
+      '<label class="profile-edit-form__label" for="peGender">Пол</label>' +
+      '<select id="peGender" class="mod-search-input">' +
+      '<option value=""' +
+      (gSel === "" ? " selected" : "") +
+      '>Не указано</option>' +
+      '<option value="male"' +
+      (gSel === "male" ? " selected" : "") +
+      '>Мужской</option>' +
+      '<option value="female"' +
+      (gSel === "female" ? " selected" : "") +
+      '>Женский</option>' +
+      "</select></div>" +
+      '<div class="profile-edit-form__actions">' +
+      '<button type="submit" class="btn-primary">Сохранить</button>' +
+      '<a class="btn-secondary" href="profile.html?user=' +
+      encodeURIComponent(u.username) +
+      '">Отмена</a></div></form></div>';
+
+    var form = document.getElementById("peForm");
+    if (!form) return;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var u2 = sessionUser(data);
+      if (!u2) return;
+      var nickEl = document.getElementById("peNick");
+      var nickNew = nickEl ? nickEl.value.trim() : "";
+      if (nickNew.length < 2 || nickNew.length > 20) {
+        window.alert("Никнейм: от 2 до 20 символов.");
+        return;
+      }
+      if (!/^[A-Za-zА-Яа-яЁё0-9_]{2,20}$/.test(nickNew)) {
+        window.alert("Никнейм может содержать только буквы, цифры и знак подчёркивания.");
+        return;
+      }
+      var gEl = document.getElementById("peGender");
+      var bEl = document.getElementById("peBday");
+      var gv = gEl ? gEl.value : "";
+      var genderLabel = gv === "male" ? "Мужской" : gv === "female" ? "Женский" : "—";
+      var bVal = bEl && bEl.value ? String(bEl.value).trim() : "";
+      if (bVal && !/^\d{4}-\d{2}-\d{2}$/.test(bVal)) {
+        window.alert("Неверная дата.");
+        return;
+      }
+      if (nickNew !== u2.username) {
+        var busy = (data.users || []).some(function (x) {
+          return x && String(x.username).toLowerCase() === nickNew.toLowerCase() && String(x.id) !== String(u2.id);
+        });
+        if (busy) {
+          window.alert("Этот никнейм уже занят.");
+          return;
+        }
+        if (msUntilUsernameChangeAllowed(u2.id) > 0) {
+          window.alert("Смена никнейма доступна не чаще одного раза в неделю.");
+          return;
+        }
+      }
+      if (nickNew !== u2.username) {
+        migrateUsernameInLocalApp(data, u2.id, u2.username, nickNew);
+        markUsernameRenameApplied(u2.id);
+      }
+      var bdayStore = bVal || "—";
+      var arr2 = loadRegisteredUsersRaw();
+      var rec2 = arr2.find(function (r) {
+        return r && String(r.id) === String(u2.id);
+      });
+      if (!rec2) {
+        window.alert("Запись аккаунта не найдена.");
+        return;
+      }
+      rec2.gender = genderLabel;
+      rec2.birthday = bdayStore;
+      saveRegisteredUsersRaw(arr2);
+      mergeRegisteredUsersIntoData(data);
+      var fresh = userById(data, u2.id);
+      if (fresh) {
+        fresh.gender = genderLabel;
+        fresh.birthday = bdayStore;
+      }
+      mergeLocalUserPrefs(data);
+      applySessionUser(data);
+      showNsToast("Профиль сохранён.");
+      window.location.href = "profile.html?user=" + encodeURIComponent(nickNew);
+    });
+  }
+
   function initProfile(data) {
     var params = new URLSearchParams(window.location.search);
     var wantedRaw = params.get("user");
@@ -7480,13 +8054,19 @@
     var fields = [
       ["js-reg", u.registration],
       ["js-nid", String(u.numericId)],
-      ["js-gender", u.gender],
-      ["js-bday", u.birthday],
+      ["js-gender", u.gender || "—"],
+      ["js-bday", formatProfileBirthdayDisplayRu(u.birthday)],
     ];
     fields.forEach(function (pair) {
       var el = document.querySelector("." + pair[0]);
       if (el) el.textContent = pair[1];
     });
+
+    var editBtn = document.getElementById("profileEditBtn");
+    if (editBtn) {
+      editBtn.hidden = !isOwn;
+      if (isOwn) editBtn.setAttribute("href", "profile-edit.html");
+    }
 
     var linksUser = document.querySelector(".js-profile-links-user");
     if (linksUser) linksUser.textContent = u.username;
@@ -7497,6 +8077,25 @@
       isOwn: isOwn,
       profileUsername: u.username,
     });
+    if (window.NSFirebaseReady && typeof window.NSFirebaseReady.then === "function") {
+      window.NSFirebaseReady.then(function () {
+        pullProfileThreadsFromFirestore(u.username, function (fresh) {
+          if (!threadsRoot) return;
+          renderProfileThreads(threadsRoot, fresh, {
+            isOwn: isOwn,
+            profileUsername: u.username,
+          });
+        });
+      });
+    } else {
+      pullProfileThreadsFromFirestore(u.username, function (fresh) {
+        if (!threadsRoot) return;
+        renderProfileThreads(threadsRoot, fresh, {
+          isOwn: isOwn,
+          profileUsername: u.username,
+        });
+      });
+    }
     wireProfileThreadComposer(u.username, isOwn);
 
     var forumPickBtn = document.getElementById("forumOpenSectionPickerBtn");
@@ -7696,7 +8295,7 @@
       if (content) content.hidden = true;
       return;
     }
-    var arr = loadProfileThreads(owner.username);
+    function continueInitTopic(arr) {
     var idx = arr.findIndex(function (x) {
       return Number(x.ts) === ts;
     });
@@ -8181,6 +8780,21 @@
         });
       }
     }
+    }
+
+    function bootstrapTopicThreads() {
+      function go(a) {
+        continueInitTopic(a);
+      }
+      if (window.NSFirebaseReady && typeof window.NSFirebaseReady.then === "function") {
+        window.NSFirebaseReady.then(function () {
+          pullProfileThreadsFromFirestore(owner.username, go);
+        });
+      } else {
+        pullProfileThreadsFromFirestore(owner.username, go);
+      }
+    }
+    bootstrapTopicThreads();
   }
 
   function initModeration(data) {
@@ -8677,6 +9291,7 @@
           th.messages.push({ role: "staff", author: me.username, body: txt, ts: Date.now() });
           th.updated = Date.now();
           saveSupportThreads(list);
+          if (th.username) notifyUserSupportStaffReply(data, th, txt);
           if (ta) ta.value = "";
           paint();
         });
@@ -9327,6 +9942,7 @@
             if (isTickets) newTh.category = cat;
             all.unshift(newTh);
             saveSupportThreads(all);
+            notifyModeratorsNewSupportTicket(data, newTh);
             selId = id;
             root.setAttribute("data-sup-sel", selId);
             root.removeAttribute("data-sup-compose");
@@ -9351,10 +9967,12 @@
             });
             if (!th || th.status === "closed") return;
             if (!th.messages) th.messages = [];
+            var prevMsgCount = th.messages.length;
             th.messages.push({ role: "user", author: me.username, body: txt, ts: Date.now(), media: media });
             th.updated = Date.now();
             root.__nsSupPend.length = 0;
             saveSupportThreads(all);
+            if (prevMsgCount >= 1) notifyModeratorsSupportUserFollowUp(data, th, txt);
             paintSup();
           });
         }
@@ -9670,6 +10288,7 @@
       bookmarks: 1,
       tickets: 1,
       profile: 1,
+      "profile-edit": 1,
       topic: 1,
       notifications: 1,
       moderation: 1,
@@ -10530,6 +11149,44 @@
     paintMarketLangStrip(data);
   }
 
+  function dmFilterThreadsByTab(threads, tab, meName) {
+    if (tab === "new") {
+      return threads.filter(function (th) {
+        var last = (th.messages || []).slice(-1)[0];
+        if (!last) return false;
+        if (last.from === meName) return false;
+        if (last.system) return false;
+        return true;
+      });
+    }
+    if (tab === "conv") {
+      return threads.filter(function (th) {
+        return !(th.messages || []).some(function (m) {
+          return m.system;
+        });
+      });
+    }
+    if (tab === "market") {
+      return threads.filter(function (th) {
+        return (th.messages || []).some(function (m) {
+          return m.system || String(m.body || "").indexOf("Покупка") !== -1;
+        });
+      });
+    }
+    return threads.slice();
+  }
+
+  function dmFilterThreadsBySearch(threads, q, meName) {
+    if (!q) return threads;
+    return threads.filter(function (th) {
+      var oth = otherPartyInThread(th, meName);
+      if (oth.toLowerCase().indexOf(q) !== -1) return true;
+      return (th.messages || []).some(function (m) {
+        return String(m.body || "").toLowerCase().indexOf(q) !== -1;
+      });
+    });
+  }
+
   function initMessagesPage(data) {
     var root = document.getElementById("messagesPageRoot");
     if (!root) return;
@@ -10574,7 +11231,7 @@
         }
         var hitBtn = e.target.closest("button");
         var bid = hitBtn ? hitBtn.id : "";
-        if (bid === "msgsImgBtn" || bid === "msgsClipBtn") {
+        if (bid === "msgsImgBtn" || bid === "msgsClipBtn" || bid === "msgsAttachQuick") {
           var inp = root.querySelector("#msgsFile");
           if (inp) inp.click();
           return;
@@ -10597,6 +11254,26 @@
           var ch = window.prompt("Вставьте эмодзи:", "😀");
           if (!ch || !ta0) return;
           ta0.value += ch.slice(0, 8);
+          return;
+        }
+        if (bid === "msgsListBtn") {
+          var taL = root.querySelector("#msgsTa");
+          if (!taL) return;
+          var s = taL.selectionStart;
+          var e2 = taL.selectionEnd;
+          var v = taL.value;
+          var ins = "\n• ";
+          taL.value = v.slice(0, s) + ins + v.slice(e2);
+          taL.selectionStart = taL.selectionEnd = s + ins.length;
+          taL.focus();
+          return;
+        }
+        if (bid === "msgsSearchOpen") {
+          showNsToast("Поиск по сообщениям — в разработке.");
+          return;
+        }
+        if (bid === "msgsThreadMenu") {
+          showNsToast("Меню чата (демо).");
           return;
         }
         if (bid === "msgsSend") {
@@ -10652,42 +11329,6 @@
         return "";
       }
     }
-    function filterThreadsByTab(threads, tab, meName) {
-      if (tab === "new") {
-        return threads.filter(function (th) {
-          var last = (th.messages || []).slice(-1)[0];
-          if (!last) return false;
-          if (last.from === meName) return false;
-          if (last.system) return false;
-          return true;
-        });
-      }
-      if (tab === "conv") {
-        return threads.filter(function (th) {
-          return !(th.messages || []).some(function (m) {
-            return m.system;
-          });
-        });
-      }
-      if (tab === "market") {
-        return threads.filter(function (th) {
-          return (th.messages || []).some(function (m) {
-            return m.system || String(m.body || "").indexOf("Покупка") !== -1;
-          });
-        });
-      }
-      return threads.slice();
-    }
-    function filterThreadsBySearch(threads, q, meName) {
-      if (!q) return threads;
-      return threads.filter(function (th) {
-        var oth = otherPartyInThread(th, meName);
-        if (oth.toLowerCase().indexOf(q) !== -1) return true;
-        return (th.messages || []).some(function (m) {
-          return String(m.body || "").toLowerCase().indexOf(q) !== -1;
-        });
-      });
-    }
     function paintPendingHtml() {
       if (!pendingAttachments.length) return "";
       return (
@@ -10708,8 +11349,8 @@
     }
     function paint() {
       var allThreads = dmThreadsForUser(u.username);
-      var tabbed = filterThreadsByTab(allThreads, msgsTab, u.username);
-      var threads = filterThreadsBySearch(tabbed, sideSearchQuery(), u.username);
+      var tabbed = dmFilterThreadsByTab(allThreads, msgsTab, u.username);
+      var threads = dmFilterThreadsBySearch(tabbed, sideSearchQuery(), u.username);
       var activeOther = withQ
         ? decodeURIComponent(withQ)
         : threads.length
@@ -10735,18 +11376,28 @@
           if (last && last.media && last.media.length) {
             prev = (last.from === u.username ? "Вы: " : "") + "[медиа]";
           }
+          var ou0 = (data.users || []).find(function (x) {
+            return x && x.username === oth;
+          });
+          var avSrc = ou0 && ou0.avatar ? ou0.avatar : dicebearAvatar(oth);
           return (
             '<button type="button" class="msgs-side-row' +
             act +
             '" data-with="' +
             escapeHtml(oth) +
             '">' +
+            '<img class="msgs-side-row__av" src="' +
+            escapeHtml(avSrc) +
+            '" alt="" width="40" height="40" loading="lazy" data-av-seed="' +
+            escapeHtml(oth) +
+            '"/>' +
+            '<span class="msgs-side-row__col">' +
             '<span class="msgs-side-row__name">' +
             escapeHtml(oth) +
             "</span>" +
             '<span class="msgs-side-row__prev">' +
             escapeHtml(prev) +
-            "</span></button>"
+            "</span></span></button>"
           );
         })
         .join("");
@@ -10771,61 +11422,137 @@
             })
             .join("")
         : "";
+      var isMarketThread =
+        !!th0 &&
+        (th0.messages || []).some(function (m) {
+          return m.system || String(m.body || "").indexOf("Покупка") !== -1;
+        });
+      var marketBanner = "";
+      if (isMarketThread) {
+        var titleBits = (data.products || [])
+          .filter(Boolean)
+          .slice(0, 12)
+          .map(function (p) {
+            return escapeHtml(String(p.title || "").trim() || "Лот");
+          })
+          .join(" · ");
+        if (!titleBits) titleBits = escapeHtml("Лоты маркета");
+        marketBanner =
+          '<div class="msgs-market-banner"><span class="msgs-market-banner__lab">Товар на Маркете</span><span class="msgs-market-banner__txt">' +
+          titleBits +
+          "</span></div>";
+      }
+      var headAv = "";
+      var headSeed = "";
+      if (activeOther && th0) {
+        var ouH = (data.users || []).find(function (x) {
+          return x && x.username === activeOther;
+        });
+        headAv = ouH && ouH.avatar ? ouH.avatar : dicebearAvatar(activeOther);
+        headSeed = activeOther;
+      }
       var qStored = "";
       try {
         qStored = sessionStorage.getItem("ns_msgs_side_q") || "";
       } catch (e4) {
         qStored = "";
       }
+      var tabBtns = [
+        { k: "all", t: "Все" },
+        { k: "new", t: "Новые" },
+        { k: "conv", t: "Беседы" },
+        { k: "market", t: "Маркет" },
+      ]
+        .map(function (row) {
+          return (
+            '<button type="button" class="msgs-tab' +
+            (msgsTab === row.k ? " is-active" : "") +
+            '" data-msgs-tab="' +
+            row.k +
+            '">' +
+            escapeHtml(row.t) +
+            "</button>"
+          );
+        })
+        .join("");
+      var mainBlock = "";
+      if (activeOther && th0) {
+        var headSub =
+          th0 && (th0.updated || 0)
+            ? '<div class="msgs-main__sub">' +
+              escapeHtml("Был(а) " + formatNotifTime(th0.updated || 0)) +
+              "</div>"
+            : "";
+        mainBlock =
+          '<div class="msgs-main__head">' +
+          '<div class="msgs-main__head-left">' +
+          '<img class="msgs-main__head-av" src="' +
+          escapeHtml(headAv) +
+          '" alt="" width="40" height="40" loading="lazy" data-av-seed="' +
+          escapeHtml(headSeed) +
+          '"/>' +
+          '<div class="msgs-main__head-text">' +
+          "<strong>" +
+          escapeHtml(activeOther) +
+          "</strong>" +
+          headSub +
+          "</div></div>" +
+          '<div class="msgs-main__head-actions">' +
+          '<button type="button" class="msgs-head-ico" id="msgsSearchOpen" title="Поиск" aria-label="Поиск">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+          "</button>" +
+          '<button type="button" class="msgs-head-ico" id="msgsThreadMenu" title="Меню" aria-label="Меню">⋯</button>' +
+          "</div></div>" +
+          marketBanner +
+          '<div class="msgs-main__scroll" id="msgsScroll">' +
+          (msgsHtml || '<p class="mod-empty">Нет сообщений</p>') +
+          "</div>" +
+          '<div class="msgs-main__composer msgs-composer-tg">' +
+          '<button type="button" class="msgs-composer-clip" id="msgsClipBtn" title="Прикрепить файл" aria-label="Прикрепить">' +
+          '<svg class="msgs-composer-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.2-9.2A3 3 0 0 1 17 4.93L8.5 13.42"/></svg>' +
+          "</button>" +
+          '<div class="msgs-composer__grow">' +
+          paintPendingHtml() +
+          '<div class="msgs-composer-input-shell">' +
+          '<textarea id="msgsTa" class="msgs-composer-ta" rows="1" maxlength="4000" placeholder="Напишите ответ..."></textarea>' +
+          '<div class="msgs-composer-input-actions">' +
+          '<button type="button" class="msgs-composer-act" id="msgsAttachQuick" title="Загрузить" aria-label="Загрузить">' +
+          '<svg class="msgs-composer-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1M8 12l4 4 4-4M12 16V4"/></svg>' +
+          "</button>" +
+          '<button type="button" class="msgs-composer-act" id="msgsListBtn" title="Маркированный список" aria-label="Список">' +
+          '<svg class="msgs-composer-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
+          "</button>" +
+          '<button type="button" class="msgs-composer-act" id="msgsEmojiBtn" title="Эмодзи" aria-label="Эмодзи">' +
+          '<svg class="msgs-composer-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>' +
+          "</button>" +
+          '<button type="button" class="msgs-composer-act" id="msgsImgBtn" title="Фото" aria-label="Фото">' +
+          '<svg class="msgs-composer-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
+          "</button>" +
+          '<button type="button" class="msgs-composer-act msgs-composer-act--gif" id="msgsGifBtn" title="GIF по ссылке">GIF</button>' +
+          "</div></div>" +
+          "</div>" +
+          '<input type="file" id="msgsFile" accept="image/*" multiple hidden />' +
+          '<button type="button" class="msgs-composer-send" id="msgsSend" title="Отправить" aria-label="Отправить">' +
+          '<svg class="msgs-composer-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>' +
+          "</button>" +
+          "</div>";
+      } else {
+        mainBlock = '<div class="msgs-placeholder"><p>Выберите диалог слева</p></div>';
+      }
       root.innerHTML =
         '<div class="msgs-layout">' +
         '<aside class="msgs-aside sidebar-card">' +
-        '<div class="msgs-aside__tabs">' +
-        [
-          { k: "all", t: "Все" },
-          { k: "new", t: "Новые" },
-          { k: "conv", t: "Беседы" },
-          { k: "market", t: "Маркет" },
-        ]
-          .map(function (row) {
-            return (
-              '<button type="button" class="msgs-tab' +
-              (msgsTab === row.k ? " is-active" : "") +
-              '" data-msgs-tab="' +
-              row.k +
-              '">' +
-              escapeHtml(row.t) +
-              "</button>"
-            );
-          })
-          .join("") +
-        "</div>" +
         '<input type="search" class="msgs-aside__search" placeholder="Поиск" id="msgsSideSearch" value="' +
         escapeHtml(qStored) +
         '"/>' +
+        '<div class="msgs-aside__tabs">' +
+        tabBtns +
+        "</div>" +
         '<div class="msgs-aside__list">' +
         (left || '<p class="mod-empty">Нет диалогов</p>') +
         "</div></aside>" +
         '<section class="msgs-main sidebar-card">' +
-        (activeOther && th0
-          ? '<div class="msgs-main__head"><strong>' +
-            escapeHtml(activeOther) +
-            '</strong></div><div class="msgs-main__scroll">' +
-            (msgsHtml || '<p class="mod-empty">Нет сообщений</p>') +
-            '</div><div class="msgs-main__composer">' +
-            '<div class="msgs-composer__grow">' +
-            '<div class="msgs-composer__toolbar">' +
-            '<button type="button" class="msgs-tb" id="msgsEmojiBtn" title="Эмодзи">😀</button>' +
-            '<button type="button" class="msgs-tb" id="msgsImgBtn" title="Фото">🖼</button>' +
-            '<button type="button" class="msgs-tb" id="msgsGifBtn" title="GIF по ссылке">GIF</button>' +
-            '<button type="button" class="msgs-tb" id="msgsClipBtn" title="Вложение">📎</button>' +
-            '<input type="file" id="msgsFile" accept="image/*" multiple hidden />' +
-            "</div>" +
-            paintPendingHtml() +
-            '<textarea id="msgsTa" rows="2" maxlength="4000" placeholder="Сообщение…"></textarea>' +
-            "</div>" +
-            '<button type="button" class="btn-primary" id="msgsSend">Отправить</button></div>'
-          : '<div class="msgs-placeholder"><p>Выберите диалог слева</p></div>') +
+        mainBlock +
         "</section></div>";
 
       root.querySelectorAll(".msgs-side-row").forEach(function (b) {
@@ -10838,6 +11565,17 @@
           }
         });
       });
+      root.querySelectorAll(".msgs-side-row__av").forEach(function (im) {
+        attachAvatarFallback(im, im.getAttribute("data-av-seed") || "");
+      });
+      var headIm = root.querySelector(".msgs-main__head-av");
+      if (headIm) attachAvatarFallback(headIm, headIm.getAttribute("data-av-seed") || "");
+      var sc0 = root.querySelector("#msgsScroll");
+      if (sc0) {
+        requestAnimationFrame(function () {
+          sc0.scrollTop = sc0.scrollHeight;
+        });
+      }
     }
     paint();
     initMarketCartDropdown(data);
@@ -11147,6 +11885,12 @@
           else if (page === "market-product") initMarketProduct(data);
           else if (page === "market-sell-manual") initMarketSellManualPage(data);
           else if (page === "profile") initProfile(data);
+          else if (page === "profile-edit") {
+            initProfileEditPage(data);
+            initMarketCartDropdown(data);
+            initHeaderMessagesDropdown(data);
+            paintMarketLangStrip(data);
+          }
           else if (page === "topic") initTopic(data);
           else if (page === "notifications") initNotificationsSettings();
           else if (page === "moderation") initModeration(data);

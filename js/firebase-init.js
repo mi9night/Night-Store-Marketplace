@@ -58,9 +58,35 @@
         });
       });
     })
+    .then(function (auth) {
+      if (!auth || typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+        window.NSFirestoreDb = null;
+        return auth;
+      }
+      return loadScript(base + "firebase-firestore-compat.js")
+        .then(function () {
+          try {
+            if (typeof firebase !== "undefined" && firebase.firestore) {
+              window.NSFirestoreDb = firebase.firestore();
+            } else {
+              window.NSFirestoreDb = null;
+            }
+          } catch (eFs) {
+            console.error("[Night Store] Firestore init:", eFs);
+            window.NSFirestoreDb = null;
+          }
+          return auth;
+        })
+        .catch(function (eLoad) {
+          console.error("[Night Store] Firestore script:", eLoad);
+          window.NSFirestoreDb = null;
+          return auth;
+        });
+    })
     .catch(function (err) {
       console.error("[Night Store] Firebase init:", err);
       window.NSFirebaseAuth = null;
+      window.NSFirestoreDb = null;
       return null;
     });
 })();
