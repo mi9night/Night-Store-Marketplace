@@ -52,9 +52,9 @@
             <span class="balance js-balance-value">0 ₽</span>
           </div>
           <div class="balance-actions">
-            <button type="button">Пополнить</button>
-            <button type="button">Вывести</button>
-            <button type="button">Перевод</button>
+            <button type="button" data-demo-wallet="topup">Пополнить</button>
+            <button type="button" data-demo-wallet="withdraw">Вывести</button>
+            <button type="button" data-demo-wallet="transfer">Перевод</button>
           </div>
         </div>
 
@@ -84,15 +84,14 @@
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Продать ▾</button>
             <div class="dropdown-panel">
-              <a href="#">Лот вручную</a>
+              <a href="#" data-market-manual-lot>Лот вручную</a>
               <a href="#">API-выгрузка</a>
             </div>
           </div>
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="btn-secondary" style="width:auto;padding:8px 14px;font-size:0.85rem" data-dropdown-toggle>Массовый залив ▾</button>
             <div class="dropdown-panel">
-              <a href="#">Шаблон CSV</a>
-              <a href="#">Документация</a>
+              <button type="button" class="dropdown-panel__solo" disabled title="Скоро">Документация</button>
             </div>
           </div>
           <span style="color:var(--text-dim);font-size:0.85rem;margin-left:auto">₽ RUB · <a href="#">English</a></span>

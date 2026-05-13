@@ -282,6 +282,9 @@
       avatar: resolvedAvatarUrl(rec.avatar, rec.username),
       balanceRub: Math.max(0, Number(rec.balanceRub) || 0),
       depositRub: Math.max(0, Number(rec.depositRub) || 0),
+      level: Math.max(1, Math.floor(Number(rec.level) || 1)),
+      xp: Math.max(0, Math.floor(Number(rec.xp) || 0)),
+      xpToNext: Math.max(1, Math.floor(Number(rec.xpToNext) || 1000)),
       registration: String(
         rec.registration ||
           new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })
@@ -694,6 +697,9 @@
         if (p.isModerator === true || p.isModerator === false) {
           if (!u.isOwner) u.isModerator = p.isModerator;
         }
+        if (typeof p.balanceRub === "number" && isFinite(p.balanceRub) && p.balanceRub >= 0) {
+          u.balanceRub = Math.floor(p.balanceRub);
+        }
       });
     } catch (err) {
       /* ignore */
@@ -714,6 +720,345 @@
     } catch (e) {
       window.alert("Не удалось сохранить настройки (лимит хранилища).");
     }
+  }
+
+  function loadLocalMarketProducts() {
+    try {
+      var a = JSON.parse(localStorage.getItem(MARKET_LOCAL_PRODUCTS_KEY) || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLocalMarketProducts(arr) {
+    try {
+      localStorage.setItem(MARKET_LOCAL_PRODUCTS_KEY, JSON.stringify(arr.slice(0, 200)));
+    } catch (e) {
+      /* quota */
+    }
+  }
+
+  function mergeLocalMarketProductsIntoData(data) {
+    if (!data.products) data.products = [];
+    loadLocalMarketProducts().forEach(function (p) {
+      if (!p || p.id == null) return;
+      if (
+        !data.products.some(function (x) {
+          return String(x.id) === String(p.id);
+        })
+      ) {
+        data.products.push(p);
+      }
+    });
+  }
+
+  function syncMarketCatalogTotal(data) {
+    if (!data.marketStats || typeof data.marketStats !== "object") return;
+    var n = (data.products || []).length;
+    if (n > (data.marketStats.totalAccounts || 0)) data.marketStats.totalAccounts = n;
+  }
+
+  function persistSessionUserBalanceRub(data, nextRub) {
+    var u = sessionUser(data);
+    if (!u) return;
+    var n = Math.max(0, Math.floor(Number(nextRub) || 0));
+    u.balanceRub = n;
+    saveLocalUserPref(u.username, { balanceRub: n });
+    var arr = loadRegisteredUsersRaw();
+    var ix = arr.findIndex(function (r) {
+      return r && String(r.id) === String(u.id);
+    });
+    if (ix !== -1) {
+      arr[ix] = Object.assign({}, arr[ix], { balanceRub: n });
+      saveRegisteredUsersRaw(arr);
+    }
+  }
+
+  function applyDemoBalanceDelta(data, deltaRub) {
+    if (data._sessionGuest || !sessionUser(data)) {
+      window.alert("Войдите в аккаунт.");
+      return null;
+    }
+    var u = sessionUser(data);
+    var cur = Math.max(0, Math.floor(Number(u.balanceRub) || 0));
+    var d = Math.floor(Number(deltaRub) || 0);
+    var next = Math.max(0, cur + d);
+    persistSessionUserBalanceRub(data, next);
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-currency-changed"));
+    } catch (e) {}
+    return next;
+  }
+
+  function closeDemoWalletModals() {
+    document.querySelectorAll("#nsDemoWalletModalTopup, #nsDemoWalletModalWithdraw").forEach(function (m) {
+      m.classList.remove("is-open");
+      m.setAttribute("aria-hidden", "true");
+    });
+    document.body.classList.remove("modal-open");
+  }
+
+  function ensureDemoWalletModals() {
+    if (document.getElementById("nsDemoWalletModalTopup")) return;
+    function panelHtml(id, title, hint, btnId, btnLabel) {
+      return (
+        '<div class="modal" id="' +
+        id +
+        '" aria-hidden="true">' +
+        '<div class="modal__backdrop" data-ns-demo-wallet-close="1"></div>' +
+        '<div class="modal__panel demo-wallet-panel" role="dialog" aria-modal="true" aria-labelledby="' +
+        id +
+        'Title">' +
+        '<div class="modal__head">' +
+        '<h2 id="' +
+        id +
+        'Title">' +
+        escapeHtml(title) +
+        '</h2><button type="button" class="modal__close" data-ns-demo-wallet-close="1" aria-label="Закрыть">×</button></div>' +
+        '<div class="modal__body"><p class="demo-wallet-hint">' +
+        escapeHtml(hint) +
+        '</p><label class="demo-wallet-label" for="' +
+        id +
+        'Amt">Сумма, ₽</label>' +
+        '<input type="number" class="demo-wallet-input" id="' +
+        id +
+        'Amt" min="1" max="999999" step="1" value="500" /></div>' +
+        '<div class="modal__foot">' +
+        '<button type="button" class="btn-secondary" data-ns-demo-wallet-close="1">Отмена</button>' +
+        '<button type="button" class="btn-primary" id="' +
+        btnId +
+        '">' +
+        escapeHtml(btnLabel) +
+        "</button></div></div></div>"
+      );
+    }
+    var wrap = document.createElement("div");
+    wrap.id = "nsDemoWalletModals";
+    wrap.innerHTML =
+      panelHtml(
+        "nsDemoWalletModalTopup",
+        "Демо: пополнение с карты",
+        "Реальные платежи не выполняются — баланс меняется только локально в браузере.",
+        "nsDemoWalletTopupGo",
+        "Зачислить"
+      ) +
+      panelHtml(
+        "nsDemoWalletModalWithdraw",
+        "Демо: вывод на карту",
+        "Реального перевода нет — сумма списывается только с локального баланса.",
+        "nsDemoWalletWithdrawGo",
+        "Вывести"
+      );
+    document.body.appendChild(wrap);
+    wrap.querySelectorAll("[data-ns-demo-wallet-close]").forEach(function (el) {
+      el.addEventListener("click", closeDemoWalletModals);
+    });
+    if (!window.__nsDemoWalletEscBound) {
+      window.__nsDemoWalletEscBound = true;
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        var t = document.getElementById("nsDemoWalletModalTopup");
+        var w = document.getElementById("nsDemoWalletModalWithdraw");
+        if (
+          (!t || !t.classList.contains("is-open")) &&
+          (!w || !w.classList.contains("is-open"))
+        ) {
+          return;
+        }
+        closeDemoWalletModals();
+      });
+    }
+    document.getElementById("nsDemoWalletTopupGo").addEventListener("click", function () {
+      var inp = document.getElementById("nsDemoWalletModalTopupAmt");
+      var v = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
+      if (!window.NightStoreData) return;
+      applyDemoBalanceDelta(window.NightStoreData, v);
+      closeDemoWalletModals();
+      window.alert("Демо: зачислено " + formatIntRu(v) + " ₽.");
+    });
+    document.getElementById("nsDemoWalletWithdrawGo").addEventListener("click", function () {
+      var inp = document.getElementById("nsDemoWalletModalWithdrawAmt");
+      var v = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
+      if (!window.NightStoreData) return;
+      var u = sessionUser(window.NightStoreData);
+      if (!u) return;
+      var cur = Math.max(0, Math.floor(Number(u.balanceRub) || 0));
+      if (v > cur) {
+        window.alert("Недостаточно средств на балансе.");
+        return;
+      }
+      applyDemoBalanceDelta(window.NightStoreData, -v);
+      closeDemoWalletModals();
+      window.alert("Демо: вывод " + formatIntRu(v) + " ₽ отражён (с баланса списано).");
+    });
+  }
+
+  function openDemoWalletModal(data, mode) {
+    if (data._sessionGuest || !sessionUser(data)) {
+      window.alert("Войдите в аккаунт.");
+      return;
+    }
+    ensureDemoWalletModals();
+    var idOpen = mode === "withdraw" ? "nsDemoWalletModalWithdraw" : "nsDemoWalletModalTopup";
+    document.querySelectorAll("#nsDemoWalletModalTopup, #nsDemoWalletModalWithdraw").forEach(function (m) {
+      var on = m.id === idOpen;
+      m.classList.toggle("is-open", on);
+      m.setAttribute("aria-hidden", on ? "false" : "true");
+    });
+    document.body.classList.add("modal-open");
+    var inp = document.getElementById(idOpen + "Amt");
+    if (inp) {
+      inp.value = "500";
+      setTimeout(function () {
+        inp.focus();
+        inp.select();
+      }, 10);
+    }
+  }
+
+  function wireDemoWalletUi(data) {
+    document.querySelectorAll("[data-demo-wallet]").forEach(function (b) {
+      if (b.dataset.nsDemoBalWired === "1") return;
+      b.dataset.nsDemoBalWired = "1";
+      b.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var mode = b.getAttribute("data-demo-wallet");
+        if (mode === "topup" || mode === "withdraw") {
+          openDemoWalletModal(data, mode);
+        } else if (mode === "transfer") {
+          window.alert("Переводы в демо-режиме недоступны.");
+        }
+      });
+    });
+  }
+
+  function closeDemoManualLotModal() {
+    var m = document.getElementById("nsDemoManualLotModal");
+    if (m) {
+      m.classList.remove("is-open");
+      m.setAttribute("aria-hidden", "true");
+    }
+    document.body.classList.remove("modal-open");
+  }
+
+  function ensureDemoManualLotModal() {
+    if (document.getElementById("nsDemoManualLotModal")) return;
+    var cats = [
+      { v: "steam", l: "Steam" },
+      { v: "telegram", l: "Telegram" },
+      { v: "gift", l: "Гифты" },
+      { v: "roblox", l: "Roblox" },
+      { v: "minecraft", l: "Minecraft" },
+    ];
+    var opts = cats
+      .map(function (c) {
+        return '<option value="' + escapeHtml(c.v) + '">' + escapeHtml(c.l) + "</option>";
+      })
+      .join("");
+    var wrap = document.createElement("div");
+    wrap.id = "nsDemoManualLotRoot";
+    wrap.innerHTML =
+      '<div class="modal" id="nsDemoManualLotModal" aria-hidden="true">' +
+      '<div class="modal__backdrop" data-ns-manual-lot-close="1"></div>' +
+      '<div class="modal__panel demo-manual-lot-panel" role="dialog" aria-modal="true" aria-labelledby="nsDemoManualLotTitle">' +
+      '<div class="modal__head">' +
+      '<h2 id="nsDemoManualLotTitle">Лот вручную</h2>' +
+      '<button type="button" class="modal__close" data-ns-manual-lot-close="1" aria-label="Закрыть">×</button></div>' +
+      '<div class="modal__body">' +
+      '<p class="demo-wallet-hint">Объявление появится в каталоге на этом устройстве (localStorage).</p>' +
+      '<label class="demo-wallet-label" for="nsManualLotTitle">Заголовок</label>' +
+      '<input type="text" class="demo-wallet-input" id="nsManualLotTitle" maxlength="120" placeholder="Например: Steam аккаунт" />' +
+      '<label class="demo-wallet-label" for="nsManualLotCat">Категория</label>' +
+      '<select class="demo-wallet-input" id="nsManualLotCat">' +
+      opts +
+      "</select>" +
+      '<label class="demo-wallet-label" for="nsManualLotPrice">Цена, ₽</label>' +
+      '<input type="number" class="demo-wallet-input" id="nsManualLotPrice" min="1" max="99999999" step="1" value="100" />' +
+      '<label class="demo-wallet-label" for="nsManualLotDesc">Описание (необязательно)</label>' +
+      '<textarea class="demo-wallet-input demo-manual-lot-ta" id="nsManualLotDesc" rows="3" maxlength="2000" placeholder="Кратко опишите лот"></textarea>' +
+      "</div>" +
+      '<div class="modal__foot">' +
+      '<button type="button" class="btn-secondary" data-ns-manual-lot-close="1">Отмена</button>' +
+      '<button type="button" class="btn-primary" id="nsManualLotSubmit">Опубликовать в каталоге</button>' +
+      "</div></div></div>";
+    document.body.appendChild(wrap);
+    wrap.querySelectorAll("[data-ns-manual-lot-close]").forEach(function (el) {
+      el.addEventListener("click", closeDemoManualLotModal);
+    });
+    if (!window.__nsManualLotEscBound) {
+      window.__nsManualLotEscBound = true;
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        var m = document.getElementById("nsDemoManualLotModal");
+        if (!m || !m.classList.contains("is-open")) return;
+        closeDemoManualLotModal();
+      });
+    }
+    document.getElementById("nsManualLotSubmit").addEventListener("click", function () {
+      if (!window.NightStoreData) return;
+      var d = window.NightStoreData;
+      var me = sessionUser(d);
+      if (!me) {
+        window.alert("Войдите, чтобы создать лот.");
+        return;
+      }
+      var title = String((document.getElementById("nsManualLotTitle") || {}).value || "").trim();
+      if (!title) {
+        window.alert("Введите заголовок.");
+        return;
+      }
+      var catEl = document.getElementById("nsManualLotCat");
+      var cat = catEl ? catEl.value : "steam";
+      var price = Math.max(1, Math.floor(Number((document.getElementById("nsManualLotPrice") || {}).value) || 0));
+      var desc = String((document.getElementById("nsManualLotDesc") || {}).value || "").trim();
+      var pid = "manual_" + Date.now();
+      var product = {
+        id: pid,
+        title: title,
+        price: price,
+        category: cat,
+        sellerId: me.id,
+        posted: formatThreadDate(),
+        badges: ["Ручной лот"],
+        _demoNote: desc,
+      };
+      if (!d.products) d.products = [];
+      d.products.unshift(product);
+      var store = loadLocalMarketProducts();
+      store.unshift(product);
+      saveLocalMarketProducts(store);
+      syncMarketCatalogTotal(d);
+      closeDemoManualLotModal();
+      if (document.body.getAttribute("data-page") === "market") {
+        refreshMarketView(d);
+      }
+      window.alert("Лот добавлен в каталог (демо, только в этом браузере).");
+    });
+  }
+
+  function openDemoManualLotModal(data) {
+    if (data._sessionGuest || !sessionUser(data)) {
+      window.alert("Войдите, чтобы выставить лот.");
+      return;
+    }
+    ensureDemoManualLotModal();
+    var m = document.getElementById("nsDemoManualLotModal");
+    if (m) {
+      m.classList.add("is-open");
+      m.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+    }
+    var ti = document.getElementById("nsManualLotTitle");
+    if (ti) ti.value = "";
+    var pr = document.getElementById("nsManualLotPrice");
+    if (pr) pr.value = "100";
+    var de = document.getElementById("nsManualLotDesc");
+    if (de) de.value = "";
+    setTimeout(function () {
+      if (ti) ti.focus();
+    }, 20);
   }
 
   /** Лимит длины data URL для встраиваемых картинок в темах/стене (JPEG/WebP). */
@@ -822,6 +1167,7 @@
   var WALL_EMOJI_GRID_COUNT = 35;
   var MOD_TICKETS_KEY = "nightstore_mod_tickets_v1";
   var USER_PREFS_KEY = "nightstore_user_prefs_v1";
+  var MARKET_LOCAL_PRODUCTS_KEY = "nightstore_market_local_products_v1";
   var SESSION_KEY = "nightstore_session_v1";
   var REG_USERS_KEY = "nightstore_registered_users_v1";
   var PENDING_REG_KEY = "nightstore_pending_reg_v1";
@@ -1425,7 +1771,7 @@
       '</span><button type="button" class="user-mega__fx-toggle" data-fx-toggle aria-expanded="false" aria-label="Валюта отображения"><span class="user-mega__fx-chev" aria-hidden="true">▾</span></button></div><div class="user-mega__fx-menu" data-fx-menu hidden>' +
       fxRows +
       fxFoot +
-      '</div><div class="user-mega__bal-actions"><button type="button" class="user-mega__bal-btn user-mega__bal-btn--plus">Пополнить</button><button type="button" class="user-mega__bal-btn">Вывести</button><button type="button" class="user-mega__bal-btn">Перевести</button></div></div><div class="user-mega__grid">' +
+      '</div><div class="user-mega__bal-actions"><button type="button" class="user-mega__bal-btn user-mega__bal-btn--plus" data-demo-wallet="topup">Пополнить</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="withdraw">Вывести</button><button type="button" class="user-mega__bal-btn" data-demo-wallet="transfer">Перевести</button></div></div><div class="user-mega__grid">' +
       gridHtml +
       "</div>" +
       modStrip +
@@ -1436,11 +1782,6 @@
       iconSvg("M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1", 20) +
       "</button></div>";
 
-    panel.querySelectorAll(".user-mega__bal-btn").forEach(function (b) {
-      b.addEventListener("click", function () {
-        window.alert("Операции с балансом сейчас недоступны.");
-      });
-    });
     var eye = panel.querySelector("[data-bal-toggle]");
     if (eye) {
       eye.addEventListener("click", function (e) {
@@ -1537,6 +1878,7 @@
     if (avBig) attachAvatarFallback(avBig, u.username);
     var secIm = panel.querySelector(".user-mega__second img");
     if (secIm && linkedUsers[0]) attachAvatarFallback(secIm, linkedUsers[0].username);
+    wireDemoWalletUi(data);
   }
 
   function subsStorageKey(username) {
@@ -2489,6 +2831,24 @@
         refreshMarketView(d);
       });
     }
+
+    wireDemoWalletUi(data);
+    var mhb = document.querySelector(".market-header-bar");
+    if (mhb && !mhb.dataset.nsManualLotWired) {
+      mhb.dataset.nsManualLotWired = "1";
+      mhb.addEventListener("click", function (e) {
+        var tr = e.target.closest("[data-market-manual-lot]");
+        if (!tr || !mhb.contains(tr)) return;
+        e.preventDefault();
+        openDemoManualLotModal(data);
+        var dd = tr.closest(".dropdown-wrap");
+        if (dd) {
+          dd.classList.remove("is-open");
+          var tb = dd.querySelector("[data-dropdown-toggle]");
+          if (tb) tb.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
   }
 
   function formatThreadDate() {
@@ -3178,6 +3538,10 @@
       listEl.hidden = false;
       var isMod = session ? canModerate(data, session) : false;
       var viewerName = session && session.username ? String(session.username) : "";
+      var isWallOwner =
+        !!viewerName &&
+        !!profileUser &&
+        String(viewerName) === String(profileUser.username || "");
       listEl.innerHTML = rows
         .map(function (p) {
           var imgs = renderDataImagesHtml(p.images, "wall-post-img");
@@ -3195,9 +3559,8 @@
             })
             .map(function (c) {
               var cav = escapeHtml(avatarForUsername(data, c.author));
-              var canDelC =
-                isMod ||
-                (!!viewerName && viewerName === String(c.author || ""));
+              var isCommentAuthor = !!viewerName && viewerName === String(c.author || "");
+              var canDelC = isMod || isCommentAuthor || isWallOwner;
               var delBtn = canDelC
                 ? '<button type="button" class="wall-comment__del" data-wall-comment-del data-wall-post="' +
                   String(p.id) +
@@ -3235,7 +3598,7 @@
                 '" data-cid="' +
                 String(c.id) +
                 '">Пожаловаться</button>' +
-                delBtn +
+                (delBtn ? '<span class="wall-comment__act-sep" aria-hidden="true">·</span>' + delBtn : "") +
                 "</div></div></div>"
               );
             })
@@ -3871,7 +4234,10 @@
             var mayModDel = canModerate(data, session);
             var isCommentAuthor =
               String(session.username || "") === String((cmD && cmD.author) || "");
-            if (!(isCommentAuthor || mayModDel)) return;
+            var isWallOwnerDel =
+              !!profileUser &&
+              String(session.username || "") === String(profileUser.username || "");
+            if (!(isCommentAuthor || mayModDel || isWallOwnerDel)) return;
             if (!window.confirm("Удалить этот комментарий?")) return;
             updateWallPost(profileUser.username, postIdD, function (pp) {
               (pp.comments || []).forEach(function (c) {
@@ -3987,6 +4353,32 @@
     paint();
   }
 
+  function applyProfileLevelWidget(u) {
+    var level = Math.max(1, Math.floor(Number(u.level) || 1));
+    var xpCap = Math.max(1, Math.floor(Number(u.xpToNext) || 1000));
+    var xp = Math.max(0, Math.floor(Number(u.xp) || 0));
+    var pct = Math.min(100, Math.round((xp / xpCap) * 1000) / 10);
+    var bd = document.querySelector(".js-profile-level-badge");
+    var ln = document.querySelector(".js-profile-level-num");
+    if (bd) bd.textContent = String(level);
+    if (ln) ln.textContent = String(level);
+    var cur = document.querySelector(".js-profile-xp-cur");
+    if (cur) cur.textContent = String(xp);
+    var cap = document.querySelector(".js-profile-xp-cap");
+    if (cap) cap.textContent = String(xpCap);
+    var toNext = document.querySelector(".js-profile-xp-to-next");
+    if (toNext) toNext.textContent = formatIntRu(xpCap) + " XP";
+    var nextLbl = document.querySelector(".js-profile-level-next");
+    if (nextLbl) nextLbl.textContent = "до " + String(level + 1) + " LVL";
+    var fill = document.querySelector(".js-profile-xp-fill");
+    if (fill) fill.style.width = pct + "%";
+    var bar = document.querySelector(".profile-level-bar");
+    if (bar) {
+      bar.setAttribute("aria-valuenow", String(Math.min(xp, xpCap)));
+      bar.setAttribute("aria-valuemax", String(xpCap));
+    }
+  }
+
   function initProfile(data) {
     var params = new URLSearchParams(window.location.search);
     var wantedRaw = params.get("user");
@@ -4035,20 +4427,7 @@
     var modBadge = document.getElementById("profileModBadge");
     if (modBadge) modBadge.hidden = !canModerate(data, u);
 
-    var depTitle = document.querySelector(".js-deposit-title");
-    if (depTitle) depTitle.textContent = "Страховой депозит " + u.username;
-
-    var amount = document.querySelector(".js-deposit-amount");
-    if (amount) {
-      var viewer = sessionUser(data);
-      amount.setAttribute("data-deposit-rub", String(u.depositRub || 0));
-      amount.textContent = formatRubForViewer(
-        data,
-        viewer && viewer.username ? viewer.username : "",
-        u.depositRub || 0,
-        {}
-      );
-    }
+    applyProfileLevelWidget(u);
 
     var av = document.querySelector(".js-profile-avatar-xl");
     if (av) {
@@ -4196,16 +4575,6 @@
       }
     }
 
-    if (!window.__nightstoreProfileFxBound) {
-      window.__nightstoreProfileFxBound = true;
-      window.addEventListener("nightstore-currency-changed", function () {
-        var d = window.NightStoreData;
-        var el = document.querySelector(".js-deposit-amount[data-deposit-rub]");
-        var v = sessionUser(d);
-        if (!el || !d || !v) return;
-        el.textContent = formatRubForViewer(d, v.username, Number(el.getAttribute("data-deposit-rub")) || 0, {});
-      });
-    }
   }
 
   function initTopic(data) {
@@ -4388,15 +4757,18 @@
               var rimgs = renderDataImagesHtml(r.images, "topic-reply-img");
               var gal = rimgs ? '<div class="topic-reply-card__gallery">' + rimgs + "</div>" : "";
               var rid = r.ts != null ? r.ts : 0;
+              var isTopicOwner = me && owner && String(me.username) === String(owner.username);
               var canDel =
-                (me && me.username === r.author) || (me && canModerate(data, me));
+                (me && me.username === r.author) ||
+                (me && canModerate(data, me)) ||
+                !!isTopicOwner;
               var act =
                 '<div class="topic-reply-card__actions">' +
                 '<button type="button" class="topic-reply__btn" data-topic-reply-report data-rid="' +
                 String(rid) +
                 '">Пожаловаться</button>' +
                 (canDel
-                  ? '<button type="button" class="topic-reply__btn topic-reply__btn--danger" data-topic-reply-del data-rid="' +
+                  ? '<span class="topic-reply__act-sep" aria-hidden="true">·</span><button type="button" class="topic-reply__btn topic-reply__btn--danger" data-topic-reply-del data-rid="' +
                     String(rid) +
                     '">Удалить</button>'
                   : "") +
@@ -4510,7 +4882,8 @@
           if (!me || !repD) return;
           var mayModDelR = canModerate(data, me);
           var isReplyAuthor = String(me.username || "") === String((repD && repD.author) || "");
-          if (!(isReplyAuthor || mayModDelR)) return;
+          var isTopicOwnerDel = owner && String(me.username || "") === String(owner.username || "");
+          if (!(isReplyAuthor || mayModDelR || isTopicOwnerDel)) return;
           if (!window.confirm("Удалить этот ответ?")) return;
           updateProfileThread(owner.username, ts, function (x) {
             x.replies = (x.replies || []).filter(function (r) {
@@ -6243,6 +6616,8 @@
       })
       .then(function (data) {
         mergeLocalUserPrefs(data);
+        mergeLocalMarketProductsIntoData(data);
+        syncMarketCatalogTotal(data);
         ensureUsersHaveStablePublicNumericIds(data);
         ensureFxRatesMerged(data, function () {
           if (!gateSiteAccess(data, page)) return;
