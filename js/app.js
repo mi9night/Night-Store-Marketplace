@@ -4272,6 +4272,15 @@
         undStack = [""];
         redStack.length = 0;
         paint();
+        var composerPanel = document.querySelector(".wall-composer--panel");
+        if (composerPanel) {
+          composerPanel.classList.remove("ns-wall-post-sent");
+          void composerPanel.offsetWidth;
+          composerPanel.classList.add("ns-wall-post-sent");
+          setTimeout(function () {
+            composerPanel.classList.remove("ns-wall-post-sent");
+          }, 600);
+        }
       });
 
       if (!listEl.dataset.wallDelegate) {
