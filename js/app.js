@@ -777,6 +777,46 @@
     });
   }
 
+  function loadMarketRemovedProductIds() {
+    try {
+      var a = JSON.parse(localStorage.getItem(MARKET_REMOVED_PRODUCT_IDS_KEY) || "[]");
+      return Array.isArray(a) ? a.map(function (x) { return String(x || "").trim(); }).filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveMarketRemovedProductIds(ids) {
+    try {
+      localStorage.setItem(MARKET_REMOVED_PRODUCT_IDS_KEY, JSON.stringify(ids.slice(0, 400)));
+    } catch (e2) {
+      /* ignore */
+    }
+  }
+
+  function markMarketProductRemoved(productId) {
+    var sid = String(productId || "").trim();
+    if (!sid) return;
+    var cur = loadMarketRemovedProductIds();
+    if (cur.indexOf(sid) === -1) {
+      cur.push(sid);
+      saveMarketRemovedProductIds(cur);
+    }
+  }
+
+  function applyMarketRemovedProductsFilter(data) {
+    if (!data.products || !data.products.length) return;
+    var rm = loadMarketRemovedProductIds();
+    if (!rm.length) return;
+    var set = {};
+    rm.forEach(function (id) {
+      set[String(id)] = 1;
+    });
+    data.products = data.products.filter(function (p) {
+      return p && !set[String(p.id)];
+    });
+  }
+
   function syncMarketCatalogTotal(data) {
     if (!data.marketStats || typeof data.marketStats !== "object") return;
     var n = (data.products || []).length;
@@ -820,12 +860,10 @@
     modal.classList.remove("demo-wallet-modal--error");
     var form = modal.querySelector(".demo-wallet-screen--form");
     var res = modal.querySelector(".demo-wallet-screen--result");
-    var footForm = modal.querySelector(".demo-wallet-foot--form");
     var footRes = modal.querySelector(".demo-wallet-foot--result");
     var title = modal.querySelector(".modal__head h2");
     if (form) form.hidden = false;
     if (res) res.hidden = true;
-    if (footForm) footForm.hidden = false;
     if (footRes) footRes.hidden = true;
     if (title) {
       title.textContent =
@@ -838,13 +876,11 @@
     opts = opts || {};
     var form = modal.querySelector(".demo-wallet-screen--form");
     var res = modal.querySelector(".demo-wallet-screen--result");
-    var footForm = modal.querySelector(".demo-wallet-foot--form");
     var footRes = modal.querySelector(".demo-wallet-foot--result");
     var msgEl = modal.querySelector(".demo-wallet-result-msg");
     var title = modal.querySelector(".modal__head h2");
     if (form) form.hidden = true;
     if (res) res.hidden = false;
-    if (footForm) footForm.hidden = true;
     if (footRes) footRes.hidden = false;
     if (msgEl) msgEl.textContent = opts.message || "";
     if (title) title.textContent = opts.headTitle || "Готово";
@@ -855,6 +891,34 @@
         doneBtn.focus();
       }, 10);
     }
+  }
+
+  /** Небольшая плашка внизу экрана (как обратная связь после демо-операций), без нативного alert. */
+  function showNsToast(message, opts) {
+    opts = opts || {};
+    var ms = typeof opts.duration === "number" && opts.duration > 0 ? opts.duration : 3600;
+    var variant = opts.variant === "danger" ? "danger" : "success";
+    var prev = document.getElementById("nsAppToastRoot");
+    if (prev) {
+      clearTimeout(prev._nsToastT);
+      prev.remove();
+    }
+    var wrap = document.createElement("div");
+    wrap.id = "nsAppToastRoot";
+    wrap.className = "ns-app-toast ns-app-toast--" + variant;
+    wrap.setAttribute("role", "status");
+    wrap.setAttribute("aria-live", "polite");
+    wrap.textContent = String(message || "");
+    document.body.appendChild(wrap);
+    requestAnimationFrame(function () {
+      wrap.classList.add("is-visible");
+    });
+    wrap._nsToastT = setTimeout(function () {
+      wrap.classList.remove("is-visible");
+      setTimeout(function () {
+        if (wrap.parentNode) wrap.remove();
+      }, 320);
+    }, ms);
   }
 
   function closeDemoWalletModals() {
@@ -893,19 +957,16 @@
         '<input type="number" class="demo-wallet-input" id="' +
         id +
         'Amt" min="1" max="999999" step="1" value="500" />' +
-        "</div>" +
+        '<button type="button" class="btn-primary demo-wallet-submit" id="' +
+        btnId +
+        '">' +
+        escapeHtml(btnLabel) +
+        "</button></div>" +
         '<div class="demo-wallet-screen demo-wallet-screen--result" hidden>' +
         '<p class="demo-wallet-result-msg" id="' +
         id +
         'ResultMsg" aria-live="polite"></p>' +
         "</div></div>" +
-        '<div class="modal__foot demo-wallet-foot--form">' +
-        '<button type="button" class="btn-secondary" data-ns-demo-wallet-close="1">Отмена</button>' +
-        '<button type="button" class="btn-primary" id="' +
-        btnId +
-        '">' +
-        escapeHtml(btnLabel) +
-        "</button></div>" +
         '<div class="modal__foot demo-wallet-foot--result" hidden>' +
         '<button type="button" class="btn-primary" data-ns-demo-wallet-done="1">Понятно</button>' +
         "</div></div></div>"
@@ -919,7 +980,7 @@
         "Демо: пополнение с карты",
         "Реальные платежи не выполняются — баланс меняется только локально в браузере.",
         "nsDemoWalletTopupGo",
-        "Зачислить"
+        "Пополнить"
       ) +
       panelHtml(
         "nsDemoWalletModalWithdraw",
@@ -980,6 +1041,17 @@
       } else {
         showDemoWalletResult(modal, { message: "Выведено " + formatIntRu(v) + " ₽." });
       }
+    });
+    ["nsDemoWalletModalTopupAmt", "nsDemoWalletModalWithdrawAmt"].forEach(function (aid) {
+      var el = document.getElementById(aid);
+      if (!el) return;
+      el.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        var goId = aid.indexOf("Topup") !== -1 ? "nsDemoWalletTopupGo" : "nsDemoWalletWithdrawGo";
+        var btn = document.getElementById(goId);
+        if (btn) btn.click();
+      });
     });
   }
 
@@ -1131,6 +1203,7 @@
   var MOD_TICKETS_KEY = "nightstore_mod_tickets_v1";
   var USER_PREFS_KEY = "nightstore_user_prefs_v1";
   var MARKET_LOCAL_PRODUCTS_KEY = "nightstore_market_local_products_v1";
+  var MARKET_REMOVED_PRODUCT_IDS_KEY = "nightstore_market_removed_product_ids_v1";
   var SESSION_KEY = "nightstore_session_v1";
   var REG_USERS_KEY = "nightstore_registered_users_v1";
   var PENDING_REG_KEY = "nightstore_pending_reg_v1";
@@ -1145,6 +1218,9 @@
   var ANCHOR_PUBLIC_NID_EMAIL = "akknomet1@gmail.com";
   var USER_STATS_MOD_KEY = "nightstore_mod_user_stats_v1";
   var SUPPORT_THREADS_KEY = "nightstore_support_threads_v1";
+  var MARKET_PURCHASES_KEY = "nightstore_market_purchases_v1";
+  var USER_LANG_KEY = "nightstore_user_lang_v1";
+  var DM_THREADS_KEY = "nightstore_dm_threads_v1";
   var PRODUCT_ADMIN_CODES_KEY = "nightstore_product_admin_codes_v1";
   var PRODUCT_MOD_NOTES_KEY = "nightstore_product_mod_notes_v1";
   var BANNED_USERNAMES_KEY = "nightstore_banned_usernames_v1";
@@ -1667,7 +1743,17 @@
     var u = sessionUser(data);
     if (data._sessionGuest || !u) {
       paintGuestAuthDropdown();
+      try {
+        document.documentElement.lang = "ru";
+      } catch (eLangG) {
+        /* ignore */
+      }
       return;
+    }
+    try {
+      document.documentElement.lang = loadUserLangPref(u.username) === "en" ? "en" : "ru";
+    } catch (eLang) {
+      /* ignore */
     }
     tryFinishPendingAccountLink(data);
     document.querySelectorAll(".js-user-name").forEach(function (el) {
@@ -1764,15 +1850,15 @@
     var linkedUsers = partnerId ? [userById(data, partnerId)].filter(Boolean) : [];
 
     var myProf = "profile.html?user=" + encodeURIComponent(u.username);
+    var curLang = loadUserLangPref(u.username);
     var grid = [
-      { href: myProf, label: "Мои аккаунты", icon: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" },
-      { href: "market.html", label: "Мои покупки", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
+      { href: "market-my-products.html", label: "Мои товары", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
+      { href: "market-purchases.html", label: "Мои покупки", icon: "M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6" },
       { href: myProf + "#create-thread", label: "Мои темы", icon: "M4 6h16M4 12h16M4 18h7" },
-      { href: "notifications.html", label: "Мои сообщения", icon: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" },
-      { href: "help.html", label: "Мои тикеты", icon: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-      { href: "help.html", label: "Мои закладки", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
+      { href: "messages.html", label: "Мои сообщения", icon: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" },
+      { href: "tickets.html", label: "Мои тикеты", icon: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+      { href: "bookmarks.html", label: "Мои закладки", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" },
       { href: "help.html", label: "FAQ", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
-      { href: "#", label: "Язык: EN", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M12 3a17 17 0 010 18" },
     ];
     var modStrip = mod
       ? '<a class="user-mega__mod-strip" href="moderation.html">' +
@@ -1792,6 +1878,12 @@
         );
       })
       .join("");
+    gridHtml +=
+      '<button type="button" class="user-mega__tile user-mega__tile--lang" data-lang-cycle>' +
+      iconSvg("M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M12 3a17 17 0 010 18", 22) +
+      "<span>Язык: " +
+      escapeHtml(marketLangLabel(curLang)) +
+      "</span></button>";
 
     var secondHtml = "";
     if (linkedUsers.length) {
@@ -1824,9 +1916,9 @@
         '</div></div><span class="user-mega__second-go" aria-hidden="true">›</span></button>';
     }
     var supportHtml =
-      '<a class="user-mega__support-block" href="support.html">' +
+      '<a class="user-mega__support-block" href="tickets.html">' +
       iconSvg("M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z", 20) +
-      "<span>Поддержка</span></a>";
+      "<span>Тикеты</span></a>";
 
     panel.className = "dropdown-panel user-mega";
     panel.innerHTML =
@@ -1902,6 +1994,17 @@
         } catch (err) {}
       });
     });
+    var langBtn = panel.querySelector("[data-lang-cycle]");
+    if (langBtn) {
+      langBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var next = loadUserLangPref(u.username) === "en" ? "ru" : "en";
+        saveUserLangPref(u.username, next);
+        paintUserMegaMenu(data);
+        paintMarketLangStrip(data);
+      });
+    }
     var lo = panel.querySelector("[data-logout]");
     if (lo) {
       lo.addEventListener("click", function (e) {
@@ -2534,6 +2637,336 @@
     updateNotifyBadge(data);
   }
 
+  function initMarketCartDropdown(data) {
+    var btn = document.querySelector("[data-market-cart-toggle]");
+    if (!btn || btn.closest(".cart-dropdown")) return;
+
+    var wrap = document.createElement("div");
+    wrap.className = "cart-dropdown";
+    btn.parentNode.insertBefore(wrap, btn);
+    wrap.appendChild(btn);
+    btn.classList.add("icon-btn--cart");
+
+    var panel = document.createElement("div");
+    panel.className = "cart-dropdown-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Корзина");
+    panel.innerHTML =
+      '<div class="cart-dropdown__head">' +
+      '<span class="cart-dropdown__count js-cart-count-label">0 товаров</span>' +
+      '<button type="button" class="cart-dropdown__clear" data-cart-clear>Очистить корзину</button>' +
+      "</div>" +
+      '<div class="cart-dropdown__body js-cart-lines"></div>' +
+      '<div class="cart-dropdown__foot">' +
+      '<button type="button" class="btn-primary cart-dropdown__checkout" data-cart-checkout disabled>Оформить покупку</button>' +
+      "</div>";
+
+    wrap.appendChild(panel);
+
+    var badge = document.createElement("span");
+    badge.className = "js-cart-badge cart-dropdown__badge";
+    badge.setAttribute("aria-hidden", "true");
+    badge.hidden = true;
+    badge.textContent = "0";
+    btn.appendChild(badge);
+
+    var listEl = panel.querySelector(".js-cart-lines");
+    var countLabel = panel.querySelector(".js-cart-count-label");
+
+    function paintCartPanel() {
+      var d = window.NightStoreData || data;
+      var items = loadMarketCart();
+      var total = marketCartGoodsCount(items);
+      if (countLabel) countLabel.textContent = formatGoodsCountRu(total);
+      badge.textContent = total > 99 ? "99+" : String(total || "0");
+      badge.hidden = total === 0;
+      var vu = sessionUser(d);
+      var vun = vu && vu.username ? vu.username : "";
+      if (!listEl) return;
+      if (!items.length) {
+        listEl.innerHTML = '<p class="cart-dropdown__empty">Корзина пуста</p>';
+        var ch0 = panel.querySelector("[data-cart-checkout]");
+        if (ch0) ch0.disabled = true;
+        return;
+      }
+      var ch1 = panel.querySelector("[data-cart-checkout]");
+      if (ch1) ch1.disabled = false;
+      listEl.innerHTML = items
+        .map(function (row) {
+          var p = findProductById(d, row.id);
+          var href = "market-product.html?id=" + encodeURIComponent(String(row.id));
+          if (!p) {
+            return (
+              '<div class="cart-line cart-line--gone">' +
+              '<div class="cart-line__main">' +
+              '<span class="cart-line__title">Товар недоступен</span>' +
+              '<span class="cart-line__sub">ID: ' +
+              escapeHtml(String(row.id)) +
+              "</span></div>" +
+              '<button type="button" class="cart-line__remove" data-cart-remove="' +
+              escapeHtml(String(row.id)) +
+              '" aria-label="Убрать">×</button></div>'
+            );
+          }
+          var title = escapeHtml(String(p.title || "").slice(0, 120));
+          var price = formatRubForViewer(d, vun, p.price || 0, {});
+          return (
+            '<div class="cart-line">' +
+            '<a class="cart-line__main" href="' +
+            href +
+            '">' +
+            '<span class="cart-line__title">' +
+            title +
+            "</span>" +
+            '<span class="cart-line__price">' +
+            escapeHtml(price) +
+            "</span></a>" +
+            '<div class="cart-line__qty" role="group" aria-label="Количество">' +
+            '<button type="button" class="cart-line__qty-btn" data-cart-delta="' +
+            escapeHtml(String(row.id)) +
+            '" data-cart-step="-1" aria-label="Меньше">−</button>' +
+            '<span class="cart-line__qty-val">' +
+            formatIntRu(row.qty) +
+            "</span>" +
+            '<button type="button" class="cart-line__qty-btn" data-cart-delta="' +
+            escapeHtml(String(row.id)) +
+            '" data-cart-step="1" aria-label="Больше">+</button>' +
+            "</div>" +
+            '<button type="button" class="cart-line__remove" data-cart-remove="' +
+            escapeHtml(String(row.id)) +
+            '" aria-label="Убрать из корзины">×</button>' +
+            "</div>"
+          );
+        })
+        .join("");
+
+      listEl.querySelectorAll("[data-cart-remove]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          removeMarketCartLine(b.getAttribute("data-cart-remove") || "");
+          dispatchMarketCartChanged();
+        });
+      });
+      listEl.querySelectorAll("[data-cart-delta]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var id = b.getAttribute("data-cart-delta") || "";
+          var step = Math.floor(Number(b.getAttribute("data-cart-step")) || 0);
+          var cur = loadMarketCart().find(function (x) {
+            return x.id === id;
+          });
+          var q = (cur ? cur.qty : 1) + step;
+          setMarketCartQty(id, q);
+          dispatchMarketCartChanged();
+        });
+      });
+    }
+
+    var chkOut = panel.querySelector("[data-cart-checkout]");
+    if (chkOut && chkOut.dataset.nsWired !== "1") {
+      chkOut.dataset.nsWired = "1";
+      chkOut.addEventListener("click", function (e) {
+        e.stopPropagation();
+        checkoutMarketCart(window.NightStoreData || data);
+        paintCartPanel();
+      });
+    }
+
+    window.__nsMarketCartRepaint = paintCartPanel;
+
+    var clr = panel.querySelector("[data-cart-clear]");
+    if (clr) {
+      clr.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!loadMarketCart().length) return;
+        if (!window.confirm("Очистить корзину полностью?")) return;
+        clearMarketCart();
+        dispatchMarketCartChanged();
+      });
+    }
+
+    panel.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+    wrap.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = wrap.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) paintCartPanel();
+    });
+
+    if (!window.__nsMarketCartDocClose) {
+      window.__nsMarketCartDocClose = true;
+      document.addEventListener("click", function (e) {
+        if (e.target.closest(".cart-dropdown")) return;
+        document.querySelectorAll(".cart-dropdown.is-open").forEach(function (w) {
+          w.classList.remove("is-open");
+          var t = w.querySelector("[data-market-cart-toggle]");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        document.querySelectorAll(".cart-dropdown.is-open").forEach(function (w) {
+          w.classList.remove("is-open");
+          var t = w.querySelector("[data-market-cart-toggle]");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+
+    if (!window.__nsMarketCartGlobalPaint) {
+      window.__nsMarketCartGlobalPaint = true;
+      window.addEventListener("nightstore-cart-changed", function () {
+        if (typeof window.__nsMarketCartRepaint === "function") window.__nsMarketCartRepaint();
+      });
+      window.addEventListener("nightstore-currency-changed", function () {
+        if (typeof window.__nsMarketCartRepaint === "function") window.__nsMarketCartRepaint();
+      });
+    }
+
+    if (!window.__nsMarketAddCartDoc) {
+      window.__nsMarketAddCartDoc = true;
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-add-cart]");
+        if (!b) return;
+        var id = b.getAttribute("data-add-cart");
+        if (!id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        addMarketCartLine(id, 1);
+        dispatchMarketCartChanged();
+      });
+    }
+
+    paintCartPanel();
+  }
+
+  function initHeaderMessagesDropdown(data) {
+    var btn = document.querySelector("[data-msgs-toggle]");
+    if (!btn || btn.closest(".msgs-dropdown")) return;
+    var wrap = document.createElement("div");
+    wrap.className = "msgs-dropdown";
+    btn.parentNode.insertBefore(wrap, btn);
+    wrap.appendChild(btn);
+
+    var panel = document.createElement("div");
+    panel.className = "msgs-dropdown-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Сообщения");
+    panel.innerHTML =
+      '<div class="msgs-dropdown__head">' +
+      '<a class="msgs-dropdown__all" href="messages.html">Показать все переписки</a>' +
+      '<div class="msgs-dropdown__icons">' +
+      '<button type="button" class="msgs-ico-btn" data-dm-markread title="Прочитано" aria-label="Отметить прочитанным">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></button>' +
+      '<a class="msgs-ico-btn" href="bookmarks.html" title="Закладки" aria-label="Закладки">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></a>' +
+      "</div></div>" +
+      '<div class="msgs-dropdown__body js-msgs-dd-list"></div>';
+
+    wrap.appendChild(panel);
+    var listEl = panel.querySelector(".js-msgs-dd-list");
+
+    function paintMsgsDd() {
+      var d = window.NightStoreData || data;
+      var u = sessionUser(d);
+      if (!u || !listEl) {
+        listEl.innerHTML = '<p class="msgs-dropdown__empty">Войдите, чтобы видеть переписки.</p>';
+        return;
+      }
+      var threads = dmThreadsForUser(u.username).slice(0, 8);
+      if (!threads.length) {
+        listEl.innerHTML = '<p class="msgs-dropdown__empty">Нет сообщений</p>';
+        return;
+      }
+      listEl.innerHTML = threads
+        .map(function (th) {
+          var other = otherPartyInThread(th, u.username);
+          var ou = (d.users || []).find(function (x) {
+            return x && x.username === other;
+          });
+          var av = ou && ou.avatar ? ou.avatar : dicebearAvatar(other);
+          var last = (th.messages || []).slice(-1)[0];
+          var prev = last ? (last.from === u.username ? "Вы: " : "") + String(last.body || "").slice(0, 72) : "—";
+          var tss = formatNotifTime(th.updated || 0);
+          return (
+            '<a class="msgs-dd-row" href="messages.html?with=' +
+            encodeURIComponent(other) +
+            '">' +
+            '<img class="msgs-dd-row__av" src="' +
+            escapeHtml(av) +
+            '" alt="" width="36" height="36"/>' +
+            '<div class="msgs-dd-row__mid"><div class="msgs-dd-row__name">' +
+            escapeHtml(other) +
+            '</div><div class="msgs-dd-row__prev">' +
+            escapeHtml(prev) +
+            "</div></div>" +
+            '<div class="msgs-dd-row__meta">' +
+            escapeHtml(tss) +
+            "</div></a>"
+          );
+        })
+        .join("");
+      listEl.querySelectorAll(".msgs-dd-row__av").forEach(function (im) {
+        var oth = im.closest(".msgs-dd-row");
+        if (!oth) return;
+        var href = oth.getAttribute("href") || "";
+        var m = href.match(/with=([^&]+)/);
+        attachAvatarFallback(im, decodeURIComponent(m && m[1] ? m[1] : "user"));
+      });
+    }
+
+    window.__nsMsgsDdRepaint = paintMsgsDd;
+
+    panel.querySelector("[data-dm-markread]") &&
+      panel.querySelector("[data-dm-markread]").addEventListener("click", function (e) {
+        e.stopPropagation();
+        showNsToast("В демо статусы прочтения не хранятся.");
+      });
+
+    panel.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+    wrap.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = wrap.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) paintMsgsDd();
+    });
+
+    if (!window.__nsMsgsDocClose) {
+      window.__nsMsgsDocClose = true;
+      document.addEventListener("click", function (e) {
+        if (e.target.closest(".msgs-dropdown")) return;
+        document.querySelectorAll(".msgs-dropdown.is-open").forEach(function (w) {
+          w.classList.remove("is-open");
+          var t = w.querySelector("[data-msgs-toggle]");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+
+    if (!window.__nsMsgsGlobal) {
+      window.__nsMsgsGlobal = true;
+      window.addEventListener("nightstore-dm-changed", function () {
+        if (typeof window.__nsMsgsDdRepaint === "function") window.__nsMsgsDdRepaint();
+      });
+    }
+
+    paintMsgsDd();
+  }
+
   function initNotificationsSettings() {
     var root = document.getElementById("notifSettingsRoot");
     if (!root) return;
@@ -2730,9 +3163,15 @@
             escapeHtml(p.title) +
             "</a>" +
             '<div class="listing-card__row">' +
+            '<div class="listing-card__row-left">' +
             '<span class="listing-card__price">' +
             formatRubForViewer(data, vun, p.price || 0, {}) +
-            "</span>" +
+            '</span>' +
+            '<button type="button" class="listing-card__cart" data-add-cart="' +
+            escapeHtml(String(p.id)) +
+            '" title="В корзину" aria-label="В корзину">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>' +
+            "</button></div>" +
             '<span class="listing-card__time">' +
             escapeHtml(p.posted) +
             "</span></div>" +
@@ -2791,6 +3230,19 @@
     var u = sessionUser(data);
     var bal = document.querySelector(".js-balance-value");
     if (bal && u) bal.textContent = formatRubForViewer(data, u.username, u.balanceRub || 0, {});
+
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+
+    if (!window.__nsMarketLangListen) {
+      window.__nsMarketLangListen = true;
+      window.addEventListener("nightstore-lang-changed", function () {
+        var d = window.NightStoreData;
+        if (!d) return;
+        paintMarketLangStrip(d);
+      });
+    }
 
     var tagRoot = document.getElementById("tagCloudRoot");
     if (tagRoot && data.recentSearches && data.recentSearches.length) {
@@ -2923,6 +3375,7 @@
         if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
         refreshMarketView(d);
         renderMarketRecentPanel(d);
+        paintMarketLangStrip(d);
       });
     }
 
@@ -3024,6 +3477,17 @@
     if (bal0 && u0) bal0.textContent = formatRubForViewer(data, u0.username, u0.balanceRub || 0, {});
     renderMarketRecentPanel(data);
     wireDemoWalletUi(data);
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+    if (!window.__nsMarketLangListen) {
+      window.__nsMarketLangListen = true;
+      window.addEventListener("nightstore-lang-changed", function () {
+        var d = window.NightStoreData;
+        if (!d) return;
+        paintMarketLangStrip(d);
+      });
+    }
     if (!window.__nightstoreMarketFxBound) {
       window.__nightstoreMarketFxBound = true;
       window.addEventListener("nightstore-currency-changed", function () {
@@ -3033,6 +3497,7 @@
         var b = document.querySelector(".js-balance-value");
         if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
         renderMarketRecentPanel(d);
+        paintMarketLangStrip(d);
       });
     }
     var sel = document.getElementById("mslCategory");
@@ -3062,6 +3527,8 @@
   }
 
   var MARKET_RECENT_IDS_KEY = "nightstore_market_recent_views_v1";
+  var MARKET_RECENT_MAX = 5;
+  var MARKET_CART_KEY = "nightstore_market_cart_v1";
 
   function findProductById(data, id) {
     var sid = String(id == null ? "" : id);
@@ -3085,7 +3552,16 @@
     try {
       var raw = localStorage.getItem(MARKET_RECENT_IDS_KEY);
       var a = JSON.parse(raw || "[]");
-      return Array.isArray(a) ? a : [];
+      if (!Array.isArray(a)) return [];
+      if (a.length > MARKET_RECENT_MAX) {
+        a = a.slice(0, MARKET_RECENT_MAX);
+        try {
+          localStorage.setItem(MARKET_RECENT_IDS_KEY, JSON.stringify(a));
+        } catch (e2) {
+          /* ignore */
+        }
+      }
+      return a;
     } catch (e) {
       return [];
     }
@@ -3101,7 +3577,7 @@
         .filter(function (x, i, arr) {
           return arr.indexOf(x) === i;
         })
-        .slice(0, 12);
+        .slice(0, MARKET_RECENT_MAX);
       localStorage.setItem(MARKET_RECENT_IDS_KEY, JSON.stringify(clean));
     } catch (e) {
       /* ignore */
@@ -3116,6 +3592,361 @@
     });
     cur.unshift(sid);
     saveMarketRecentIds(cur);
+  }
+
+  function loadMarketCart() {
+    try {
+      var a = JSON.parse(localStorage.getItem(MARKET_CART_KEY) || "[]");
+      if (!Array.isArray(a)) return [];
+      return a
+        .map(function (x) {
+          if (!x || x.id == null) return null;
+          var qty = Math.max(1, Math.min(99, Math.floor(Number(x.qty) || 1)));
+          return { id: String(x.id).trim(), qty: qty };
+        })
+        .filter(function (x) {
+          return x && x.id;
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveMarketCart(items) {
+    try {
+      localStorage.setItem(MARKET_CART_KEY, JSON.stringify(items.slice(0, 40)));
+    } catch (e2) {
+      /* ignore */
+    }
+  }
+
+  function marketCartGoodsCount(items) {
+    return (items || []).reduce(function (s, x) {
+      return s + (x && x.qty ? x.qty : 0);
+    }, 0);
+  }
+
+  function formatGoodsCountRu(n) {
+    n = Math.max(0, Math.floor(Number(n) || 0));
+    var m10 = n % 10;
+    var m100 = n % 100;
+    if (m100 >= 11 && m100 <= 14) return formatIntRu(n) + " товаров";
+    if (m10 === 1) return formatIntRu(n) + " товар";
+    if (m10 >= 2 && m10 <= 4) return formatIntRu(n) + " товара";
+    return formatIntRu(n) + " товаров";
+  }
+
+  function setMarketCartQty(productId, qty) {
+    var sid = String(productId || "").trim();
+    if (!sid) return;
+    var cur = loadMarketCart();
+    if (qty <= 0) {
+      cur = cur.filter(function (x) {
+        return x.id !== sid;
+      });
+    } else {
+      qty = Math.max(1, Math.min(99, Math.floor(qty)));
+      var found = false;
+      cur = cur.map(function (x) {
+        if (x.id !== sid) return x;
+        found = true;
+        return { id: sid, qty: qty };
+      });
+      if (!found) cur.unshift({ id: sid, qty: qty });
+    }
+    saveMarketCart(cur);
+  }
+
+  function addMarketCartLine(productId, delta) {
+    var sid = String(productId || "").trim();
+    if (!sid) return;
+    var d = Math.max(1, Math.floor(Number(delta) || 1));
+    var cur = loadMarketCart();
+    var row = cur.find(function (x) {
+      return x.id === sid;
+    });
+    var q = (row ? row.qty : 0) + d;
+    setMarketCartQty(sid, q);
+  }
+
+  function removeMarketCartLine(productId) {
+    setMarketCartQty(productId, 0);
+  }
+
+  function clearMarketCart() {
+    saveMarketCart([]);
+  }
+
+  function dispatchMarketCartChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-cart-changed"));
+    } catch (e3) {
+      /* ignore */
+    }
+  }
+
+  function loadUserLangPref(username) {
+    try {
+      var o = JSON.parse(localStorage.getItem(USER_LANG_KEY) || "{}");
+      var c = o[String(username || "")];
+      if (c === "en" || c === "ru") return c;
+    } catch (e) {
+      /* ignore */
+    }
+    return "ru";
+  }
+
+  function saveUserLangPref(username, lang) {
+    var o = {};
+    try {
+      o = JSON.parse(localStorage.getItem(USER_LANG_KEY) || "{}");
+    } catch (e2) {
+      o = {};
+    }
+    o[String(username || "")] = lang === "en" ? "en" : "ru";
+    try {
+      localStorage.setItem(USER_LANG_KEY, JSON.stringify(o));
+    } catch (e3) {
+      /* ignore */
+    }
+    try {
+      document.documentElement.lang = o[String(username || "")] === "en" ? "en" : "ru";
+    } catch (e4) {
+      /* ignore */
+    }
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-lang-changed"));
+    } catch (e5) {
+      /* ignore */
+    }
+  }
+
+  function marketLangLabel(code) {
+    return code === "en" ? "English" : "Русский";
+  }
+
+  function paintMarketLangStrip(data) {
+    document.querySelectorAll(".js-market-lang-strip").forEach(function (el) {
+      var u = sessionUser(data);
+      if (!u) {
+        el.textContent = "₽ RUB · " + marketLangLabel("ru");
+        return;
+      }
+      var cur = loadUserCurrencyPref(u.username);
+      var opt = CURRENCY_OPTIONS.find(function (x) {
+        return x.code === cur;
+      });
+      var sym = opt ? opt.sym : "₽";
+      var code = opt ? opt.code : "RUB";
+      var lang = loadUserLangPref(u.username);
+      el.textContent = sym + " " + code + " · " + marketLangLabel(lang);
+    });
+  }
+
+  function loadMarketPurchases(username) {
+    try {
+      var o = JSON.parse(localStorage.getItem(MARKET_PURCHASES_KEY) || "{}");
+      var arr = o[String(username || "")];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveMarketPurchases(username, arr) {
+    var o = {};
+    try {
+      o = JSON.parse(localStorage.getItem(MARKET_PURCHASES_KEY) || "{}");
+    } catch (e2) {
+      o = {};
+    }
+    o[String(username || "")] = (arr || []).slice(0, 200);
+    try {
+      localStorage.setItem(MARKET_PURCHASES_KEY, JSON.stringify(o));
+    } catch (e3) {
+      /* ignore */
+    }
+  }
+
+  function productDeliveryText(p) {
+    if (!p) return "";
+    return String(p._demoNote || p.description || "").trim();
+  }
+
+  function purchaseOneProduct(data, buyerUsername, productId, opts) {
+    opts = opts || {};
+    var me = (data.users || []).find(function (x) {
+      return x && x.username === buyerUsername;
+    });
+    if (!me) return { ok: false, reason: "no_user" };
+    var p = findProductById(data, productId);
+    if (!p) return { ok: false, reason: "no_product" };
+    if (String(p.sellerId) === String(me.id)) return { ok: false, reason: "own" };
+    var price = Math.max(0, Math.floor(Number(p.price) || 0));
+    var bal = Math.max(0, Math.floor(Number(me.balanceRub) || 0));
+    if (bal < price) return { ok: false, reason: "balance" };
+    persistSessionUserBalanceRub(data, bal - price);
+    var rec = {
+      id: "pur_" + Date.now() + "_" + String(productId).replace(/[^a-z0-9_-]/gi, "_"),
+      productId: String(p.id),
+      title: String(p.title || ""),
+      priceRub: price,
+      sellerId: String(p.sellerId || ""),
+      sellerUsername: (userById(data, p.sellerId) || {}).username || "?",
+      deliveryText: productDeliveryText(p),
+      ts: Date.now(),
+    };
+    var list = loadMarketPurchases(buyerUsername);
+    list.unshift(rec);
+    saveMarketPurchases(buyerUsername, list);
+    removeMarketCartLine(String(p.id));
+    dispatchMarketCartChanged();
+    var seller = userById(data, p.sellerId);
+    if (seller && seller.username) {
+      pushDmSystemMessage(data, me.username, seller.username, "Покупка: @" + me.username + " оформил лот «" + String(p.title || "").slice(0, 80) + "» за " + formatIntRu(price) + " ₽.");
+      pushNotification(seller.username, {
+        id: "sold_" + rec.id,
+        tab: "market",
+        read: false,
+        ts: Date.now(),
+        title: "Продажа на маркете",
+        link: "market-my-products.html",
+        kind: "market",
+        detail: "Покупатель @" + me.username + ": " + String(p.title || "").slice(0, 120),
+      });
+      updateNotifyBadge(data);
+    }
+    if (!opts.silent) showNsToast("Покупка оформлена. Данные — в «Мои покупки».");
+    return { ok: true, rec: rec };
+  }
+
+  function checkoutMarketCart(data) {
+    var u = sessionUser(data);
+    if (!u) {
+      showNsToast("Войдите в аккаунт.", { variant: "danger" });
+      return;
+    }
+    var items = loadMarketCart();
+    if (!items.length) {
+      showNsToast("Корзина пуста.");
+      return;
+    }
+    var okc = 0;
+    for (var i = 0; i < items.length; i++) {
+      var row = items[i];
+      var qty = Math.max(1, Math.floor(Number(row.qty) || 1));
+      for (var q = 0; q < qty; q++) {
+        var r = purchaseOneProduct(data, u.username, row.id, { silent: true });
+        if (!r.ok) {
+          if (r.reason === "balance") {
+            showNsToast("Недостаточно средств для части лотов. Оформлено: " + okc + ".", { variant: "danger" });
+            return;
+          }
+          if (r.reason === "own") continue;
+        } else okc++;
+      }
+    }
+    clearMarketCart();
+    dispatchMarketCartChanged();
+    if (okc) showNsToast("Оформлено покупок: " + okc + ". См. «Мои покупки».");
+    else showNsToast("Не удалось оформить покупки.", { variant: "danger" });
+  }
+
+  function loadDmThreads() {
+    try {
+      var a = JSON.parse(localStorage.getItem(DM_THREADS_KEY) || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveDmThreads(arr) {
+    try {
+      localStorage.setItem(DM_THREADS_KEY, JSON.stringify((arr || []).slice(0, 120)));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function dmPairKey(a, b) {
+    var x = String(a || "");
+    var y = String(b || "");
+    return x < y ? x + "\n" + y : y + "\n" + x;
+  }
+
+  function getOrCreateDmThread(u1, u2) {
+    var key = dmPairKey(u1, u2);
+    var all = loadDmThreads();
+    var t = all.find(function (th) {
+      return th && th.pairKey === key;
+    });
+    if (t) return t;
+    t = {
+      id: "dm_" + Date.now(),
+      pairKey: key,
+      users: [String(u1), String(u2)],
+      messages: [],
+      updated: Date.now(),
+    };
+    all.unshift(t);
+    saveDmThreads(all);
+    return t;
+  }
+
+  function pushDmSystemMessage(data, fromUser, toUser, body) {
+    if (!fromUser || !toUser || fromUser === toUser) return;
+    var th = getOrCreateDmThread(fromUser, toUser);
+    th.messages = th.messages || [];
+    th.messages.push({ from: fromUser, to: toUser, body: String(body || ""), ts: Date.now(), system: true });
+    th.updated = Date.now();
+    var all = loadDmThreads();
+    var ix = all.findIndex(function (x) {
+      return x.id === th.id;
+    });
+    if (ix !== -1) all[ix] = th;
+    saveDmThreads(all);
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-dm-changed"));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function pushDmUserMessage(fromUser, toUser, body) {
+    if (!fromUser || !toUser || !String(body || "").trim()) return;
+    var th = getOrCreateDmThread(fromUser, toUser);
+    th.messages = th.messages || [];
+    th.messages.push({ from: fromUser, to: toUser, body: String(body || "").trim(), ts: Date.now() });
+    th.updated = Date.now();
+    var all = loadDmThreads();
+    var ix = all.findIndex(function (x) {
+      return x.id === th.id;
+    });
+    if (ix !== -1) all[ix] = th;
+    saveDmThreads(all);
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-dm-changed"));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function dmThreadsForUser(username) {
+    var un = String(username || "");
+    return loadDmThreads()
+      .filter(function (th) {
+        return th && th.users && th.users.indexOf(un) !== -1;
+      })
+      .sort(function (a, b) {
+        return (Number(b.updated) || 0) - (Number(a.updated) || 0);
+      });
+  }
+
+  function otherPartyInThread(th, meName) {
+    var u = th.users || [];
+    if (u[0] === meName) return u[1] || u[0];
+    return u[0] || u[1] || "?";
   }
 
   function renderMarketRecentPanel(data) {
@@ -3346,7 +4177,9 @@
       "</span></div>" +
       '<div class="product-hero__actions">' +
       '<button type="button" class="btn-primary js-product-buy-demo">Купить</button>' +
-      '<button type="button" class="btn-secondary js-product-cart-demo">В корзину</button>' +
+      '<button type="button" class="btn-secondary js-product-cart-demo" data-add-cart="' +
+      escapeHtml(String(p.id)) +
+      '">В корзину</button>' +
       "</div>" +
       '<ul class="product-hero__bullets">' +
       "<li>Сделка и передача данных — только демонстрация интерфейса.</li>" +
@@ -3422,6 +4255,17 @@
     if (bal && u) bal.textContent = formatRubForViewer(data, u.username, u.balanceRub || 0, {});
     renderMarketRecentPanel(data);
     wireDemoWalletUi(data);
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+    if (!window.__nsMarketLangListen) {
+      window.__nsMarketLangListen = true;
+      window.addEventListener("nightstore-lang-changed", function () {
+        var d = window.NightStoreData;
+        if (!d) return;
+        paintMarketLangStrip(d);
+      });
+    }
     if (!window.__nightstoreMarketFxBound) {
       window.__nightstoreMarketFxBound = true;
       window.addEventListener("nightstore-currency-changed", function () {
@@ -3431,6 +4275,7 @@
         var b = document.querySelector(".js-balance-value");
         if (b && us) b.textContent = formatRubForViewer(d, us.username, us.balanceRub || 0, {});
         renderMarketRecentPanel(d);
+        paintMarketLangStrip(d);
       });
     }
     var pid = null;
@@ -3459,9 +4304,27 @@
     if (titEl) titEl.textContent = String(p.title).length > 48 ? String(p.title).slice(0, 45) + "…" : p.title;
     root.innerHTML = renderMarketProductDetail(data, p);
     wireProductReviewsUi(root);
-    root.querySelectorAll(".js-product-buy-demo, .js-product-cart-demo").forEach(function (btn) {
+    root.querySelectorAll(".js-product-buy-demo").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        window.alert("Демо: оплата и доставка лота не выполняются.");
+        var u = sessionUser(data);
+        if (!u || data._sessionGuest) {
+          showNsToast("Войдите в аккаунт.", { variant: "danger" });
+          return;
+        }
+        var r = purchaseOneProduct(data, u.username, p.id, {});
+        if (!r.ok) {
+          if (r.reason === "balance") showNsToast("Недостаточно средств на балансе.", { variant: "danger" });
+          else if (r.reason === "own") showNsToast("Нельзя купить свой лот.", { variant: "danger" });
+          else showNsToast("Покупка не выполнена.", { variant: "danger" });
+          return;
+        }
+        var balEl = document.querySelector(".js-balance-value");
+        if (balEl) balEl.textContent = formatRubForViewer(data, u.username, u.balanceRub || 0, {});
+        try {
+          window.dispatchEvent(new CustomEvent("nightstore-currency-changed"));
+        } catch (eB) {
+          /* ignore */
+        }
       });
     });
     root.querySelectorAll(".product-review__av, .product-hero__av").forEach(function (im) {
@@ -6286,7 +7149,11 @@
             '<div class="mod-sup-chat__composer">' +
             '<textarea id="modProdTa" rows="3" maxlength="4000" placeholder="Внутренняя заметка по товару…"></textarea>' +
             '<button type="button" class="btn-primary" data-mod-prod-note>Добавить заметку</button>' +
-            "</div></div>";
+            '<div class="mod-prod-actions">' +
+            '<button type="button" class="btn-secondary" data-mod-prod-notify-seller>Отправить уведомление продавцу</button>' +
+            '<button type="button" class="btn-secondary mod-btn-danger" data-mod-prod-delete>Удалить лот</button>' +
+            '<button type="button" class="btn-secondary" data-mod-prod-complain>Жаловаться на лот</button>' +
+            "</div></div></div>";
         }
         body =
           '<div class="mod-panel mod-panel--products">' +
@@ -6376,7 +7243,7 @@
               read: false,
               ts: Date.now(),
               title: "Поддержка: обращение решено",
-              link: "support.html",
+              link: "tickets.html",
               kind: "support",
               detail: th.subject || "",
             });
@@ -6466,7 +7333,7 @@
           var n = Math.max(1, Math.floor(Number(inp && inp.value) || 1));
           setUserLevelDirect(data, tgt, n, tgt.username);
           persistUserLevelFields(data, tgt);
-          window.alert("Уровень обновлён.");
+          showNsToast("Уровень обновлён.");
           paint();
         });
       }
@@ -6480,7 +7347,7 @@
           if (!amt) return;
           applyXpDeltaWithLevels(data, tgt, amt, tgt.username);
           persistUserLevelFields(data, tgt);
-          window.alert("Опыт обновлён.");
+          showNsToast("Опыт обновлён.");
           paint();
         });
       }
@@ -6494,7 +7361,7 @@
           if (!amt) return;
           applyXpDeltaWithLevels(data, tgt, -amt, tgt.username);
           persistUserLevelFields(data, tgt);
-          window.alert("Опыт обновлён.");
+          showNsToast("Опыт обновлён.");
           paint();
         });
       }
@@ -6583,6 +7450,118 @@
         });
       }
 
+      var pNotify = root.querySelector("[data-mod-prod-notify-seller]");
+      if (pNotify) {
+        pNotify.addEventListener("click", function () {
+          var sid = root.getAttribute("data-mod-prod-sel") || "";
+          var pp = (data.products || []).find(function (x) {
+            return x && String(x.id) === String(sid);
+          });
+          if (!pp) {
+            window.alert("Товар не выбран.");
+            return;
+          }
+          var seller = userById(data, pp.sellerId);
+          if (!seller || !seller.username) {
+            window.alert("Продавец не найден в данных.");
+            return;
+          }
+          var defMsg =
+            "По вашему лоту «" + String(pp.title || "").slice(0, 80) + "» есть служебное сообщение от модерации.";
+          var msg = window.prompt("Текст уведомления продавцу @" + seller.username + ":", defMsg);
+          if (msg === null) return;
+          msg = String(msg || "").trim() || defMsg;
+          pushNotification(seller.username, {
+            id: "mod_prod_" + String(pp.id) + "_" + Date.now(),
+            tab: "moderation",
+            read: false,
+            ts: Date.now(),
+            title: "Модерация: сообщение по лоту",
+            link: "market-product.html?id=" + encodeURIComponent(String(pp.id)),
+            kind: "moderation",
+            detail: msg,
+          });
+          updateNotifyBadge(data);
+          window.alert("Уведомление отправлено продавцу @" + seller.username + ".");
+        });
+      }
+
+      var pDel = root.querySelector("[data-mod-prod-delete]");
+      if (pDel) {
+        pDel.addEventListener("click", function () {
+          var sid = root.getAttribute("data-mod-prod-sel") || "";
+          var pp = (data.products || []).find(function (x) {
+            return x && String(x.id) === String(sid);
+          });
+          if (!pp) {
+            window.alert("Товар не выбран.");
+            return;
+          }
+          if (!window.confirm("Удалить лот «" + String(pp.title || pp.id) + "» из каталога на этом устройстве?")) return;
+          markMarketProductRemoved(pp.id);
+          var ix = (data.products || []).findIndex(function (x) {
+            return x && String(x.id) === String(pp.id);
+          });
+          if (ix !== -1) data.products.splice(ix, 1);
+          var nm = loadProductModNotes();
+          delete nm[String(pp.id)];
+          saveProductModNotes(nm);
+          root.removeAttribute("data-mod-prod-sel");
+          syncMarketCatalogTotal(data);
+          try {
+            window.dispatchEvent(new CustomEvent("nightstore-currency-changed"));
+          } catch (eDel) {
+            /* ignore */
+          }
+          window.alert("Лот удалён из каталога (локально).");
+          paint();
+        });
+      }
+
+      var pCompl = root.querySelector("[data-mod-prod-complain]");
+      if (pCompl) {
+        pCompl.addEventListener("click", function () {
+          var sid = root.getAttribute("data-mod-prod-sel") || "";
+          var pp = (data.products || []).find(function (x) {
+            return x && String(x.id) === String(sid);
+          });
+          if (!pp) {
+            window.alert("Товар не выбран.");
+            return;
+          }
+          var text = window.prompt("Опишите суть жалобы на лот (попадёт в раздел «Жалобы»):", "");
+          if (text === null) return;
+          text = String(text || "").trim();
+          if (!text) {
+            window.alert("Введите текст жалобы.");
+            return;
+          }
+          var sec2 = ensureProductAdminCode(pp.id);
+          enqueueModerationTicket({
+            id: "mod_lot_" + String(pp.id) + "_" + Date.now(),
+            ts: Date.now(),
+            title: "Жалоба на лот: " + String(pp.title || pp.id).slice(0, 120),
+            detail:
+              "От: @" +
+              me.username +
+              "\nЛот: " +
+              String(pp.title || "") +
+              "\nID: " +
+              String(pp.id) +
+              "\nКод: " +
+              sec2 +
+              "\n\n" +
+              text,
+            link: "market-product.html?id=" + encodeURIComponent(String(pp.id)),
+            kind: "lot",
+            reporter: me.username,
+            status: "open",
+            replies: [],
+          });
+          window.alert("Жалоба добавлена в очередь (вкладка «1. Жалобы»).");
+        });
+      }
+
       var tr = root.querySelector("#modTicketsRoot");
       if (tr) {
         tr.querySelectorAll("[data-mod-reply]").forEach(function (btn) {
@@ -6632,16 +7611,31 @@
   }
 
   function initSupportPage(data) {
-    var root = document.getElementById("supportPageRoot");
+    var root = document.getElementById("ticketsPageRoot") || document.getElementById("supportPageRoot");
     if (!root) return;
+    var isTickets = root.id === "ticketsPageRoot";
     var me = sessionUser(data);
     if (!me || data._sessionGuest) {
-      root.innerHTML = '<p class="mod-empty">Войдите, чтобы писать в поддержку.</p>';
+      root.innerHTML =
+        '<p class="mod-empty">' +
+        (isTickets ? "Войдите, чтобы видеть тикеты." : "Войдите, чтобы писать в поддержку.") +
+        "</p>";
       return;
     }
     var selId = root.getAttribute("data-sup-sel") || "";
 
     function supportNewFormFields() {
+      if (isTickets) {
+        return (
+          '<label class="sr-only" for="supNewSub">Тема</label>' +
+          '<div class="sup-form__label">Тема</div>' +
+          '<input type="text" id="supNewSub" class="mod-search-input sup-form__field" maxlength="120" placeholder="Заголовок…" />' +
+          '<label class="sr-only" for="supNewBody">Сообщение</label>' +
+          '<div class="sup-form__label">Сообщение</div>' +
+          '<textarea id="supNewBody" class="sup-form__ta" rows="8" maxlength="4000" placeholder="Опишите ситуацию…"></textarea>' +
+          '<button type="button" class="btn-primary sup-form__submit" id="supNewBtn">Создать тикет</button>'
+        );
+      }
       return (
         '<label class="sr-only" for="supNewSub">Тема обращения</label>' +
         '<input type="text" id="supNewSub" class="mod-search-input sup-form__field" maxlength="120" placeholder="Тема обращения" />' +
@@ -6677,14 +7671,28 @@
             );
           })
           .join("");
-        var st2 = th0.status === "resolved" ? "Решено" : th0.status === "closed" ? "Закрыто" : "Открыто";
+        var st2 = isTickets
+          ? th0.status === "resolved"
+            ? "Решён"
+            : th0.status === "closed"
+              ? "Закрыт"
+              : "Активен"
+          : th0.status === "resolved"
+            ? "Решено"
+            : th0.status === "closed"
+              ? "Закрыто"
+              : "Открыто";
         return (
           '<div class="mod-sup-chat"><div class="mod-sup-chat__head"><strong>' +
           escapeHtml(th0.subject || "Обращение") +
           '</strong> <span class="mod-sup-chat__badge">' +
           escapeHtml(st2) +
           '</span></div>' +
-          '<p class="mod-sup-pub-hint">Статус обращения отображается здесь и у вас в разделе «Поддержка».</p>' +
+          '<p class="mod-sup-pub-hint">' +
+          (isTickets
+            ? "Статус тикета и переписка сохраняются локально в демо."
+            : "Статус обращения отображается здесь и у вас в разделе «Поддержка».") +
+          '</p>' +
           '<div class="mod-sup-chat__msgs">' +
           (msgs || '<p class="mod-empty">Пока нет сообщений.</p>') +
           "</div>" +
@@ -6713,7 +7721,7 @@
             var sub = s ? s.value.trim() : "";
             var body = t ? t.value.trim() : "";
             if (!sub || !body) {
-              window.alert("Укажите тему и текст.");
+              window.alert(isTickets ? "Укажите тему и текст тикета." : "Укажите тему и текст.");
               return;
             }
             var all = loadSupportThreads();
@@ -6779,11 +7787,19 @@
         root.innerHTML =
           '<div class="support-solo">' +
           '<div class="support-solo__head">' +
-          '<h1 class="support-solo__h1">Поддержка</h1>' +
-          '<p class="mod-sub support-solo__sub">Напишите тему и описание — после отправки здесь появится список ваших обращений.</p>' +
+          '<h1 class="support-solo__h1">' +
+          (isTickets ? "Ваши тикеты" : "Поддержка") +
+          "</h1>" +
+          '<p class="mod-sub support-solo__sub">' +
+          (isTickets
+            ? "Здесь отображаются ваши обращения. Создайте тикет — он появится в списке после отправки."
+            : "Напишите тему и описание — после отправки здесь появится список ваших обращений.") +
+          "</p>" +
           "</div>" +
           '<div class="sidebar-card support-solo__card">' +
-          '<h2 class="mod-h2 support-solo__h2">Новое обращение</h2>' +
+          '<h2 class="mod-h2 support-solo__h2">' +
+          (isTickets ? "Создать тикет" : "Новое обращение") +
+          "</h2>" +
           supportNewFormFields() +
           "</div></div>";
         bindSupportPage();
@@ -6808,7 +7824,17 @@
       var left = threads
         .map(function (th) {
           var act = th.id === selId && !compose ? " is-active" : "";
-          var st = th.status === "resolved" ? "Решено" : th.status === "closed" ? "Закрыто" : "Открыто";
+          var st = isTickets
+            ? th.status === "resolved"
+              ? "Решён"
+              : th.status === "closed"
+                ? "Закрыт"
+                : "Активен"
+            : th.status === "resolved"
+              ? "Решено"
+              : th.status === "closed"
+                ? "Закрыто"
+                : "Открыто";
           return (
             '<button type="button" class="mod-sup-row' +
             act +
@@ -6828,10 +7854,14 @@
         right =
           '<div class="mod-sup-compose">' +
           '<div class="mod-sup-compose__head">' +
-          '<h2 class="mod-h2" style="margin:0">Новое обращение</h2>' +
+          '<h2 class="mod-h2" style="margin:0">' +
+          (isTickets ? "Создать тикет" : "Новое обращение") +
+          "</h2>" +
           '<button type="button" class="btn-secondary mod-sup-compose__cancel" data-sup-compose-cancel>Отмена</button>' +
           "</div>" +
-          '<p class="mod-sup-compose__hint">После отправки обращение появится в списке слева.</p>' +
+          '<p class="mod-sup-compose__hint">' +
+          (isTickets ? "После отправки тикет появится в списке слева." : "После отправки обращение появится в списке слева.") +
+          "</p>" +
           supportNewFormFields() +
           "</div>";
       } else {
@@ -6840,11 +7870,17 @@
 
       root.innerHTML =
         '<div class="mod-support-toolbar mod-support-toolbar--user">' +
-        '<h1 class="mod-support-toolbar__title">Поддержка</h1>' +
-        '<button type="button" class="btn-secondary mod-support-toolbar__new" data-sup-new>Новое обращение</button>' +
+        '<h1 class="mod-support-toolbar__title">' +
+        (isTickets ? "Ваши тикеты" : "Поддержка") +
+        "</h1>" +
+        '<button type="button" class="btn-secondary mod-support-toolbar__new" data-sup-new>' +
+        (isTickets ? "Создать тикет" : "Новое обращение") +
+        "</button>" +
         "</div>" +
         '<div class="mod-support-shell">' +
-        '<aside class="mod-support-sidebar"><div class="mod-support-list-label">Мои обращения</div><div class="mod-support-list">' +
+        '<aside class="mod-support-sidebar"><div class="mod-support-list-label">' +
+        (isTickets ? "Мои тикеты" : "Мои обращения") +
+        '</div><div class="mod-support-list">' +
         left +
         "</div></aside>" +
         '<section class="mod-support-main">' +
@@ -6855,6 +7891,9 @@
     }
 
     paintSup();
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
   }
 
   function gateSiteAccess(data, page) {
@@ -6878,12 +7917,16 @@
       market: 1,
       "market-product": 1,
       "market-sell-manual": 1,
+      "market-purchases": 1,
+      "market-my-products": 1,
+      messages: 1,
+      bookmarks: 1,
+      tickets: 1,
       profile: 1,
       topic: 1,
       notifications: 1,
       moderation: 1,
       settings: 1,
-      support: 1,
     };
     if (!gated[page]) return true;
     var u = sessionUser(data);
@@ -7453,6 +8496,448 @@
     });
     var first = nav.querySelector(".settings-nav__btn.is-active");
     show(first ? first.getAttribute("data-settings-tab") : "personal");
+
+    var u = sessionUser(data);
+    document.querySelectorAll("[data-lang-set]").forEach(function (b) {
+      if (b.dataset.nsLangWired === "1") return;
+      b.dataset.nsLangWired = "1";
+      b.addEventListener("click", function () {
+        if (!u || data._sessionGuest) {
+          showNsToast("Войдите, чтобы сохранить язык.");
+          return;
+        }
+        var code = b.getAttribute("data-lang-set");
+        saveUserLangPref(u.username, code === "en" ? "en" : "ru");
+        showNsToast("Язык: " + marketLangLabel(loadUserLangPref(u.username)));
+        paintMarketLangStrip(data);
+      });
+    });
+  }
+
+  function initMarketPurchasesPage(data) {
+    var root = document.getElementById("marketPurchasesRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите, чтобы видеть покупки.</p>';
+      return;
+    }
+    function paint() {
+      var list = loadMarketPurchases(u.username);
+      var q = (document.getElementById("mpSearch") || {}).value || "";
+      var qlow = String(q).trim().toLowerCase();
+      var pf = document.getElementById("mpPriceFrom");
+      var pt = document.getElementById("mpPriceTo");
+      var pMin = pf && pf.value !== "" ? Number(pf.value) : NaN;
+      var pMax = pt && pt.value !== "" ? Number(pt.value) : NaN;
+      var tag = String((document.getElementById("mpTag") || {}).value || "").trim().toLowerCase();
+      var xtag = String((document.getElementById("mpXTag") || {}).value || "").trim().toLowerCase();
+      var sell = String((document.getElementById("mpSeller") || {}).value || "").trim().toLowerCase();
+      var filt = list.filter(function (r) {
+        if (!r) return false;
+        if (qlow) {
+          var b = (String(r.title) + " " + String(r.productId)).toLowerCase();
+          if (b.indexOf(qlow) === -1) return false;
+        }
+        if (isFinite(pMin) && r.priceRub < pMin) return false;
+        if (isFinite(pMax) && r.priceRub > pMax) return false;
+        if (tag) {
+          var tb = (String(r.title) || "").toLowerCase();
+          if (tb.indexOf(tag) === -1) return false;
+        }
+        if (xtag) {
+          var tb2 = (String(r.title) || "").toLowerCase();
+          if (tb2.indexOf(xtag) !== -1) return false;
+        }
+        if (sell && String(r.sellerUsername || "").toLowerCase().indexOf(sell) === -1) return false;
+        return true;
+      });
+      root.innerHTML =
+        '<div class="mp-toolbar sidebar-card">' +
+        '<div class="mp-toolbar__row">' +
+        '<input type="number" class="mp-inp" id="mpPriceFrom" placeholder="Цена от" min="0" step="1" value="' +
+        escapeHtml(pf && pf.value != null ? String(pf.value) : "") +
+        '" />' +
+        '<input type="number" class="mp-inp" id="mpPriceTo" placeholder="до" min="0" step="1" value="' +
+        escapeHtml(pt && pt.value != null ? String(pt.value) : "") +
+        '" />' +
+        '<input type="search" class="mp-inp mp-inp--grow" id="mpSearch" placeholder="Поиск по заголовку" value="' +
+        escapeHtml(q) +
+        '" />' +
+        "</div>" +
+        '<div class="mp-toolbar__row">' +
+        '<input type="text" class="mp-inp" id="mpTag" placeholder="Метка (подстрока в названии)" value="' +
+        escapeHtml((document.getElementById("mpTag") || {}).value || "") +
+        '" />' +
+        '<input type="text" class="mp-inp" id="mpXTag" placeholder="Исключить метку" value="' +
+        escapeHtml((document.getElementById("mpXTag") || {}).value || "") +
+        '" />' +
+        '<input type="text" class="mp-inp" id="mpSeller" placeholder="Ник продавца" value="' +
+        escapeHtml((document.getElementById("mpSeller") || {}).value || "") +
+        '" />' +
+        "</div>" +
+        '<div class="mp-toolbar__row mp-toolbar__actions">' +
+        '<button type="button" class="btn-secondary" id="mpDl">Скачать выбранные</button>' +
+        '<button type="button" class="btn-secondary" id="mpAct">Действие с выбранными</button>' +
+        '<span class="mp-count">Показано ' +
+        formatIntRu(filt.length) +
+        " из " +
+        formatIntRu(list.length) +
+        "</span></div></div>" +
+        '<div class="mp-list">' +
+        (filt.length
+          ? filt
+              .map(function (r) {
+                return (
+                  '<label class="mp-card">' +
+                  '<input type="checkbox" class="mp-card__cb" data-pid="' +
+                  escapeHtml(r.id) +
+                  '" />' +
+                  '<div class="mp-card__body">' +
+                  '<div class="mp-card__title">' +
+                  escapeHtml(r.title) +
+                  "</div>" +
+                  '<div class="mp-card__meta">' +
+                  escapeHtml(r.sellerUsername) +
+                  " · " +
+                  formatIntRu(r.priceRub) +
+                  " ₽ · " +
+                  escapeHtml(formatNotifTime(r.ts)) +
+                  "</div>" +
+                  '<pre class="mp-card__data">' +
+                  escapeHtml(String(r.deliveryText || "—").slice(0, 500)) +
+                  (String(r.deliveryText || "").length > 500 ? "…" : "") +
+                  "</pre></div></label>"
+                );
+              })
+              .join("")
+          : '<p class="mod-empty">Покупок пока нет.</p>') +
+        "</div>";
+
+      function selectedIds() {
+        var out = [];
+        root.querySelectorAll(".mp-card__cb:checked").forEach(function (c) {
+          out.push(c.getAttribute("data-pid"));
+        });
+        return out;
+      }
+
+      function recordsByIds(idsArr) {
+        var m = {};
+        idsArr.forEach(function (id) {
+          m[id] = 1;
+        });
+        return list.filter(function (r) {
+          return m[r.id];
+        });
+      }
+
+      root.querySelectorAll("#mpSearch, #mpPriceFrom, #mpPriceTo, #mpTag, #mpXTag, #mpSeller").forEach(function (el) {
+        if (!el || el.dataset.nsWired === "1") return;
+        el.dataset.nsWired = "1";
+        el.addEventListener("input", paint);
+      });
+
+      var dl = root.querySelector("#mpDl");
+      if (dl && dl.dataset.nsWired !== "1") {
+        dl.dataset.nsWired = "1";
+        dl.addEventListener("click", function () {
+          var sel = selectedIds();
+          if (!sel.length) {
+            showNsToast("Отметьте покупки галочкой.");
+            return;
+          }
+          var rows = recordsByIds(sel);
+          var blob = new Blob(
+            [
+              JSON.stringify(
+                rows.map(function (r) {
+                  return {
+                    id: r.id,
+                    productId: r.productId,
+                    title: r.title,
+                    priceRub: r.priceRub,
+                    seller: r.sellerUsername,
+                    delivery: r.deliveryText,
+                    ts: r.ts,
+                  };
+                }),
+                null,
+                2
+              ),
+            ],
+            { type: "application/json;charset=utf-8" }
+          );
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "nightstore-purchases.json";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+      }
+      var ac = root.querySelector("#mpAct");
+      if (ac && ac.dataset.nsWired !== "1") {
+        ac.dataset.nsWired = "1";
+        ac.addEventListener("click", function () {
+          var sel = selectedIds();
+          if (!sel.length) {
+            showNsToast("Отметьте покупки.");
+            return;
+          }
+          window.alert("Демо: массовое действие над " + sel.length + " покупками (заглушка).");
+        });
+      }
+    }
+    paint();
+    wireDemoWalletUi(data);
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+  }
+
+  function initMarketMyProductsPage(data) {
+    var root = document.getElementById("marketMyProductsRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите, чтобы видеть свои товары.</p>';
+      return;
+    }
+    function paint() {
+      var mine = (data.products || []).filter(function (p) {
+        return p && String(p.sellerId) === String(u.id);
+      });
+      var qv = String((document.getElementById("mypSearch") || {}).value || "");
+      var q = qv.trim().toLowerCase();
+      var pf = document.getElementById("mypPriceFrom");
+      var pt = document.getElementById("mypPriceTo");
+      var pMin = pf && pf.value !== "" ? Number(pf.value) : NaN;
+      var pMax = pt && pt.value !== "" ? Number(pt.value) : NaN;
+      var tag = String((document.getElementById("mypTag") || {}).value || "").trim().toLowerCase();
+      var xtag = String((document.getElementById("mypXTag") || {}).value || "").trim().toLowerCase();
+      var filt = mine.filter(function (p) {
+        if (q && String(p.title || "").toLowerCase().indexOf(q) === -1) return false;
+        if (isFinite(pMin) && Number(p.price) < pMin) return false;
+        if (isFinite(pMax) && Number(p.price) > pMax) return false;
+        if (tag && String(p.title || "").toLowerCase().indexOf(tag) === -1) return false;
+        if (xtag && String(p.title || "").toLowerCase().indexOf(xtag) !== -1) return false;
+        return true;
+      });
+      root.innerHTML =
+        '<div class="mp-toolbar sidebar-card">' +
+        '<div class="mp-toolbar__row">' +
+        '<input type="number" class="mp-inp" id="mypPriceFrom" placeholder="Цена от" value="' +
+        escapeHtml(pf && pf.value != null ? String(pf.value) : "") +
+        '" />' +
+        '<input type="number" class="mp-inp" id="mypPriceTo" placeholder="до" value="' +
+        escapeHtml(pt && pt.value != null ? String(pt.value) : "") +
+        '" />' +
+        '<input type="search" class="mp-inp mp-inp--grow" id="mypSearch" placeholder="Поиск по заголовку" value="' +
+        escapeHtml(qv) +
+        '" />' +
+        "</div>" +
+        '<div class="mp-toolbar__row">' +
+        '<input type="text" class="mp-inp" id="mypTag" placeholder="Метка" value="' +
+        escapeHtml((document.getElementById("mypTag") || {}).value || "") +
+        '" />' +
+        '<input type="text" class="mp-inp" id="mypXTag" placeholder="Исключить метку" value="' +
+        escapeHtml((document.getElementById("mypXTag") || {}).value || "") +
+        '" />' +
+        "</div>" +
+        '<div class="mp-toolbar__row"><span class="mp-count">Лотов: ' +
+        formatIntRu(filt.length) +
+        "</span></div></div>" +
+        '<div class="mp-list">' +
+        (filt.length
+          ? filt
+              .map(function (p) {
+                return (
+                  '<a class="mp-card mp-card--link" href="market-product.html?id=' +
+                  encodeURIComponent(String(p.id)) +
+                  '">' +
+                  '<div class="mp-card__body">' +
+                  '<div class="mp-card__title">' +
+                  escapeHtml(p.title) +
+                  "</div>" +
+                  '<div class="mp-card__meta">' +
+                  formatIntRu(p.price || 0) +
+                  " ₽ · " +
+                  escapeHtml(p.posted || "") +
+                  "</div></div></a>"
+                );
+              })
+              .join("")
+          : '<p class="mod-empty">Нет опубликованных лотов.</p>') +
+        "</div>";
+      root.querySelectorAll("#mypSearch, #mypPriceFrom, #mypPriceTo, #mypTag, #mypXTag").forEach(function (el) {
+        if (!el || el.dataset.nsWired === "1") return;
+        el.dataset.nsWired = "1";
+        el.addEventListener("input", paint);
+      });
+    }
+    paint();
+    wireDemoWalletUi(data);
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+  }
+
+  function initMessagesPage(data) {
+    var root = document.getElementById("messagesPageRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите.</p>';
+      return;
+    }
+    var withQ = "";
+    try {
+      withQ = new URLSearchParams(location.search).get("with") || "";
+    } catch (e) {
+      withQ = "";
+    }
+    function paint() {
+      var threads = dmThreadsForUser(u.username);
+      var activeOther = withQ ? decodeURIComponent(withQ) : threads.length ? otherPartyInThread(threads[0], u.username) : "";
+      var left = threads
+        .map(function (th) {
+          var oth = otherPartyInThread(th, u.username);
+          var act = oth === activeOther ? " is-active" : "";
+          var last = (th.messages || []).slice(-1)[0];
+          var prev = last ? (last.from === u.username ? "Вы: " : "") + String(last.body || "").slice(0, 80) : "—";
+          return (
+            '<button type="button" class="msgs-side-row' +
+            act +
+            '" data-with="' +
+            escapeHtml(oth) +
+            '">' +
+            '<span class="msgs-side-row__name">' +
+            escapeHtml(oth) +
+            "</span>" +
+            '<span class="msgs-side-row__prev">' +
+            escapeHtml(prev) +
+            "</span></button>"
+          );
+        })
+        .join("");
+      var th0 =
+        threads.find(function (x) {
+          return otherPartyInThread(x, u.username) === activeOther;
+        }) || null;
+      var msgsHtml = th0
+        ? (th0.messages || [])
+            .map(function (m) {
+              var mine = m.from === u.username;
+              return (
+                '<div class="msgs-bubble' +
+                (mine ? " msgs-bubble--me" : "") +
+                '"><div class="msgs-bubble__meta">' +
+                escapeHtml(m.from) +
+                " · " +
+                escapeHtml(formatNotifTime(m.ts || 0)) +
+                '</div><div class="msgs-bubble__body">' +
+                escapeHtml(m.body || "").replace(/\n/g, "<br/>") +
+                "</div></div>"
+              );
+            })
+            .join("")
+        : "";
+      root.innerHTML =
+        '<div class="msgs-layout">' +
+        '<aside class="msgs-aside sidebar-card">' +
+        '<div class="msgs-aside__tabs">' +
+        '<button type="button" class="msgs-tab is-active">Все</button>' +
+        '<button type="button" class="msgs-tab" disabled>Новые</button>' +
+        '<button type="button" class="msgs-tab" disabled>Беседы</button>' +
+        '<button type="button" class="msgs-tab" disabled>Маркет</button>' +
+        "</div>" +
+        '<input type="search" class="msgs-aside__search" placeholder="Поиск" id="msgsSideSearch" />' +
+        '<div class="msgs-aside__list">' +
+        (left || '<p class="mod-empty">Нет диалогов</p>') +
+        "</div></aside>" +
+        '<section class="msgs-main sidebar-card">' +
+        (activeOther && th0
+          ? '<div class="msgs-main__head"><strong>' +
+            escapeHtml(activeOther) +
+            '</strong></div><div class="msgs-main__scroll">' +
+            (msgsHtml || '<p class="mod-empty">Нет сообщений</p>') +
+            '</div><div class="msgs-main__composer">' +
+            '<textarea id="msgsTa" rows="2" maxlength="4000" placeholder="Сообщение…"></textarea>' +
+            '<button type="button" class="btn-primary" id="msgsSend">Отправить</button></div>'
+          : '<div class="msgs-placeholder"><p>Выберите диалог слева</p></div>') +
+        "</section></div>";
+
+      root.querySelectorAll(".msgs-side-row").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var w = b.getAttribute("data-with") || "";
+          if (w) {
+            history.replaceState(null, "", "messages.html?with=" + encodeURIComponent(w));
+            withQ = w;
+            paint();
+          }
+        });
+      });
+      var sd = root.querySelector("#msgsSend");
+      if (sd && sd.dataset.nsW !== "1") {
+        sd.dataset.nsW = "1";
+        sd.addEventListener("click", function () {
+          var ta = document.getElementById("msgsTa");
+          var txt = ta ? ta.value.trim() : "";
+          if (!txt || !activeOther) return;
+          pushDmUserMessage(u.username, activeOther, txt);
+          if (ta) ta.value = "";
+          paint();
+        });
+      }
+    }
+    paint();
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
+    if (!window.__nsMsgsDmGlobal) {
+      window.__nsMsgsDmGlobal = true;
+      window.addEventListener("nightstore-dm-changed", function () {
+        var rr = document.getElementById("messagesPageRoot");
+        if (rr && typeof rr.__nsMsgsRepaint === "function") rr.__nsMsgsRepaint();
+      });
+    }
+    root.__nsMsgsRepaint = paint;
+  }
+
+  function initBookmarksPage(data) {
+    var root = document.getElementById("bookmarksPageRoot");
+    if (!root) return;
+    var u = sessionUser(data);
+    if (!u || data._sessionGuest) {
+      root.innerHTML = '<p class="mod-empty">Войдите.</p>';
+      return;
+    }
+    var subs = loadTopicSubs(u.username);
+    root.innerHTML =
+      '<h1 class="bm-h1">Закладки</h1>' +
+      '<p class="bm-sub">Темы, на которые вы подписаны.</p>' +
+      '<div class="bm-list">' +
+      (subs.length
+        ? subs
+            .map(function (s) {
+              var href =
+                "topic.html?user=" + encodeURIComponent(s.owner || "") + "&id=" + encodeURIComponent(String(s.ts));
+              return (
+                '<a class="bm-row sidebar-card" href="' +
+                href +
+                '"><span class="bm-row__title">' +
+                escapeHtml(s.title || "Тема") +
+                '</span><span class="bm-row__meta">@' +
+                escapeHtml(s.owner || "") +
+                "</span></a>"
+              );
+            })
+            .join("")
+        : '<p class="mod-empty">Подписок пока нет — откройте тему и нажмите «Подписаться».</p>') +
+      "</div>";
+    initMarketCartDropdown(data);
+    initHeaderMessagesDropdown(data);
+    paintMarketLangStrip(data);
   }
 
   function initHelp() {
@@ -7695,6 +9180,7 @@
       .then(function (data) {
         mergeLocalUserPrefs(data);
         mergeLocalMarketProductsIntoData(data);
+        applyMarketRemovedProductsFilter(data);
         syncMarketCatalogTotal(data);
         ensureUsersHaveStablePublicNumericIds(data);
         ensureFxRatesMerged(data, function () {
@@ -7715,7 +9201,11 @@
           else if (page === "topic") initTopic(data);
           else if (page === "notifications") initNotificationsSettings();
           else if (page === "moderation") initModeration(data);
-          else if (page === "support") initSupportPage(data);
+          else if (page === "tickets") initSupportPage(data);
+          else if (page === "market-purchases") initMarketPurchasesPage(data);
+          else if (page === "market-my-products") initMarketMyProductsPage(data);
+          else if (page === "messages") initMessagesPage(data);
+          else if (page === "bookmarks") initBookmarksPage(data);
           else if (page === "settings") initSettingsPage(data);
           if (page === "help") initHelp();
         });

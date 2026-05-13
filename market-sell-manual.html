@@ -24,6 +24,8 @@
           <input type="search" placeholder="Поиск на маркете…" disabled />
         </div>
         <div class="header-actions">
+          <button type="button" class="icon-btn icon-btn--cart icon-btn--cart-ns" aria-label="Корзина" aria-expanded="false" data-market-cart-toggle><span class="cart-ns-glyph" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span></button>
+          <button type="button" class="icon-btn" aria-label="Сообщения" aria-expanded="false" data-msgs-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
           <button type="button" class="icon-btn icon-btn--notify" aria-label="Уведомления" aria-expanded="false" data-notify-toggle><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
           <div class="dropdown-wrap" data-dropdown>
             <button type="button" class="user-pill" data-dropdown-toggle aria-expanded="false">
@@ -48,7 +50,7 @@
       <aside class="sidebar-market">
         <div class="sidebar-card market-currency-card">
           <div class="market-currency-card__title">Валюта каталога</div>
-          <p class="market-currency-card__hint">Цены в каталоге в ₽; пересчёт в другие валюты — из настроек профиля (демо).</p>
+          <p class="market-currency-card__hint">В каталоге цены указаны в рублях. Пересчёт в другие валюты — в настройках профиля (демо).</p>
           <a class="btn-secondary market-currency-card__btn" href="settings.html">Настройки</a>
         </div>
 
@@ -67,8 +69,8 @@
         <div class="sidebar-card market-side-nav">
           <div class="nav-section-title">Маркет</div>
           <a class="side-link" href="market.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>К каталогу</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Мои аккаунты</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
+          <a class="side-link" href="market-my-products.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>Мои товары</a>
+          <a class="side-link" href="market-purchases.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
           <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Мои операции</a>
           <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Избранное</a>
         </div>
@@ -78,7 +80,7 @@
           <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Правила и гарантии</a>
           <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Советы и гайды</a>
           <a class="side-link" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 008.6 15a1.65 1.65 0 00-1-1.51V12a2 2 0 012-2h.09A1.65 1.65 0 0011 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 11c.36.95.36 1.99 0 2.95z"/></svg>Настройки</a>
-          <a class="side-link" href="support.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>Поддержка</a>
+          <a class="side-link" href="tickets.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>Тикеты</a>
         </div>
 
         <div class="sidebar-card market-recent-card">
@@ -101,6 +103,9 @@
       </aside>
 
       <div class="market-main">
+        <div class="market-header-bar" style="margin-bottom:12px">
+          <span class="market-lang-strip js-market-lang-strip" aria-live="polite">₽ RUB · Русский</span>
+        </div>
         <div class="sidebar-card msl-card">
         <h1 class="msl-card__h1">Новый лот вручную</h1>
         <p class="msl-card__lead">

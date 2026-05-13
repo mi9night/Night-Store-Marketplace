@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Товар — Night Store</title>
+  <title>Мои товары — Night Store</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
 </head>
-<body data-page="market-product">
+<body data-page="market-my-products">
   <div class="app-shell">
     <header class="site-header">
       <div class="header-inner">
-        <a class="btn-back" href="market.html" style="flex-shrink:0">← К маркету</a>
+        <a class="btn-back" href="index.html" style="flex-shrink:0">← На форум</a>
         <a class="brand" href="market.html">
           <img src="assets/logo.svg" width="36" height="36" alt="" />
           <span>Night <strong>Store</strong></span>
         </a>
         <div class="header-search" style="max-width:400px">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="search" placeholder="Поиск по маркету…" />
+          <input type="search" placeholder="Поиск по маркету..." />
         </div>
         <div class="header-actions">
           <button type="button" class="icon-btn icon-btn--cart icon-btn--cart-ns" aria-label="Корзина" aria-expanded="false" data-market-cart-toggle><span class="cart-ns-glyph" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span></button>
@@ -42,9 +42,7 @@
       </div>
     </header>
 
-    <nav class="breadcrumbs">
-      <a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span id="productBreadcrumbCat">Категория</span> / <span id="productBreadcrumbTitle">Товар</span>
-    </nav>
+    <nav class="breadcrumbs"><a href="index.html">Форум</a> / <a href="market.html">Маркет</a> / <span>Мои товары</span></nav>
 
     <main class="layout-market">
       <aside class="sidebar-market">
@@ -70,50 +68,28 @@
           <div class="nav-section-title">Маркет</div>
           <a class="side-link" href="market-my-products.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>Мои товары</a>
           <a class="side-link" href="market-purchases.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 00-2 2v7h18v-7a2 2 0 00-2-2h-4M9 11V9a3 3 0 016 0v2M9 11h6"/></svg>Мои покупки</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Мои операции</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Избранное</a>
-          <a class="side-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Метки</a>
+          <a class="side-link" href="market-sell-manual.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Новый лот</a>
+          <a class="side-link" href="market.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Каталог</a>
         </div>
 
         <div class="sidebar-card market-side-nav market-side-nav--muted">
           <div class="nav-section-title">Сервис</div>
-          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Правила и гарантии</a>
-          <a class="side-link" href="help.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Советы и гайды</a>
-          <a class="side-link" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 008.6 15a1.65 1.65 0 00-1-1.51V12a2 2 0 012-2h.09A1.65 1.65 0 0011 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 11c.36.95.36 1.99 0 2.95z"/></svg>Настройки</a>
           <a class="side-link" href="tickets.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>Тикеты</a>
-        </div>
-
-        <div class="sidebar-card market-recent-card">
-          <div class="nav-section-title">Недавно просмотрено</div>
-          <div id="marketRecentRoot" class="market-recent-root" aria-live="polite"></div>
-        </div>
-
-        <div class="tool-panel">
-          <h4>Получить код с почты</h4>
-          <input type="text" placeholder="Почта от аккаунта" />
-          <input type="text" placeholder="Логин от аккаунта" />
-          <button type="button" class="btn-primary" style="margin-top:4px">Получить код</button>
-        </div>
-
-        <div class="tool-panel">
-          <h4>Получить письма</h4>
-          <input type="text" placeholder="Почта:пароль" />
-          <button type="button" class="btn-primary" style="margin-top:4px">Получить письма</button>
         </div>
       </aside>
 
       <div class="market-main">
-        <div class="market-header-bar" style="margin-bottom:12px">
+        <div class="market-header-bar">
+          <a class="btn-secondary" href="market.html" style="width:auto;padding:8px 14px;font-size:0.85rem;text-decoration:none;display:inline-flex;align-items:center">← К каталогу</a>
           <span class="market-lang-strip js-market-lang-strip" aria-live="polite">₽ RUB · Русский</span>
         </div>
-        <div id="productPageRoot"></div>
+        <h1 class="market-page-h1">Мои товары</h1>
+        <div id="marketMyProductsRoot"></div>
       </div>
     </main>
 
-    <footer class="site-footer">Night Store · товар</footer>
+    <footer class="site-footer">Night Store · мои товары</footer>
   </div>
-
-  <button type="button" class="fab-chat" aria-label="Поддержка"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5 14.5c0-4.6 3.7-8.3 8.3-8.3 1.7 0 3.2.5 4.5 1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 16.5c2 3.3 5.6 5.3 9.5 5.3 5.4 0 9.8-4.3 9.8-9.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.36"/><path d="M5 19h5l-1 3.5H6L5 19z" fill="currentColor" opacity="0.9"/></svg></button>
   <script src="js/main.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-init.js"></script>
