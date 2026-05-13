@@ -1168,6 +1168,34 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   color: var(--text);
 }
 
+.mod-hint--tight {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+}
+
+.mod-level-xp-panel {
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: linear-gradient(165deg, rgba(26, 22, 36, 0.55), rgba(15, 13, 20, 0.85));
+  box-shadow: inset 0 1px 0 rgba(201, 180, 255, 0.05);
+}
+
+.mod-level-xp-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mod-level-xp-panel__row .btn-secondary,
+.mod-level-xp-panel__row .btn-primary {
+  flex: 1 1 140px;
+  width: auto !important;
+  min-width: 0;
+}
+
 .profile-sidebar .profile-avatar-wrap {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -1344,9 +1372,41 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   padding-top: 4px;
 }
 
+.profile-level-widget__prize-full--reward-new .profile-level-widget__prize-body {
+  animation: ns-profile-prize-pulse 2.2s ease-in-out infinite;
+  border-color: rgba(201, 180, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(201, 180, 255, 0.12),
+    0 0 0 1px var(--accent-ring),
+    0 4px 28px rgba(174, 146, 255, 0.22);
+}
+
+.profile-level-widget__prize-full--reward-new .profile-level-widget__prize-tag {
+  color: var(--accent-hover);
+  border-color: rgba(201, 180, 255, 0.55);
+  background: rgba(201, 180, 255, 0.12);
+}
+
+@keyframes ns-profile-prize-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(201, 180, 255, 0.1),
+      0 0 0 1px rgba(174, 146, 255, 0.2),
+      0 2px 18px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(201, 180, 255, 0.16),
+      0 0 0 1px var(--accent-ring),
+      0 4px 32px rgba(174, 146, 255, 0.28);
+  }
+}
+
 .profile-level-widget__prize-full .profile-level-widget__prize-tag {
   position: absolute;
-  left: 10px;
+  left: auto;
+  right: 10px;
   top: 0;
   transform: translateY(-55%);
   z-index: 2;
@@ -1371,11 +1431,34 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   padding: 10px 14px;
   min-height: 44px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  border: 1px solid rgba(201, 180, 255, 0.12);
+  background: linear-gradient(
+    175deg,
+    rgba(42, 34, 58, 0.92) 0%,
+    rgba(22, 18, 34, 0.97) 45%,
+    rgba(28, 22, 40, 0.99) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(201, 180, 255, 0.1),
+    0 4px 18px rgba(0, 0, 0, 0.28);
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.profile-level-widget__prize-full .profile-level-widget__prize-body:hover {
+  border-color: rgba(201, 180, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(201, 180, 255, 0.14),
+    0 6px 22px rgba(0, 0, 0, 0.32);
+}
+
+.profile-level-widget__prize-full .profile-level-widget__prize-body:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .profile-level-widget__prize-full .profile-level-widget__prize-ico {
@@ -2617,14 +2700,14 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #f87171;
+  color: var(--text-dim);
   font-size: 0.72rem;
   cursor: pointer;
 }
 
 .wall-post-card__del:hover {
-  text-decoration: underline;
-  background: rgba(248, 113, 113, 0.08);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .wall-post-card__votes {
@@ -2742,18 +2825,14 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   color: var(--accent);
 }
 
+.wall-comment__del:hover {
+  color: var(--accent);
+}
+
 .wall-comment__act-sep {
   color: var(--text-dim);
   font-size: 0.72rem;
   user-select: none;
-}
-
-.wall-comment__del {
-  color: #f87171;
-}
-
-.wall-comment__del:hover {
-  text-decoration: underline;
 }
 
 .wall-comment-form {
@@ -3847,6 +3926,23 @@ textarea.demo-wallet-input.demo-manual-lot-ta {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.modal__panel--reward {
+  width: min(420px, 100%);
+  max-height: none;
+  background: linear-gradient(165deg, rgba(30, 26, 42, 0.98), rgba(15, 13, 22, 0.99));
+  border-color: rgba(201, 180, 255, 0.18);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(201, 180, 255, 0.08);
+}
+
+.modal__lead {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
 
 .modal__head {

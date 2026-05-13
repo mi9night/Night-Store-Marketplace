@@ -1058,6 +1058,115 @@
   var PRODUCT_ADMIN_CODES_KEY = "nightstore_product_admin_codes_v1";
   var PRODUCT_MOD_NOTES_KEY = "nightstore_product_mod_notes_v1";
   var BANNED_USERNAMES_KEY = "nightstore_banned_usernames_v1";
+  var PROFILE_COUPON_ACK_LEVEL_KEY = "nightstore_profile_coupon_ack_lvl_v1";
+
+  function profileCouponAckMap() {
+    try {
+      var o = JSON.parse(localStorage.getItem(PROFILE_COUPON_ACK_LEVEL_KEY) || "{}");
+      return o && typeof o === "object" ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProfileCouponAckMap(map) {
+    try {
+      localStorage.setItem(PROFILE_COUPON_ACK_LEVEL_KEY, JSON.stringify(map || {}));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function getProfileCouponAckLevel(username) {
+    var o = profileCouponAckMap();
+    var v = o[String(username || "")];
+    if (v == null || !isFinite(Number(v))) return 0;
+    return Math.max(0, Math.floor(Number(v)));
+  }
+
+  function setProfileCouponAckLevel(username, level) {
+    var o = profileCouponAckMap();
+    o[String(username || "")] = Math.max(0, Math.floor(Number(level) || 0));
+    saveProfileCouponAckMap(o);
+  }
+
+  function nsXpStepForUser(u) {
+    return Math.max(1, Math.floor(Number(u && u.xpToNext) || 1000));
+  }
+
+  function persistUserLevelFields(data, u) {
+    if (!u || u.username == null) return;
+    u.level = Math.max(1, Math.floor(Number(u.level) || 1));
+    u.xp = Math.max(0, Math.floor(Number(u.xp) || 0));
+    u.xpToNext = nsXpStepForUser(u);
+    var arr = loadRegisteredUsersRaw();
+    var ix = arr.findIndex(function (r) {
+      return r && String(r.id) === String(u.id);
+    });
+    if (ix !== -1) {
+      arr[ix] = Object.assign({}, arr[ix], {
+        level: u.level,
+        xp: u.xp,
+        xpToNext: u.xpToNext,
+      });
+      saveRegisteredUsersRaw(arr);
+    }
+    try {
+      window.dispatchEvent(new CustomEvent("nightstore-level-changed"));
+    } catch (e) {}
+  }
+
+  function notifyUserLevelUp(data, username, newLevel) {
+    if (!username || !newLevel) return;
+    pushNotification(username, {
+      id: "lvlup_" + String(username) + "_" + String(newLevel) + "_" + Date.now(),
+      read: false,
+      ts: Date.now(),
+      title: "Уровень повышен",
+      detail: "Поздравляем: у вас " + newLevel + " уровень!",
+      link: "profile.html?user=" + encodeURIComponent(username),
+      kind: "level_up",
+      tab: "all",
+    });
+    try {
+      updateNotifyBadge(data);
+    } catch (e) {}
+  }
+
+  function applyXpDeltaWithLevels(data, u, delta, notifyUsername) {
+    if (!u) return 0;
+    var STEP = nsXpStepForUser(u);
+    var prevLevel = Math.max(1, Math.floor(Number(u.level) || 1));
+    u.xp = Math.max(0, Math.floor(Number(u.xp) || 0)) + Math.floor(Number(delta) || 0);
+    u.level = Math.max(1, Math.floor(Number(u.level) || 1));
+    while (u.xp >= STEP) {
+      u.xp -= STEP;
+      u.level++;
+    }
+    while (u.xp < 0 && u.level > 1) {
+      u.level--;
+      u.xp += STEP;
+    }
+    if (u.xp < 0) u.xp = 0;
+    u.xpToNext = STEP;
+    var gained = u.level - prevLevel;
+    if (gained > 0 && notifyUsername) {
+      notifyUserLevelUp(data, notifyUsername, u.level);
+    }
+    return gained;
+  }
+
+  function setUserLevelDirect(data, u, newLevel, notifyUsername) {
+    if (!u) return;
+    var prev = Math.max(1, Math.floor(Number(u.level) || 1));
+    var n = Math.max(1, Math.floor(Number(newLevel) || 1));
+    u.level = n;
+    u.xp = 0;
+    u.xpToNext = Math.max(1, Math.floor(Number(u.xpToNext) || 1000));
+    if (n > prev && notifyUsername) {
+      notifyUserLevelUp(data, notifyUsername, n);
+    }
+  }
 
   function loadPublicNumericIdMap() {
     try {
@@ -4645,6 +4754,49 @@
       }
     }
 
+    var prizeWrap = document.querySelector(".js-profile-prize-wrap");
+    if (prizeWrap && isOwn) {
+      var ackHi = getProfileCouponAckLevel(u.username);
+      prizeWrap.classList.toggle("profile-level-widget__prize-full--reward-new", u.level > ackHi);
+    }
+    var rewardModal = document.getElementById("nsProfileRewardModal");
+    var couponBtn = document.querySelector(".js-profile-coupon-btn");
+    if (rewardModal && !rewardModal.dataset.nsRewardCloseWired) {
+      rewardModal.dataset.nsRewardCloseWired = "1";
+      rewardModal.querySelectorAll("[data-ns-profile-reward-close]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          rewardModal.classList.remove("is-open");
+          rewardModal.setAttribute("aria-hidden", "true");
+          document.body.classList.remove("modal-open");
+        });
+      });
+    }
+    if (couponBtn && rewardModal && isOwn) {
+      couponBtn.disabled = false;
+      couponBtn.onclick = function () {
+        var fresh = (data.users || []).find(function (x) {
+          return x && x.username === u.username;
+        });
+        if (!fresh) return;
+        var ack = getProfileCouponAckLevel(fresh.username);
+        var wasNew = fresh.level > ack;
+        var msg = wasNew
+          ? "Поздравляем! У вас " + fresh.level + " уровень! Награда — купон за уровень."
+          : "У вас " + fresh.level + " уровень. Купон за уровень активен.";
+        var mEl = rewardModal.querySelector(".js-ns-level-reward-msg");
+        if (mEl) mEl.textContent = msg;
+        rewardModal.classList.add("is-open");
+        rewardModal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        setProfileCouponAckLevel(fresh.username, fresh.level);
+        var pw = document.querySelector(".js-profile-prize-wrap");
+        if (pw) pw.classList.remove("profile-level-widget__prize-full--reward-new");
+      };
+    } else if (couponBtn) {
+      couponBtn.disabled = true;
+      couponBtn.onclick = null;
+    }
+
   }
 
   function initTopic(data) {
@@ -5436,6 +5588,35 @@
             );
           })
           .join("");
+        var curLvl = pu ? Math.max(1, Math.floor(Number(pu.level) || 1)) : 1;
+        var curXp = pu ? Math.max(0, Math.floor(Number(pu.xp) || 0)) : 0;
+        var curCap = pu ? Math.max(1, Math.floor(Number(pu.xpToNext) || 1000)) : 1000;
+        var modXpPanel = pu
+          ? '<div class="mod-level-xp-panel">' +
+            '<div class="mod-stats-label">Уровень и опыт</div>' +
+            "<p class=\"mod-hint mod-hint--tight\">Сейчас: <strong>" +
+            curLvl +
+            " LVL</strong> · " +
+            formatIntRu(curXp) +
+            " / " +
+            formatIntRu(curCap) +
+            " XP</p>" +
+            '<div class="mod-stats-field"><label for="modProfGrantLevel">Выдать уровень (число)</label>' +
+            '<input type="number" min="1" max="999" step="1" id="modProfGrantLevel" class="mod-stats-input" value="' +
+            curLvl +
+            '" /></div>' +
+            '<div class="mod-level-xp-panel__row">' +
+            '<button type="button" class="btn-primary" data-mod-prof-grant-level>Применить уровень</button>' +
+            "</div>" +
+            '<div class="mod-stats-field"><label for="modProfXpAmount">Опыт (XP)</label>' +
+            '<input type="number" min="1" max="1000000" step="1" id="modProfXpAmount" class="mod-stats-input" placeholder="Сколько" value="100" /></div>' +
+            '<div class="mod-level-xp-panel__row">' +
+            '<button type="button" class="btn-secondary" data-mod-prof-xp-add>Выдать XP</button>' +
+            '<button type="button" class="btn-secondary" data-mod-prof-xp-sub>Забрать XP</button>' +
+            "</div>" +
+            '<p class="mod-hint">Забрать XP уменьшает прогресс; при нехватке очков уровень может снизиться.</p>' +
+            "</div>"
+          : "";
         var modGrantLine =
           userIsOwner(data, me) && pu && pu.username !== me.username && !userIsOwner(data, pu)
             ? '<label class="mod-prof-ban"><input type="checkbox" data-mod-prof-mod ' +
@@ -5468,6 +5649,7 @@
               '<div class="mod-stats-grid">' +
               statFields +
               "</div>" +
+              modXpPanel +
               modGrantLine +
               '<div class="mod-prof-actions">' +
               '<button type="button" class="btn-primary" data-mod-prof-save>Сохранить статистику</button>' +
@@ -5706,6 +5888,54 @@
             return x.username === un;
           });
           if (uu && !uu.isOwner) uu.isModerator = !!pmod.checked;
+        });
+      }
+      function modProfResolveTarget() {
+        var un = root.getAttribute("data-mod-prof-user");
+        if (!un) return null;
+        return (data.users || []).find(function (x) {
+          return x.username === un;
+        });
+      }
+      var grantLvlBtn = root.querySelector("[data-mod-prof-grant-level]");
+      if (grantLvlBtn) {
+        grantLvlBtn.addEventListener("click", function () {
+          var tgt = modProfResolveTarget();
+          if (!tgt) return;
+          var inp = document.getElementById("modProfGrantLevel");
+          var n = Math.max(1, Math.floor(Number(inp && inp.value) || 1));
+          setUserLevelDirect(data, tgt, n, tgt.username);
+          persistUserLevelFields(data, tgt);
+          window.alert("Уровень обновлён.");
+          paint();
+        });
+      }
+      var xpAddB = root.querySelector("[data-mod-prof-xp-add]");
+      if (xpAddB) {
+        xpAddB.addEventListener("click", function () {
+          var tgt = modProfResolveTarget();
+          if (!tgt) return;
+          var inp = document.getElementById("modProfXpAmount");
+          var amt = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
+          if (!amt) return;
+          applyXpDeltaWithLevels(data, tgt, amt, tgt.username);
+          persistUserLevelFields(data, tgt);
+          window.alert("Опыт обновлён.");
+          paint();
+        });
+      }
+      var xpSubB = root.querySelector("[data-mod-prof-xp-sub]");
+      if (xpSubB) {
+        xpSubB.addEventListener("click", function () {
+          var tgt = modProfResolveTarget();
+          if (!tgt) return;
+          var inp = document.getElementById("modProfXpAmount");
+          var amt = Math.max(1, Math.floor(Number(inp && inp.value) || 0));
+          if (!amt) return;
+          applyXpDeltaWithLevels(data, tgt, -amt, tgt.username);
+          persistUserLevelFields(data, tgt);
+          window.alert("Опыт обновлён.");
+          paint();
         });
       }
       var psave = root.querySelector("[data-mod-prof-save]");

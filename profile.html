@@ -88,9 +88,9 @@
             <div class="profile-level-bar" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" aria-label="Прогресс до следующего уровня">
               <div class="profile-level-bar__fill js-profile-xp-fill"></div>
             </div>
-            <div class="profile-level-widget__prize-full">
+            <div class="profile-level-widget__prize-full js-profile-prize-wrap">
               <span class="profile-level-widget__prize-tag">+ приз</span>
-              <div class="profile-level-widget__prize-body" role="status" aria-label="Награда за уровень">
+              <button type="button" class="profile-level-widget__prize-body js-profile-coupon-btn" aria-label="Купон за уровень">
                 <span class="profile-level-widget__prize-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <ellipse cx="8" cy="7" rx="2" ry="2.5" />
@@ -101,7 +101,7 @@
                   </svg>
                 </span>
                 <span>Купон</span>
-              </div>
+              </button>
             </div>
           </div>
           <details style="margin-top:14px;color:var(--text-muted);font-size:0.85rem">
@@ -353,6 +353,23 @@
 
     <footer class="site-footer">Night Store · профиль</footer>
   </div>
+
+  <div class="modal" id="nsProfileRewardModal" aria-hidden="true">
+    <div class="modal__backdrop" data-ns-profile-reward-close="1"></div>
+    <div class="modal__panel modal__panel--reward" role="dialog" aria-modal="true" aria-labelledby="nsProfileRewardTitle">
+      <div class="modal__head">
+        <h2 id="nsProfileRewardTitle">Награда за уровень</h2>
+        <button type="button" class="modal__close" data-ns-profile-reward-close="1" aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal__body">
+        <p class="modal__lead js-ns-level-reward-msg"></p>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn-primary" data-ns-profile-reward-close="1">Отлично</button>
+      </div>
+    </div>
+  </div>
+
   <button type="button" class="fab-chat" aria-label="Чат"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
   <script src="js/main.js"></script>
   <script src="js/firebase-config.js"></script>
