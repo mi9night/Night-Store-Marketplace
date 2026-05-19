@@ -4,39 +4,50 @@ import {
   Wallet, ArrowDownLeft, ArrowLeftRight,
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code,
-  ChevronDown, ChevronRight, Plus
+  ChevronDown, ChevronRight, Plus, MessageSquare
 } from 'lucide-react';
 import { currentUser, categories } from '../data/mockData';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
   currentPage: Page;
-  setCurrentPage: (page: Page) => void;
+  forumFilter: string | null;
+  setCurrentPage: (page: Page, filter?: string | null) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, forumFilter, setCurrentPage, isOpen, onClose }) => {
   const [activeCategory, setActiveCategory] = useState('');
   const [expandedCategory, setExpandedCategory] = useState('');
 
+  // Обновленный список навигации с учетом задач 1-4
   const navItems = [
     { icon: Package, label: 'Мои аккаунты', page: 'sell' as Page },
     { icon: ShoppingBag, label: 'Мои покупки', page: 'purchases' as Page },
-    { icon: Receipt, label: 'Мои операции', page: 'settings' as Page },
+    { icon: Receipt, label: 'Мои операции', page: 'operations' as Page },
     { icon: Heart, label: 'Избранное', page: 'favorites' as Page },
     { icon: Tag, label: 'Управление метками', page: 'labels' as Page },
     { icon: Zap, label: 'Автопокупки', page: 'autobuy' as Page },
     { icon: Settings, label: 'Настройки', page: 'settings' as Page },
-    { icon: Shield, label: 'Правила и гарантии', page: 'forum' as Page },
+    { icon: Shield, label: 'Правила и гарантии', page: 'forum' as Page, filter: 'rules' },
+    { icon: MessageSquare, label: 'Форум', page: 'forum' as Page, filter: null },
     { icon: TrendingUp, label: 'Повышение статуса', page: 'topSellers' as Page },
-    { icon: DollarSign, label: 'Курсы валют', page: 'market' as Page },
-    { icon: Code, label: 'API', page: 'settings' as Page },
+    { icon: DollarSign, label: 'Курсы валют', page: 'rates' as Page },
+    { icon: Code, label: 'API', page: 'api' as Page },
   ];
+
+  // Логика проверки активного состояния (ЗАДАЧА 5)
+  const isItemActive = (item: typeof navItems[0]) => {
+    if (item.page === 'forum') {
+      return currentPage === 'forum' && forumFilter === item.filter;
+    }
+    return currentPage === item.page;
+  };
 
   const sidebarContent = (
     <div className="h-full flex flex-col overflow-y-auto">
-      {/* Balance block */}
+      {/* Balance block (без изменений) */}
       <div className="p-4 border-b border-purple-900/20">
         <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20">
           <div className="flex items-center justify-between mb-1">
@@ -68,22 +79,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, 
       {/* Navigation */}
       <div className="p-3">
         <p className="text-xs text-text-secondary font-medium uppercase tracking-wider px-2 mb-2">Навигация</p>
-        {navItems.map(item => (
-          <motion.button
-            key={item.label}
-            onClick={() => { setCurrentPage(item.page); onClose(); }}
-            whileHover={{ x: 2 }}
-            className={`sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm ${
-              currentPage === item.page ? 'sidebar-item-active' : 'text-text-secondary'
-            }`}
-          >
-            <item.icon size={16} />
-            <span>{item.label}</span>
-          </motion.button>
-        ))}
+        {navItems.map(item => {
+          const active = isItemActive(item);
+          return (
+            <motion.button
+              key={item.label + (item.filter || '')}
+              onClick={() => { setCurrentPage(item.page, item.filter); onClose(); }}
+              whileHover={{ x: 2 }}
+              className={`sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-all ${
+                active ? 'sidebar-item-active bg-purple-600/20 text-accent-soft' : 'text-text-secondary'
+              }`}
+            >
+              <item.icon size={16} />
+              <span>{item.label}</span>
+            </motion.button>
+          );
+        })}
       </div>
 
-      {/* Categories */}
+      {/* Categories (без изменений) */}
       <div className="p-3 border-t border-purple-900/20">
         <p className="text-xs text-text-secondary font-medium uppercase tracking-wider px-2 mb-2">Категории</p>
         {categories.map(cat => (
@@ -145,12 +159,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, 
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="hidden lg:block fixed left-0 top-16 bottom-0 w-60 bg-bg-secondary border-r border-purple-900/20 z-40">
         {sidebarContent}
       </aside>
-
-      {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {isOpen && (
           <>
