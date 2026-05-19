@@ -28,29 +28,35 @@ import { Account } from './types';
 import type { Page } from './types/pages';
 
 const App: React.FC = () => {
+
   /* ================= AUTH ================= */
 
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
+
+    // ✅ ВАЖНО: используем getSession(), а не getUser()
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
       setAuthLoading(false);
     };
 
-    getUser();
+    initAuth();
 
+    // ✅ слушаем изменения auth (login/logout/confirm)
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
+        setAuthLoading(false);
       }
     );
 
     return () => {
       listener.subscription.unsubscribe();
     };
+
   }, []);
 
   if (authLoading) {
@@ -69,8 +75,7 @@ const App: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState<Page>('market');
   const [forumFilter, setForumFilter] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] =
-    useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [cartItems, setCartItems] = useState<Account[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -91,20 +96,21 @@ const App: React.FC = () => {
   }, []);
 
   const handleAddToCart = useCallback((account: Account) => {
-    setCartItems((prev) => {
-      if (prev.find((i) => i.id === account.id)) return prev;
+    setCartItems(prev => {
+      if (prev.find(i => i.id === account.id)) return prev;
       return [...prev, account];
     });
   }, []);
 
   const handleRemoveFromCart = useCallback((id: string) => {
-    setCartItems((prev) => prev.filter((i) => i.id !== id));
+    setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
 
   /* ================= РЕНДЕР ================= */
 
   return (
     <div className="min-h-screen bg-bg-primary">
+
       <Header
         currentPage={currentPage}
         setCurrentPage={handleSetPage}
@@ -112,9 +118,7 @@ const App: React.FC = () => {
         cartItems={cartItems}
         onRemoveFromCart={handleRemoveFromCart}
         onClearCart={() => setCartItems([])}
-        onMenuToggle={() =>
-          setIsMobileMenuOpen(!isMobileMenuOpen)
-        }
+        onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
@@ -136,6 +140,7 @@ const App: React.FC = () => {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
             >
+
               {currentPage === 'market' && (
                 <MarketPage
                   onSelectAccount={handleSelectAccount}
@@ -144,14 +149,13 @@ const App: React.FC = () => {
                 />
               )}
 
-              {currentPage === 'product' &&
-                selectedAccount && (
-                  <ProductPage
-                    account={selectedAccount}
-                    setCurrentPage={handleSetPage}
-                    onAddToCart={handleAddToCart}
-                  />
-                )}
+              {currentPage === 'product' && selectedAccount && (
+                <ProductPage
+                  account={selectedAccount}
+                  setCurrentPage={handleSetPage}
+                  onAddToCart={handleAddToCart}
+                />
+              )}
 
               {currentPage === 'profile' && <ProfilePage />}
 
@@ -166,9 +170,7 @@ const App: React.FC = () => {
 
               {currentPage === 'sell' && <SellPage />}
               {currentPage === 'bulk' && <BulkPage />}
-              {currentPage === 'forum' && (
-                <ForumPage filter={forumFilter} />
-              )}
+              {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
               {currentPage === 'purchases' && (
                 <PurchasesPage
                   onSelectAccount={handleSelectAccount}
@@ -185,21 +187,19 @@ const App: React.FC = () => {
 
               {currentPage === 'settings' && <SettingsPage />}
               {currentPage === 'api' && <ApiPage />}
-              {currentPage === 'operations' && (
-                <OperationsPage />
-              )}
+              {currentPage === 'operations' && <OperationsPage />}
               {currentPage === 'rates' && <RatesPage />}
               {currentPage === 'labels' && <LabelsPage />}
               {currentPage === 'autobuy' && <AutobuyPage />}
-              {currentPage === 'topSellers' && (
-                <StatusPage />
-              )}
+              {currentPage === 'topSellers' && <StatusPage />}
+
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
 
       <RealTimeNotification />
+
     </div>
   );
 };
