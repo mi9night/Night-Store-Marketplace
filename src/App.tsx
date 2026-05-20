@@ -24,12 +24,8 @@ import { Account } from './types';
 
 const App: React.FC = () => {
 
-  /* ================= AUTH ================= */
-
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-
-  /* ================= NAVIGATION ================= */
 
   const [currentPage, setCurrentPage] = useState<Page>('market');
   const [forumFilter, setForumFilter] = useState<string | null>(null);
@@ -37,19 +33,12 @@ const App: React.FC = () => {
   const [cartItems, setCartItems] = useState<Account[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  /* ================= AUTH LOGIC ================= */
-
   useEffect(() => {
 
     const init = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setUser(data.session?.user ?? null);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setAuthLoading(false);
-      }
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
+      setAuthLoading(false);
     };
 
     init();
@@ -61,20 +50,15 @@ const App: React.FC = () => {
       setAuthLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
 
   }, []);
-
-  /* ================= HANDLERS ================= */
 
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
       setCurrentPage(page);
       setForumFilter(filter);
       setIsMobileMenuOpen(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     []
   );
@@ -96,109 +80,103 @@ const App: React.FC = () => {
     setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
 
-  /* ================= STATES ================= */
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-primary text-white">
-        Загрузка...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthPage />;
-  }
-
-  /* ================= MAIN ================= */
-
   return (
     <div className="min-h-screen bg-bg-primary">
 
-      <Header
-        currentPage={currentPage}
-        setCurrentPage={handleSetPage}
-        cartCount={cartItems.length}
-        onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        isMobileMenuOpen={isMobileMenuOpen}
-      />
-
-      {/* ✅ ВАЖНО — forumFilter передаётся */}
-      <Sidebar
-        currentPage={currentPage}
-        forumFilter={forumFilter}
-        setCurrentPage={handleSetPage}
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-      />
-
-      <main className="lg:ml-60 pt-16 min-h-screen">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto">
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentPage}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-            >
-
-              {currentPage === 'market' && (
-                <MarketPage
-                  onSelectAccount={handleSelectAccount}
-                  setCurrentPage={handleSetPage}
-                  onAddToCart={handleAddToCart}
-                />
-              )}
-
-              {currentPage === 'product' && selectedAccount && (
-                <ProductPage
-                  account={selectedAccount}
-                  setCurrentPage={handleSetPage}
-                  onAddToCart={handleAddToCart}
-                />
-              )}
-
-              {currentPage === 'profile' && <ProfilePage />}
-
-              {currentPage === 'cart' && (
-                <CartPage
-                  cartItems={cartItems}
-                  onRemove={handleRemoveFromCart}
-                  setCurrentPage={handleSetPage}
-                  onSelectAccount={handleSelectAccount}
-                />
-              )}
-
-              {currentPage === 'sell' && <SellPage />}
-              {currentPage === 'bulk' && <BulkPage />}
-              {currentPage === 'forum' && (
-                <ForumPage filter={forumFilter} />
-              )}
-              {currentPage === 'purchases' && (
-                <PurchasesPage
-                  onSelectAccount={handleSelectAccount}
-                  setCurrentPage={handleSetPage}
-                />
-              )}
-              {currentPage === 'favorites' && (
-                <FavoritesPage
-                  onSelectAccount={handleSelectAccount}
-                  setCurrentPage={handleSetPage}
-                  onAddToCart={handleAddToCart}
-                />
-              )}
-              {currentPage === 'settings' && <SettingsPage />}
-              {currentPage === 'topSellers' && <TopSellersPage />}
-
-            </motion.div>
-          </AnimatePresence>
-
+      {authLoading && (
+        <div className="min-h-screen flex items-center justify-center text-white">
+          Загрузка...
         </div>
-      </main>
+      )}
 
-      <RealTimeNotification />
+      {!authLoading && !user && (
+        <AuthPage />
+      )}
+
+      {!authLoading && user && (
+        <>
+          <Header
+            currentPage={currentPage}
+            setCurrentPage={handleSetPage}
+            cartCount={cartItems.length}
+            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isMobileMenuOpen={isMobileMenuOpen}
+          />
+
+          <Sidebar
+            currentPage={currentPage}
+            forumFilter={forumFilter}
+            setCurrentPage={handleSetPage}
+            isOpen={isMobileMenuOpen}
+            onClose={() => setIsMobileMenuOpen(false)}
+          />
+
+          <main className="lg:ml-60 pt-16 min-h-screen">
+            <div className="p-4 md:p-6 max-w-7xl mx-auto">
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPage}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                >
+
+                  {currentPage === 'market' && (
+                    <MarketPage
+                      onSelectAccount={handleSelectAccount}
+                      setCurrentPage={handleSetPage}
+                      onAddToCart={handleAddToCart}
+                    />
+                  )}
+
+                  {currentPage === 'product' && selectedAccount && (
+                    <ProductPage
+                      account={selectedAccount}
+                      setCurrentPage={handleSetPage}
+                      onAddToCart={handleAddToCart}
+                    />
+                  )}
+
+                  {currentPage === 'profile' && <ProfilePage />}
+                  {currentPage === 'cart' && (
+                    <CartPage
+                      cartItems={cartItems}
+                      onRemove={handleRemoveFromCart}
+                      setCurrentPage={handleSetPage}
+                      onSelectAccount={handleSelectAccount}
+                    />
+                  )}
+
+                  {currentPage === 'sell' && <SellPage />}
+                  {currentPage === 'bulk' && <BulkPage />}
+                  {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
+                  {currentPage === 'purchases' && (
+                    <PurchasesPage
+                      onSelectAccount={handleSelectAccount}
+                      setCurrentPage={handleSetPage}
+                    />
+                  )}
+                  {currentPage === 'favorites' && (
+                    <FavoritesPage
+                      onSelectAccount={handleSelectAccount}
+                      setCurrentPage={handleSetPage}
+                      onAddToCart={handleAddToCart}
+                    />
+                  )}
+                  {currentPage === 'settings' && <SettingsPage />}
+                  {currentPage === 'topSellers' && <TopSellersPage />}
+
+                </motion.div>
+              </AnimatePresence>
+
+            </div>
+          </main>
+
+          <RealTimeNotification />
+        </>
+      )}
 
     </div>
   );
