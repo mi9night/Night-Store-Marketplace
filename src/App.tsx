@@ -29,12 +29,23 @@ import type { Page } from './types/pages';
 import { Account } from './types';
 
 const App: React.FC = () => {
-  /* ================= AUTH ================= */
+
+  /* ================= AUTH STATE ================= */
 
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [emailConfirmed, setEmailConfirmed] = useState(false);
+
+  /* ================= USER MODE STATE ================= */
+
+  const [currentPage, setCurrentPage] = useState<Page>('market');
+  const [forumFilter, setForumFilter] = useState<string | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [cartItems, setCartItems] = useState<Account[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  /* ================= AUTH LOGIC ================= */
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -48,7 +59,6 @@ const App: React.FC = () => {
     const initAuth = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-
         if (error) throw error;
 
         const currentUser = data.session?.user ?? null;
@@ -96,37 +106,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  /* ================= AUTH STATES ================= */
-
-  if (emailConfirmed) {
-    return <EmailConfirmedPage />;
-  }
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-primary text-white">
-        Загрузка...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthPage />;
-  }
-
-  /* ================= ADMIN MODE ================= */
-
-  if (profile?.role === 'admin') {
-    return <AdminPanel />;
-  }
-
-  /* ================= USER MODE ================= */
-
-  const [currentPage, setCurrentPage] = useState<Page>('market');
-  const [forumFilter, setForumFilter] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [cartItems, setCartItems] = useState<Account[]>([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  /* ================= NAVIGATION HANDLERS ================= */
 
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
@@ -155,6 +135,32 @@ const App: React.FC = () => {
     setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
 
+  /* ================= AUTH STATES ================= */
+
+  if (emailConfirmed) {
+    return <EmailConfirmedPage />;
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary text-white">
+        Загрузка...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  /* ================= ADMIN MODE ================= */
+
+  if (profile?.role === 'admin') {
+    return <AdminPanel />;
+  }
+
+  /* ================= USER MODE ================= */
+
   return (
     <div className="min-h-screen bg-bg-primary">
       <Header
@@ -178,6 +184,7 @@ const App: React.FC = () => {
 
       <main className="lg:ml-60 pt-16 min-h-screen">
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
+
           {currentPage === 'market' && (
             <MarketPage
               onSelectAccount={handleSelectAccount}
@@ -228,6 +235,7 @@ const App: React.FC = () => {
           {currentPage === 'labels' && <LabelsPage />}
           {currentPage === 'autobuy' && <AutobuyPage />}
           {currentPage === 'topSellers' && <StatusPage />}
+
         </div>
       </main>
 
