@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, Save, X, Clock, Check, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ModerationPanel from '../components/ModerationPanel';
 
 type ActionType = 'username' | 'email' | 'password' | null;
 
@@ -36,7 +37,7 @@ const SettingsPage: React.FC = () => {
 
       if (data.user) {
         const { data: p } = await supabase
-          .from('profiles')
+          .from('users')
           .select('*')
           .eq('id', data.user.id)
           .maybeSingle();
@@ -61,6 +62,8 @@ const SettingsPage: React.FC = () => {
 
   const canChangeUsername = daysUntilCanChange === 0;
 
+  const isMod = ['moderator', 'admin', 'owner'].includes(profile?.role || '');
+
   const sections = [
     { id: 'profile', label: 'Профиль', icon: Settings },
     { id: 'security', label: 'Безопасность', icon: Shield },
@@ -68,6 +71,7 @@ const SettingsPage: React.FC = () => {
     { id: 'appearance', label: 'Внешний вид', icon: Palette },
     { id: 'payments', label: 'Оплата', icon: CreditCard },
     { id: 'api', label: 'API', icon: Key },
+    ...(isMod ? [{ id: 'moderation', label: 'Модерация', icon: Shield }] : []),
   ];
 
   /* ============ Открыть модалку ============ */
@@ -126,14 +130,14 @@ const SettingsPage: React.FC = () => {
 
       // 2. Выполняем действие
       if (action === 'username') {
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            username: newValue,
-            username_changed_at: new Date().toISOString()
-          });
+        // Используем RPC — серверная проверка лимита 7 дней
+        const { data: result, error } = await supabase.rpc('update_username', { new_username: newValue });
         if (error) throw error;
+        if (result === 'too_soon') {
+          setActionMessage({ type: 'err', text: 'Никнейм можно менять раз в 7 дней' });
+          setActionLoading(false);
+          return;
+        }
         setProfile({ ...profile, username: newValue, username_changed_at: new Date().toISOString() });
       }
 
@@ -265,7 +269,7 @@ const SettingsPage: React.FC = () => {
                   className="w-full px-4 py-3 rounded-xl text-sm resize-none bg-bg-secondary border border-purple-900/30 text-white"
                   onBlur={async (e) => {
                     if (user) {
-                      await supabase.from('profiles').upsert({ id: user.id, bio: e.target.value });
+                      await supabase.from('users').upsert({ id: user.id, bio: e.target.value });
                     }
                   }}
                 />
@@ -359,6 +363,9 @@ const SettingsPage: React.FC = () => {
               <p className="text-sm text-text-secondary">Скоро можно будет создавать API-токены для автоматизации 🔑</p>
             </>
           )}
+
+          {/* === МОДЕРАЦИЯ === */}
+          {activeSection === 'moderation' && isMod && <ModerationPanel />}
         </motion.div>
       </div>
 

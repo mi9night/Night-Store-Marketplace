@@ -8,6 +8,8 @@ import {
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { Account } from '../types';
+import MessagesModal from './MessagesModal';
+import { RoleBadge } from './ModerationPanel';
 import type { Page } from '../types/pages';
 
 interface HeaderProps {
@@ -52,6 +54,9 @@ const Header: React.FC<HeaderProps> = ({
   const [showCartDropdown, setShowCartDropdown] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [balance, setBalance] = useState<number>(0);
+  const [showMessages, setShowMessages] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [myProfile, setMyProfile] = useState<any>(null);
   const [notifications, setNotifications] = useState<Notif[]>([]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -69,14 +74,18 @@ const Header: React.FC<HeaderProps> = ({
       if (data.user) {
         // Профиль с балансом
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('balance')
+          .from('users')
+          .select('balance, role, verified, username')
           .eq('id', data.user.id)
           .maybeSingle();
         if (profile?.balance != null) setBalance(profile.balance);
+        if (profile) setMyProfile(profile);
 
         // Уведомления
         loadNotifications(data.user.id);
+
+        // Непрочитанные сообщения
+        loadUnreadMessages(data.user.id);
       }
     };
     init();
@@ -90,6 +99,17 @@ const Header: React.FC<HeaderProps> = ({
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const loadUnreadMessages = async (userId: string) => {
+    try {
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', userId)
+        .eq('is_read', false);
+      setUnreadMessages(count || 0);
+    } catch { setUnreadMessages(0); }
+  };
 
   const loadNotifications = async (userId: string) => {
     try {
@@ -109,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     if (!user?.id) return;
 
-    const channel = supabase
+    const notifChannel = supabase
       .channel('notifications_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
@@ -117,7 +137,18 @@ const Header: React.FC<HeaderProps> = ({
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const msgChannel = supabase
+      .channel('messages_unread')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        () => loadUnreadMessages(user.id)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notifChannel);
+      supabase.removeChannel(msgChannel);
+    };
   }, [user?.id]);
 
   /* ============ Клик вне (закрываем дропдауны) ============ */
@@ -363,11 +394,17 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Messages */}
           <motion.button
+            onClick={() => setShowMessages(true)}
             className="hidden sm:flex relative p-2 text-text-secondary hover:text-text-primary transition-colors"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
             <MessageSquare size={20} />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-success text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {unreadMessages}
+              </span>
+            )}
           </motion.button>
 
           {/* Notifications */}
@@ -470,8 +507,9 @@ const Header: React.FC<HeaderProps> = ({
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-text-primary text-sm truncate">
-                          {user?.email?.split('@')[0] || 'User'}
+                        <p className="font-semibold text-text-primary text-sm truncate flex items-center gap-1.5">
+                          {myProfile?.username || user?.email?.split('@')[0] || 'User'}
+                          <RoleBadge role={myProfile?.role} />
                         </p>
                         <p className="text-xs text-text-secondary truncate">{user?.email}</p>
                       </div>
@@ -514,6 +552,9 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Модалка сообщений */}
+      <MessagesModal isOpen={showMessages} onClose={() => setShowMessages(false)} />
     </header>
   );
 };

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
+import { RoleBadge } from '../components/ModerationPanel';
 
 interface UserData {
   id: string;
@@ -247,16 +248,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
                 {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
-                {profile?.role === 'admin' && (
-                  <span className="px-2 py-0.5 bg-red-900/30 border border-red-800/40 text-red-400 text-xs rounded-full font-semibold">
-                    Админ
-                  </span>
-                )}
-                {profile?.role === 'moderator' && (
-                  <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/40 text-blue-400 text-xs rounded-full font-semibold">
-                    Модератор
-                  </span>
-                )}
+                <RoleBadge role={profile?.role} />
                 <span className="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded-full font-semibold">
                   Lvl {profile?.level || 1}
                 </span>

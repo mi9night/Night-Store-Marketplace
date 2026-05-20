@@ -53,7 +53,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
         if (sellerIds.length > 0) {
           const { data: sellers } = await supabase
             .from('users')
-            .select('id, username, avatar, rating, sales, verified')
+            .select('id, username, avatar, rating, sales, verified, role')
             .in('id', sellerIds);
           sellers?.forEach((s: any) => { sellersMap[s.id] = s; });
         }
@@ -78,7 +78,8 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               isOnline: false,
               reviewsCount: 0,
               responseTime: '~1ч',
-            } : undefined
+              role: s.role,
+            } as any : undefined
           });
         });
 
@@ -269,7 +270,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               </button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredAccounts.map((account, i) => (
                 <AccountCard
                   key={account.id}

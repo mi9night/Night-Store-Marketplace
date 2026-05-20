@@ -157,6 +157,7 @@ const App: React.FC = () => {
                     <CartPage
                       cartItems={cartItems}
                       onRemove={handleRemoveFromCart}
+                      onClearCart={handleClearCart}
                       setCurrentPage={handleSetPage}
                       onSelectAccount={handleSelectAccount}
                     />

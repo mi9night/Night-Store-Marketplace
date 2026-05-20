@@ -1,0 +1,962 @@
+// src/components/ModerationPanel.tsx
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Shield, Users, Package, Receipt, Ticket, BarChart3,
+  Search, Ban, VolumeX, AlertTriangle, CheckCircle2, XCircle,
+  Trash2, Edit3, MessageSquare, RotateCcw, ArrowRight, X,
+  Crown, Settings as SettingsIcon
+} from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats';
+
+interface Props {
+  // Колбек, чтобы из модерации можно было перейти на тему / товар
+  onNavigate?: (page: 'forum' | 'product' | 'profile', payload?: any) => void;
+}
+
+const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
+  const [section, setSection] = useState<Section>('tickets');
+  const [myRole, setMyRole] = useState<string>('user');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        const { data: u } = await supabase.from('users').select('role').eq('id', data.user.id).maybeSingle();
+        setMyRole(u?.role || 'user');
+      }
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center py-12 text-text-secondary">Загрузка...</div>;
+  }
+
+  if (!['moderator', 'admin', 'owner'].includes(myRole)) {
+    return (
+      <div className="bg-bg-card border border-red-800/40 rounded-2xl p-8 text-center">
+        <Shield size={40} className="mx-auto text-red-400 mb-3" />
+        <h3 className="text-lg font-semibold text-white mb-2">Доступ запрещён</h3>
+        <p className="text-sm text-text-secondary">Эта секция доступна только модераторам</p>
+      </div>
+    );
+  }
+
+  const sections = [
+    { id: 'tickets',    label: 'Тикеты',     icon: Ticket },
+    { id: 'users',      label: 'Пользователи', icon: Users },
+    { id: 'operations', label: 'Финансы',    icon: Receipt },
+    { id: 'products',   label: 'Товары',     icon: Package },
+    { id: 'stats',      label: 'Статистика', icon: BarChart3 },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Shield size={24} className="text-purple-400" />
+        <h2 className="text-xl font-bold text-white">Панель модерации</h2>
+        <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
+          myRole === 'owner' ? 'bg-red-900/30 text-red-400' :
+          myRole === 'admin' ? 'bg-orange-900/30 text-orange-400' :
+          'bg-blue-900/30 text-blue-400'
+        }`}>
+          {myRole === 'owner' ? '👑 OWNER' : myRole === 'admin' ? '🛡 ADMIN' : '⚖️ MOD'}
+        </span>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto bg-bg-card border border-purple-900/20 rounded-xl p-1">
+        {sections.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setSection(s.id as Section)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
+              section === s.id
+                ? 'bg-purple-600/30 text-purple-300'
+                : 'text-text-secondary hover:text-white'
+            }`}
+          >
+            <s.icon size={14} />
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={section}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {section === 'tickets' && <TicketsSection onNavigate={onNavigate} />}
+          {section === 'users' && <UsersSection myRole={myRole} />}
+          {section === 'operations' && <OperationsSection />}
+          {section === 'products' && <ProductsSection onNavigate={onNavigate} />}
+          {section === 'stats' && <StatsSection />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+
+/* =================== 1. ТИКЕТЫ =================== */
+const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavigate }) => {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed' | 'not_resolved'>('all');
+  const [activeTicket, setActiveTicket] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [reply, setReply] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setTickets(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const loadMessages = async (ticketId: string) => {
+    const { data } = await supabase
+      .from('ticket_messages')
+      .select('*')
+      .eq('ticket_id', ticketId)
+      .order('created_at', { ascending: true });
+    setMessages(data || []);
+  };
+
+  const openTicket = async (t: any) => {
+    setActiveTicket(t);
+    loadMessages(t.id);
+  };
+
+  const updateStatus = async (status: string, resolution?: string) => {
+    if (!activeTicket) return;
+    const upd: any = { status, updated_at: new Date().toISOString() };
+    if (resolution) upd.resolution = resolution;
+    if (status === 'closed') upd.closed_at = new Date().toISOString();
+    await supabase.from('tickets').update(upd).eq('id', activeTicket.id);
+    setActiveTicket({ ...activeTicket, ...upd });
+    load();
+  };
+
+  const sendReply = async () => {
+    if (!reply.trim() || !activeTicket) return;
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from('ticket_messages').insert({
+      ticket_id: activeTicket.id,
+      sender_id: u.user?.id,
+      message: reply,
+    });
+    setReply('');
+    loadMessages(activeTicket.id);
+  };
+
+  const goToSource = () => {
+    if (!activeTicket || !onNavigate) return;
+    if (activeTicket.target_type === 'topic' || activeTicket.target_type === 'forum') {
+      onNavigate('forum');
+    } else if (activeTicket.target_type === 'account') {
+      onNavigate('product', { id: activeTicket.target_id });
+    } else if (activeTicket.target_type === 'user') {
+      onNavigate('profile', { id: activeTicket.target_id });
+    }
+  };
+
+  const filtered = filter === 'all'
+    ? tickets
+    : tickets.filter(t => filter === 'not_resolved' ? t.resolution === 'not_resolved' : (t.status === filter || t.resolution === filter));
+
+  if (activeTicket) {
+    return (
+      <div className="bg-bg-card border border-purple-900/20 rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-purple-900/20 flex items-center gap-2">
+          <button onClick={() => setActiveTicket(null)} className="text-text-secondary hover:text-white p-1">
+            <ArrowRight size={18} className="rotate-180" />
+          </button>
+          <h3 className="text-base font-semibold text-white flex-1">
+            Тикет #{activeTicket.id.slice(0, 8)}
+          </h3>
+          <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+            activeTicket.status === 'closed' ? 'bg-gray-900/40 text-gray-400' :
+            activeTicket.status === 'open' ? 'bg-blue-900/30 text-blue-400' :
+            'bg-yellow-900/30 text-yellow-400'
+          }`}>
+            {activeTicket.status}
+          </span>
+        </div>
+
+        <div className="p-4 border-b border-purple-900/20">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-text-secondary text-xs">Категория</span>
+              <p className="text-white">{activeTicket.category || '—'}</p>
+            </div>
+            <div>
+              <span className="text-text-secondary text-xs">Цель жалобы</span>
+              <p className="text-white">{activeTicket.target_type || '—'}</p>
+            </div>
+            <div className="col-span-2">
+              <span className="text-text-secondary text-xs">Тема</span>
+              <p className="text-white">{activeTicket.subject || '—'}</p>
+            </div>
+            <div className="col-span-2">
+              <span className="text-text-secondary text-xs">Описание</span>
+              <p className="text-white">{activeTicket.description || '—'}</p>
+            </div>
+          </div>
+
+          {activeTicket.target_id && (
+            <button
+              onClick={goToSource}
+              className="mt-3 flex items-center gap-2 px-3 py-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm"
+            >
+              <ArrowRight size={14} /> Перейти к источнику жалобы
+            </button>
+          )}
+        </div>
+
+        {/* Метки решения */}
+        <div className="p-4 border-b border-purple-900/20 flex gap-2 flex-wrap">
+          <button
+            onClick={() => updateStatus('in_progress', 'in_progress')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-900/20 hover:bg-yellow-900/40 text-yellow-400 rounded-lg text-xs font-semibold"
+          >
+            ⏳ Решается
+          </button>
+          <button
+            onClick={() => updateStatus('open', 'resolved')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-900/20 hover:bg-green-900/40 text-green-400 rounded-lg text-xs font-semibold"
+          >
+            ✅ Решено
+          </button>
+          <button
+            onClick={() => updateStatus('open', 'not_resolved')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-xs font-semibold"
+          >
+            ❌ Не решено
+          </button>
+          <button
+            onClick={() => updateStatus('closed', activeTicket.resolution || 'closed')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 rounded-lg text-xs font-semibold ml-auto"
+          >
+            🔒 Закрыть тикет
+          </button>
+        </div>
+
+        {/* Сообщения */}
+        <div className="p-4 max-h-80 overflow-y-auto space-y-2">
+          {messages.length === 0 ? (
+            <p className="text-text-secondary text-sm text-center py-6">Сообщений нет</p>
+          ) : messages.map(m => (
+            <div key={m.id} className="bg-bg-secondary border border-purple-900/20 rounded-lg p-3">
+              <p className="text-xs text-text-secondary mb-1">{new Date(m.created_at).toLocaleString('ru-RU')}</p>
+              <p className="text-sm text-white">{m.message}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Ответ */}
+        <div className="p-3 border-t border-purple-900/20 flex gap-2">
+          <input
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendReply()}
+            placeholder="Ответ от модератора..."
+            className="flex-1 px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm"
+          />
+          <button onClick={sendReply} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm">
+            Отправить
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Фильтры */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { id: 'all', label: 'Все' },
+          { id: 'open', label: '🆕 Открытые' },
+          { id: 'in_progress', label: '⏳ Решается' },
+          { id: 'resolved', label: '✅ Решено' },
+          { id: 'not_resolved', label: '❌ Не решено' },
+          { id: 'closed', label: '🔒 Закрытые' },
+        ].map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id as any)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+              filter === f.id ? 'bg-purple-600 text-white' : 'bg-bg-card text-text-secondary border border-purple-900/20'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-text-secondary">Загрузка...</div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-8 text-center text-text-secondary">
+          Тикетов нет
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(t => (
+            <div
+              key={t.id}
+              onClick={() => openTicket(t)}
+              className="bg-bg-card border border-purple-900/20 hover:border-purple-700/40 rounded-xl p-3 cursor-pointer flex items-center gap-3"
+            >
+              <Ticket size={18} className="text-purple-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-white truncate">{t.subject || t.category || 'Тикет'}</span>
+                  {t.target_type && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-purple-900/30 rounded text-purple-300">{t.target_type}</span>
+                  )}
+                </div>
+                <p className="text-xs text-text-secondary truncate">{t.description || 'Без описания'}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                  t.status === 'closed' ? 'bg-gray-900/40 text-gray-400' :
+                  t.status === 'in_progress' ? 'bg-yellow-900/30 text-yellow-400' :
+                  'bg-blue-900/30 text-blue-400'
+                }`}>{t.status}</span>
+                {t.resolution && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    t.resolution === 'resolved' ? 'bg-green-900/30 text-green-400' :
+                    t.resolution === 'not_resolved' ? 'bg-red-900/30 text-red-400' :
+                    'bg-yellow-900/30 text-yellow-400'
+                  }`}>{t.resolution}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+/* =================== 2. ПОЛЬЗОВАТЕЛИ =================== */
+const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
+  const [query, setQuery] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [active, setActive] = useState<any>(null);
+  const [bans, setBans] = useState<any[]>([]);
+  const [modal, setModal] = useState<null | 'punish' | 'stat'>(null);
+
+  // Punish form
+  const [pType, setPType] = useState<'ban' | 'mute' | 'warn'>('mute');
+  const [pReason, setPReason] = useState('');
+  const [pHours, setPHours] = useState<string>('24');
+
+  // Stat form
+  const [statField, setStatField] = useState('balance');
+  const [statValue, setStatValue] = useState('');
+
+  const search = async () => {
+    setLoading(true);
+    const q = supabase.from('users').select('*').limit(50);
+    if (query.trim()) {
+      q.or(`username.ilike.%${query}%,email.ilike.%${query}%,id.eq.${query.match(/^[a-f0-9-]{36}$/i) ? query : '00000000-0000-0000-0000-000000000000'}`);
+    }
+    const { data } = await q.order('created_at', { ascending: false });
+    setUsers(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { search(); }, []);
+
+  const openUser = async (u: any) => {
+    setActive(u);
+    const { data } = await supabase.from('bans').select('*').eq('user_id', u.id).order('created_at', { ascending: false });
+    setBans(data || []);
+  };
+
+  const punish = async () => {
+    if (!active) return;
+    const { error } = await supabase.rpc('moderate_punish', {
+      p_user_id: active.id,
+      p_type: pType,
+      p_reason: pReason,
+      p_duration_hours: pHours ? parseInt(pHours) : null,
+    });
+    if (error) { alert(error.message); return; }
+    setModal(null);
+    setPReason('');
+    openUser(active);
+  };
+
+  const unpunish = async (banId: string) => {
+    await supabase.rpc('moderate_unpunish', { p_ban_id: banId });
+    openUser(active);
+  };
+
+  const setStat = async () => {
+    if (!active) return;
+    const { data, error } = await supabase.rpc('moderate_set_stat', {
+      p_user_id: active.id,
+      p_field: statField,
+      p_value: statValue,
+    });
+    if (error) { alert(error.message); return; }
+    if (!data?.ok) { alert(data?.error); return; }
+    setModal(null);
+    setStatValue('');
+    const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
+    setActive(refreshed);
+  };
+
+  if (active) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => setActive(null)} className="text-sm text-purple-400 flex items-center gap-1">
+          ← Назад к поиску
+        </button>
+
+        {/* Карточка пользователя */}
+        <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-5">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+              {active.avatar_url ? <img src={active.avatar_url} className="w-full h-full object-cover" /> :
+                <span className="text-xl font-bold text-white">{(active.username?.[0] || 'U').toUpperCase()}</span>}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-white">{active.username || active.email}</h3>
+                {active.verified && <CheckCircle2 size={16} className="text-blue-400" />}
+                <RoleBadge role={active.role} />
+              </div>
+              <p className="text-sm text-text-secondary">{active.email}</p>
+              <p className="text-xs text-text-secondary">ID: {active.id}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[
+              { label: 'Баланс', value: `${(active.balance || 0).toLocaleString('ru-RU')} ₽` },
+              { label: 'Продажи', value: active.sales || 0 },
+              { label: 'XP', value: active.xp || 0 },
+              { label: 'Уровень', value: active.level || 1 },
+            ].map(s => (
+              <div key={s.label} className="bg-bg-secondary rounded-lg p-2 text-center">
+                <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
+                <p className="text-sm font-bold text-white">{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Кнопки действий */}
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setModal('punish')} className="flex items-center gap-1.5 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-sm">
+              <Ban size={14} /> Наказание
+            </button>
+            <button onClick={() => setModal('stat')} className="flex items-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-lg text-sm">
+              <SettingsIcon size={14} /> Изменить статы
+            </button>
+          </div>
+        </div>
+
+        {/* История наказаний */}
+        <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-4">
+          <h4 className="text-sm font-semibold text-white mb-3">История наказаний ({bans.length})</h4>
+          {bans.length === 0 ? (
+            <p className="text-text-secondary text-sm text-center py-4">Наказаний нет</p>
+          ) : (
+            <div className="space-y-2">
+              {bans.map(b => {
+                const isActive = b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date());
+                return (
+                  <div key={b.id} className={`border rounded-lg p-3 ${isActive ? 'bg-red-900/10 border-red-800/40' : 'bg-bg-secondary border-purple-900/20'}`}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        b.type === 'ban' ? 'bg-red-900/30 text-red-400' :
+                        b.type === 'mute' ? 'bg-yellow-900/30 text-yellow-400' :
+                        'bg-orange-900/30 text-orange-400'
+                      }`}>{b.type}</span>
+                      {isActive && <span className="text-[10px] px-1.5 py-0.5 bg-red-500 text-white rounded animate-pulse">АКТИВЕН</span>}
+                      <span className="text-xs text-text-secondary ml-auto">{new Date(b.created_at).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <p className="text-sm text-white"><b>Причина:</b> {b.reason}</p>
+                    <p className="text-xs text-text-secondary">
+                      <b>Выдал:</b> {b.moderator_name} · <b>Срок:</b> {b.duration_hours ? `${b.duration_hours} ч` : 'навсегда'}
+                      {b.ends_at && ` · до ${new Date(b.ends_at).toLocaleString('ru-RU')}`}
+                    </p>
+                    {isActive && (
+                      <button onClick={() => unpunish(b.id)} className="mt-2 text-xs text-green-400 hover:underline">
+                        ✓ Снять наказание
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Модалка наказания */}
+        {modal === 'punish' && (
+          <Modal onClose={() => setModal(null)} title="Выдать наказание">
+            <label className="text-xs text-text-secondary mb-1 block">Тип</label>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[
+                { id: 'warn', label: '⚠️ Предупр.', color: 'orange' },
+                { id: 'mute', label: '🔇 Мут', color: 'yellow' },
+                { id: 'ban', label: '🚫 Бан', color: 'red' },
+              ].map(t => (
+                <button key={t.id} onClick={() => setPType(t.id as any)}
+                  className={`py-2 rounded-lg text-xs font-semibold border ${
+                    pType === t.id ? 'border-purple-500 bg-purple-900/30 text-white' : 'border-purple-900/20 text-text-secondary'
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="text-xs text-text-secondary mb-1 block">Причина</label>
+            <textarea value={pReason} onChange={e => setPReason(e.target.value)} rows={2}
+              className="w-full px-3 py-2 mb-3 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm resize-none" />
+
+            <label className="text-xs text-text-secondary mb-1 block">Срок (часов, 0 = навсегда)</label>
+            <div className="flex gap-2 mb-3">
+              {['1', '24', '72', '168', '720', '0'].map(h => (
+                <button key={h} onClick={() => setPHours(h)}
+                  className={`flex-1 py-2 rounded-lg text-xs border ${
+                    pHours === h ? 'border-purple-500 bg-purple-900/30 text-white' : 'border-purple-900/20 text-text-secondary'
+                  }`}>
+                  {h === '0' ? '∞' : h === '24' ? '1д' : h === '72' ? '3д' : h === '168' ? '7д' : h === '720' ? '30д' : h + 'ч'}
+                </button>
+              ))}
+            </div>
+            <input value={pHours} onChange={e => setPHours(e.target.value)} type="number" placeholder="Своё значение"
+              className="w-full px-3 py-2 mb-3 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+
+            <button onClick={punish} disabled={!pReason} className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-semibold disabled:opacity-50">
+              Выдать наказание
+            </button>
+          </Modal>
+        )}
+
+        {modal === 'stat' && (
+          <Modal onClose={() => setModal(null)} title="Изменить статистику">
+            <label className="text-xs text-text-secondary mb-1 block">Поле</label>
+            <select value={statField} onChange={e => setStatField(e.target.value)}
+              className="w-full px-3 py-2 mb-3 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm">
+              <option value="balance">Баланс</option>
+              <option value="xp">XP</option>
+              <option value="level">Уровень</option>
+              <option value="sales">Продажи</option>
+              <option value="positive_reviews">Положительные отзывы</option>
+              <option value="verified">Верификация (true/false)</option>
+              {myRole === 'owner' && <option value="role">Роль (user/moderator/admin/owner)</option>}
+            </select>
+
+            <label className="text-xs text-text-secondary mb-1 block">Новое значение</label>
+            <input value={statValue} onChange={e => setStatValue(e.target.value)}
+              className="w-full px-3 py-2 mb-3 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+
+            <button onClick={setStat} className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold">
+              Применить
+            </button>
+          </Modal>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && search()}
+          placeholder="Поиск по никнейму, email или ID..."
+          className="flex-1 px-4 py-2.5 rounded-xl bg-bg-card border border-purple-900/30 text-white text-sm" />
+        <button onClick={search} className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm">
+          <Search size={16} />
+        </button>
+      </div>
+
+      {loading ? <div className="text-center py-8 text-text-secondary">Загрузка...</div> :
+        <div className="space-y-2">
+          {users.map(u => (
+            <div key={u.id} onClick={() => openUser(u)}
+              className="bg-bg-card border border-purple-900/20 hover:border-purple-700/40 rounded-xl p-3 cursor-pointer flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+                {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full object-cover" /> :
+                  <span className="text-xs font-bold text-white">{(u.username?.[0] || 'U').toUpperCase()}</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-white truncate">{u.username || u.email}</p>
+                  <RoleBadge role={u.role} />
+                </div>
+                <p className="text-xs text-text-secondary truncate">{u.email}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs text-text-secondary">Баланс</p>
+                <p className="text-sm font-bold text-white">{(u.balance || 0).toLocaleString('ru-RU')} ₽</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      }
+    </div>
+  );
+};
+
+
+/* =================== 3. ФИНАНСЫ =================== */
+const OperationsSection: React.FC = () => {
+  const [ops, setOps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'pending' | 'completed' | 'failed' | 'all'>('pending');
+  const [note, setNote] = useState('');
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    let q = supabase.from('operations').select('*').order('created_at', { ascending: false }).limit(100);
+    if (filter !== 'all') q = q.eq('status', filter);
+    const { data } = await q;
+    setOps(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [filter]);
+
+  const action = async (opId: string, act: 'approve' | 'reject' | 'rollback') => {
+    const { error } = await supabase.rpc('moderate_operation', { p_op_id: opId, p_action: act, p_note: note || null });
+    if (error) alert(error.message);
+    setNote('');
+    setOpening(null);
+    load();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { id: 'pending', label: '⏳ Ожидает', color: 'yellow' },
+          { id: 'completed', label: '✅ Выполнено', color: 'green' },
+          { id: 'failed', label: '❌ Отклонено', color: 'red' },
+          { id: 'all', label: 'Все', color: 'gray' },
+        ].map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id as any)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+              filter === f.id ? 'bg-purple-600 text-white' : 'bg-bg-card text-text-secondary border border-purple-900/20'
+            }`}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <div className="text-center py-8 text-text-secondary">Загрузка...</div> :
+       ops.length === 0 ? <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-8 text-center text-text-secondary">Операций нет</div> :
+        <div className="space-y-2">
+          {ops.map(o => (
+            <div key={o.id} className="bg-bg-card border border-purple-900/20 rounded-xl p-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  o.type === 'deposit' ? 'bg-green-900/20 text-green-400' :
+                  o.type === 'withdraw' ? 'bg-red-900/20 text-red-400' :
+                  'bg-purple-900/20 text-purple-300'
+                }`}>
+                  {o.type === 'deposit' ? '+' : o.type === 'withdraw' ? '−' : '→'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">
+                    {o.type} · {Number(o.amount).toLocaleString('ru-RU')} ₽
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    User: {o.user_id?.slice(0, 8)} · {new Date(o.created_at).toLocaleString('ru-RU')}
+                    {o.recipient && ` · → ${o.recipient}`}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0 ${
+                  o.status === 'pending' ? 'bg-yellow-900/30 text-yellow-400' :
+                  o.status === 'completed' ? 'bg-green-900/30 text-green-400' :
+                  'bg-red-900/30 text-red-400'
+                }`}>{o.status}{o.rolled_back && ' · откат'}</span>
+              </div>
+
+              {opening === o.id && (
+                <div className="mt-3 space-y-2">
+                  <input value={note} onChange={e => setNote(e.target.value)} placeholder="Комментарий (необязательно)"
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+                  <div className="flex gap-2">
+                    {o.status === 'pending' && (
+                      <>
+                        <button onClick={() => action(o.id, 'approve')} className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-semibold">
+                          ✅ Одобрить
+                        </button>
+                        <button onClick={() => action(o.id, 'reject')} className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold">
+                          ❌ Отклонить
+                        </button>
+                      </>
+                    )}
+                    {o.status === 'completed' && !o.rolled_back && (
+                      <button onClick={() => action(o.id, 'rollback')} className="flex-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-semibold">
+                        ↩️ Откатить
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {opening !== o.id && (o.status === 'pending' || (o.status === 'completed' && !o.rolled_back)) && (
+                <button onClick={() => setOpening(o.id)} className="mt-2 text-xs text-purple-400 hover:underline">
+                  Действия →
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      }
+    </div>
+  );
+};
+
+
+/* =================== 4. ТОВАРЫ =================== */
+const ProductsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavigate }) => {
+  const [products, setProducts] = useState<any[]>([]);
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [editMsg, setEditMsg] = useState<{ id: string; text: string } | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    let q = supabase.from('accounts').select('*').limit(100).order('created_at', { ascending: false });
+    if (query.trim()) q = q.ilike('title', `%${query}%`);
+    if (category.trim()) q = q.eq('category', category);
+    const { data } = await q;
+    setProducts(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const delProduct = async (id: string) => {
+    const reason = prompt('Причина удаления:');
+    if (!reason) return;
+    await supabase.rpc('moderate_delete_account', { p_account_id: id, p_reason: reason });
+    load();
+  };
+
+  const requestEdit = async (id: string) => {
+    if (!editMsg) return;
+    await supabase.rpc('moderate_request_edit', { p_account_id: id, p_message: editMsg.text });
+    setEditMsg(null);
+    alert('Запрос отправлен продавцу');
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 flex-wrap">
+        <input value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && load()}
+          placeholder="Поиск по названию..."
+          className="flex-1 px-3 py-2 rounded-xl bg-bg-card border border-purple-900/30 text-white text-sm" />
+        <input value={category} onChange={e => setCategory(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && load()}
+          placeholder="Категория"
+          className="w-32 px-3 py-2 rounded-xl bg-bg-card border border-purple-900/30 text-white text-sm" />
+        <button onClick={load} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm">
+          <Search size={16} />
+        </button>
+      </div>
+
+      {loading ? <div className="text-center py-8 text-text-secondary">Загрузка...</div> :
+        <div className="space-y-2">
+          {products.map(p => (
+            <div key={p.id} className="bg-bg-card border border-purple-900/20 rounded-xl p-3">
+              <div className="flex items-center gap-3">
+                <Package size={18} className="text-purple-400" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-purple-900/30 rounded text-purple-300">{p.category}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.status === 'sold' ? 'bg-gray-900/40 text-gray-400' : 'bg-green-900/30 text-green-400'}`}>
+                      {p.status || 'active'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white truncate">{p.title}</p>
+                  <p className="text-xs text-text-secondary">{p.price?.toLocaleString('ru-RU')} ₽ · seller: {p.seller_id?.slice(0, 8)}</p>
+                </div>
+                <div className="flex gap-1">
+                  {onNavigate && (
+                    <button onClick={() => onNavigate('product', { id: p.id })} className="p-2 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-lg">
+                      <ArrowRight size={14} />
+                    </button>
+                  )}
+                  <button onClick={() => setEditMsg({ id: p.id, text: '' })} className="p-2 bg-yellow-900/20 hover:bg-yellow-900/40 text-yellow-400 rounded-lg">
+                    <Edit3 size={14} />
+                  </button>
+                  <button onClick={() => delProduct(p.id)} className="p-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {editMsg?.id === p.id && (
+                <div className="mt-3 space-y-2">
+                  <textarea value={editMsg.text} onChange={e => setEditMsg({ ...editMsg, text: e.target.value })}
+                    placeholder="Что нужно исправить?" rows={2}
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm resize-none" />
+                  <div className="flex gap-2">
+                    <button onClick={() => requestEdit(p.id)} disabled={!editMsg.text}
+                      className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
+                      Отправить запрос
+                    </button>
+                    <button onClick={() => setEditMsg(null)} className="px-4 py-2 bg-purple-900/30 text-white rounded-lg text-xs">
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      }
+    </div>
+  );
+};
+
+
+/* =================== 5. СТАТИСТИКА =================== */
+const StatsSection: React.FC = () => {
+  const [stats, setStats] = useState({
+    users: 0, active_users: 0, accounts: 0, sold: 0,
+    pending_ops: 0, open_tickets: 0, total_revenue: 0,
+  });
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [users, accs, sold, pendingOps, openTk, ordersSum, modLogs] = await Promise.all([
+          supabase.from('users').select('id', { count: 'exact', head: true }),
+          supabase.from('accounts').select('id', { count: 'exact', head: true }),
+          supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('status', 'sold'),
+          supabase.from('operations').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+          supabase.from('orders').select('amount'),
+          supabase.from('moderation_logs').select('*').order('created_at', { ascending: false }).limit(20),
+        ]);
+        const total = (ordersSum.data || []).reduce((s, o) => s + Number(o.amount || 0), 0);
+        setStats({
+          users: users.count || 0,
+          active_users: 0,
+          accounts: accs.count || 0,
+          sold: sold.count || 0,
+          pending_ops: pendingOps.count || 0,
+          open_tickets: openTk.count || 0,
+          total_revenue: total,
+        });
+        setLogs(modLogs.data || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  if (loading) return <div className="text-center py-8 text-text-secondary">Загрузка...</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Пользователей', value: stats.users, color: 'text-blue-400' },
+          { label: 'Товаров', value: stats.accounts, color: 'text-purple-400' },
+          { label: 'Продано', value: stats.sold, color: 'text-green-400' },
+          { label: 'Оборот, ₽', value: stats.total_revenue.toLocaleString('ru-RU'), color: 'text-yellow-400' },
+          { label: 'Ожидают опер.', value: stats.pending_ops, color: 'text-orange-400' },
+          { label: 'Открытые тикеты', value: stats.open_tickets, color: 'text-red-400' },
+        ].map(s => (
+          <div key={s.label} className="bg-bg-card border border-purple-900/20 rounded-xl p-4 text-center">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-xs text-text-secondary mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-4">
+        <h4 className="text-sm font-semibold text-white mb-3">📋 Журнал действий модераторов</h4>
+        {logs.length === 0 ? (
+          <p className="text-text-secondary text-sm text-center py-4">Действий пока нет</p>
+        ) : (
+          <div className="space-y-2">
+            {logs.map(l => (
+              <div key={l.id} className="bg-bg-secondary border border-purple-900/20 rounded-lg p-2 text-xs">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-semibold text-purple-300">{l.action}</span>
+                  <span className="text-text-secondary">{new Date(l.created_at).toLocaleString('ru-RU')}</span>
+                </div>
+                <p className="text-white">{l.details}</p>
+                <p className="text-[10px] text-text-secondary">
+                  Mod: {l.moderator_id?.slice(0, 8)} · Target: {l.target_type || '—'}/{l.target_id?.slice(0, 8) || '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+/* =================== HELPERS =================== */
+export const RoleBadge: React.FC<{ role?: string }> = ({ role }) => {
+  if (!role || role === 'user') return null;
+  const map: Record<string, { label: string; icon: string; cls: string }> = {
+    owner:     { label: 'OWNER', icon: '👑', cls: 'bg-red-900/30 text-red-400 border-red-800/40' },
+    admin:     { label: 'ADMIN', icon: '🛡', cls: 'bg-orange-900/30 text-orange-400 border-orange-800/40' },
+    moderator: { label: 'MOD',   icon: '⚖️', cls: 'bg-blue-900/30 text-blue-400 border-blue-800/40' },
+  };
+  const r = map[role];
+  if (!r) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${r.cls}`}>
+      {r.icon} {r.label}
+    </span>
+  );
+};
+
+const Modal: React.FC<{ onClose: () => void; title: string; children: React.ReactNode }> = ({ onClose, title, children }) => (
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+      onClick={e => e.stopPropagation()}
+      className="bg-bg-card border border-purple-900/30 rounded-2xl p-5 w-full max-w-md">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-bold text-white">{title}</h3>
+        <button onClick={onClose} className="text-text-secondary hover:text-white"><X size={18} /></button>
+      </div>
+      {children}
+    </motion.div>
+  </motion.div>
+);
+
+export default ModerationPanel;
