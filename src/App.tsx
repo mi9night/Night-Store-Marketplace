@@ -6,7 +6,6 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RealTimeNotification from './components/RealTimeNotification';
 
-import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage';
 import MarketPage from './pages/MarketPage';
 import ProductPage from './pages/ProductPage';
@@ -41,10 +40,16 @@ const App: React.FC = () => {
   /* ================= AUTH LOGIC ================= */
 
   useEffect(() => {
+
     const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
-      setAuthLoading(false);
+      try {
+        const { data } = await supabase.auth.getSession();
+        setUser(data.session?.user ?? null);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setAuthLoading(false);
+      }
     };
 
     init();
@@ -56,7 +61,10 @@ const App: React.FC = () => {
       setAuthLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
+
   }, []);
 
   /* ================= HANDLERS ================= */
@@ -78,7 +86,9 @@ const App: React.FC = () => {
 
   const handleAddToCart = useCallback((account: Account) => {
     setCartItems(prev =>
-      prev.find(i => i.id === account.id) ? prev : [...prev, account]
+      prev.find(i => i.id === account.id)
+        ? prev
+        : [...prev, account]
     );
   }, []);
 
@@ -96,7 +106,9 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user) return <AuthPage />;
+  if (!user) {
+    return <AuthPage />;
+  }
 
   /* ================= MAIN ================= */
 
@@ -111,8 +123,10 @@ const App: React.FC = () => {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
+      {/* ✅ ВАЖНО — forumFilter передаётся */}
       <Sidebar
         currentPage={currentPage}
+        forumFilter={forumFilter}
         setCurrentPage={handleSetPage}
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
@@ -147,6 +161,7 @@ const App: React.FC = () => {
               )}
 
               {currentPage === 'profile' && <ProfilePage />}
+
               {currentPage === 'cart' && (
                 <CartPage
                   cartItems={cartItems}
@@ -158,7 +173,9 @@ const App: React.FC = () => {
 
               {currentPage === 'sell' && <SellPage />}
               {currentPage === 'bulk' && <BulkPage />}
-              {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
+              {currentPage === 'forum' && (
+                <ForumPage filter={forumFilter} />
+              )}
               {currentPage === 'purchases' && (
                 <PurchasesPage
                   onSelectAccount={handleSelectAccount}
@@ -182,6 +199,7 @@ const App: React.FC = () => {
       </main>
 
       <RealTimeNotification />
+
     </div>
   );
 };
