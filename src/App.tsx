@@ -18,6 +18,11 @@ import PurchasesPage from './pages/PurchasesPage';
 import FavoritesPage from './pages/FavoritesPage';
 import SettingsPage from './pages/SettingsPage';
 import TopSellersPage from './pages/TopSellersPage';
+import OperationsPage from './pages/OperationsPage';
+import LabelsPage from './pages/LabelsPage';
+import AutobuyPage from './pages/AutobuyPage';
+import RatesPage from './pages/RatesPage';
+import ApiPage from './pages/ApiPage';
 
 import type { Page } from './types/pages';
 import { Account } from './types';
@@ -147,6 +152,7 @@ const App: React.FC = () => {
                   )}
 
                   {currentPage === 'profile' && <ProfilePage />}
+
                   {currentPage === 'cart' && (
                     <CartPage
                       cartItems={cartItems}
@@ -159,12 +165,14 @@ const App: React.FC = () => {
                   {currentPage === 'sell' && <SellPage />}
                   {currentPage === 'bulk' && <BulkPage />}
                   {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
+
                   {currentPage === 'purchases' && (
                     <PurchasesPage
                       onSelectAccount={handleSelectAccount}
                       setCurrentPage={handleSetPage}
                     />
                   )}
+
                   {currentPage === 'favorites' && (
                     <FavoritesPage
                       onSelectAccount={handleSelectAccount}
@@ -172,8 +180,16 @@ const App: React.FC = () => {
                       onAddToCart={handleAddToCart}
                     />
                   )}
+
                   {currentPage === 'settings' && <SettingsPage />}
                   {currentPage === 'topSellers' && <TopSellersPage />}
+
+                  {/* ✅ Восстановленные страницы */}
+                  {currentPage === 'operations' && <OperationsPage />}
+                  {currentPage === 'labels' && <LabelsPage />}
+                  {currentPage === 'autobuy' && <AutobuyPage />}
+                  {currentPage === 'rates' && <RatesPage />}
+                  {currentPage === 'api' && <ApiPage />}
 
                 </motion.div>
               </AnimatePresence>
