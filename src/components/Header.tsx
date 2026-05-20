@@ -5,7 +5,7 @@ import {
   User, Settings, LogOut, Star, Package,
   Wallet, Menu, X, Trash2, ArrowRight
 } from 'lucide-react';
-import { currentUser, notifications, categories } from '../data/mockData';
+import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
@@ -19,6 +19,19 @@ interface HeaderProps {
   onClearCart?: () => void;
   onMenuToggle: () => void;
   isMobileMenuOpen: boolean;
+  onOpenAccount?: (accountId: string) => void;
+}
+
+interface Notif {
+  id: string;
+  type: string;
+  title: string;
+  text: string;
+  link_type?: 'account' | 'forum' | 'profile' | 'order' | null;
+  link_id?: string | null;
+  is_read: boolean;
+  created_at: string;
+  icon?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -28,7 +41,8 @@ const Header: React.FC<HeaderProps> = ({
   cartItems = [],
   onRemoveFromCart,
   onMenuToggle,
-  isMobileMenuOpen
+  isMobileMenuOpen,
+  onOpenAccount
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('Все');
@@ -37,27 +51,74 @@ const Header: React.FC<HeaderProps> = ({
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [showCartDropdown, setShowCartDropdown] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const [notifications, setNotifications] = useState<Notif[]>([]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const cartRef = useRef<HTMLDivElement>(null);
 
-  /* ============ USER из Supabase ============ */
+  /* ============ USER + Профиль + Уведомления ============ */
   useEffect(() => {
-    const getUser = async () => {
+    const init = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
+
+      if (data.user) {
+        // Профиль с балансом
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        if (profile?.balance != null) setBalance(profile.balance);
+
+        // Уведомления
+        loadNotifications(data.user.id);
+      }
     };
-    getUser();
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => setUser(session?.user ?? null)
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) loadNotifications(session.user.id);
+      }
     );
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const loadNotifications = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setNotifications(data || []);
+    } catch (e) {
+      setNotifications([]);
+    }
+  };
+
+  /* ============ Real-time подписка на новые уведомления ============ */
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => loadNotifications(user.id)
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   /* ============ Клик вне (закрываем дропдауны) ============ */
   useEffect(() => {
@@ -70,6 +131,34 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  /* ============ Клик по уведомлению ============ */
+  const handleNotificationClick = async (notif: Notif) => {
+    // Помечаем как прочитанное в БД
+    if (!notif.is_read) {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notif.id);
+
+      setNotifications(prev =>
+        prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
+      );
+    }
+
+    // Переход в зависимости от типа
+    if (notif.link_type === 'account' && notif.link_id && onOpenAccount) {
+      onOpenAccount(notif.link_id);
+    } else if (notif.link_type === 'forum') {
+      setCurrentPage('forum');
+    } else if (notif.link_type === 'order') {
+      setCurrentPage('purchases');
+    } else if (notif.link_type === 'profile') {
+      setCurrentPage('profile');
+    }
+
+    setShowNotifications(false);
+  };
+
   const cartTotal = (cartItems ?? []).reduce((s, i) => s + (i?.price ?? 0), 0);
 
   const navItems: { label: string; page: Page }[] = [
@@ -79,10 +168,29 @@ const Header: React.FC<HeaderProps> = ({
     { label: 'Залив', page: 'bulk' },
   ];
 
+  const timeAgo = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'только что';
+    if (minutes < 60) return `${minutes} мин назад`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} ч назад`;
+    const days = Math.floor(hours / 24);
+    return `${days} дн назад`;
+  };
+
+  const notifIcon = (type: string): string => {
+    if (type === 'purchase') return '🛒';
+    if (type === 'sale') return '💰';
+    if (type === 'message') return '💬';
+    if (type === 'system') return '⚙️';
+    if (type === 'promo') return '🎁';
+    return '🔔';
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-purple-900/20">
       <div className="flex items-center h-16 px-4 gap-4">
-        {/* Mobile menu toggle */}
         <button
           onClick={onMenuToggle}
           className="lg:hidden text-text-secondary hover:text-text-primary transition-colors p-1"
@@ -101,7 +209,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center glow-purple">
               <Moon size={20} className="text-white" fill="white" />
             </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse-glow" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse" />
           </div>
           <div className="hidden sm:block">
             <span className="text-lg font-bold gradient-text">Night</span>
@@ -109,7 +217,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </motion.div>
 
-        {/* Nav items - desktop */}
+        {/* Nav */}
         <nav className="hidden lg:flex items-center gap-1 ml-2">
           {navItems.map(item => (
             <motion.button
@@ -128,13 +236,13 @@ const Header: React.FC<HeaderProps> = ({
           ))}
         </nav>
 
-        {/* Search bar */}
+        {/* Search */}
         <div className="flex-1 max-w-xl mx-auto flex items-center gap-2">
-          <div className="flex-1 flex items-center bg-bg-secondary border border-purple-900/30 rounded-xl overflow-hidden hover:border-purple-700/50 transition-all focus-within:border-purple-600/60 focus-within:shadow-[0_0_0_2px_rgba(138,43,226,0.15)]">
+          <div className="flex-1 flex items-center bg-bg-secondary border border-purple-900/30 rounded-xl overflow-hidden hover:border-purple-700/50 transition-all">
             <div className="relative">
               <button
                 onClick={() => setShowCategoryFilter(!showCategoryFilter)}
-                className="flex items-center gap-1 px-3 py-2 text-xs text-text-secondary hover:text-text-primary border-r border-purple-900/30 whitespace-nowrap transition-colors"
+                className="flex items-center gap-1 px-3 py-2 text-xs text-text-secondary hover:text-text-primary border-r border-purple-900/30 whitespace-nowrap"
               >
                 {searchCategory} <ChevronDown size={12} />
               </button>
@@ -144,14 +252,14 @@ const Header: React.FC<HeaderProps> = ({
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="absolute top-full left-0 mt-1 dropdown w-40 z-50"
+                    className="absolute top-full left-0 mt-1 bg-bg-card border border-purple-900/30 rounded-xl w-40 z-50 shadow-xl overflow-hidden"
                   >
                     {['Все', ...categories.map(c => c.name)].map(cat => (
                       <button
                         key={cat}
                         onClick={() => { setSearchCategory(cat); setShowCategoryFilter(false); }}
                         className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                          searchCategory === cat ? 'text-accent-soft bg-purple-900/20' : 'text-text-secondary hover:text-text-primary hover:bg-purple-900/10'
+                          searchCategory === cat ? 'text-accent-soft bg-purple-900/20' : 'text-text-secondary hover:bg-purple-900/10'
                         }`}
                       >
                         {cat}
@@ -185,11 +293,11 @@ const Header: React.FC<HeaderProps> = ({
           >
             <Wallet size={14} className="text-accent" />
             <span className="text-sm font-semibold text-text-primary">
-              {currentUser.balance.toLocaleString('ru-RU')} ₽
+              {balance.toLocaleString('ru-RU')} ₽
             </span>
           </motion.button>
 
-          {/* Cart с дропдауном */}
+          {/* Cart */}
           <div className="relative" ref={cartRef}>
             <motion.button
               onClick={() => setShowCartDropdown(!showCartDropdown)}
@@ -215,50 +323,32 @@ const Header: React.FC<HeaderProps> = ({
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
                   className="absolute right-0 top-full mt-2 w-80 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden"
                 >
                   <div className="p-4 border-b border-purple-900/20">
-                    <h3 className="text-sm font-semibold text-white">
-                      Корзина ({cartCount})
-                    </h3>
+                    <h3 className="text-sm font-semibold text-white">Корзина ({cartCount})</h3>
                   </div>
-
                   {cartItems.length === 0 ? (
-                    <div className="p-6 text-center text-text-secondary text-sm">
-                      Корзина пуста
-                    </div>
+                    <div className="p-6 text-center text-text-secondary text-sm">Корзина пуста</div>
                   ) : (
                     <>
                       <div className="max-h-60 overflow-y-auto">
                         {cartItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="p-3 flex items-center justify-between border-b border-purple-900/10"
-                          >
-                            <span className="text-sm text-white truncate">
-                              {item.title}
-                            </span>
-                            <button
-                              onClick={() => onRemoveFromCart?.(item.id)}
-                              className="text-error"
-                            >
+                          <div key={item.id} className="p-3 flex items-center justify-between border-b border-purple-900/10">
+                            <span className="text-sm text-white truncate">{item.title}</span>
+                            <button onClick={() => onRemoveFromCart?.(item.id)} className="text-error">
                               <Trash2 size={16} />
                             </button>
                           </div>
                         ))}
                       </div>
-
                       <div className="p-4">
                         <div className="flex justify-between mb-3 text-sm">
                           <span className="text-text-secondary">Итого:</span>
                           <span className="font-bold text-white">{cartTotal} ₽</span>
                         </div>
                         <button
-                          onClick={() => {
-                            setCurrentPage('cart');
-                            setShowCartDropdown(false);
-                          }}
+                          onClick={() => { setCurrentPage('cart'); setShowCartDropdown(false); }}
                           className="w-full py-2 bg-accent text-white rounded-xl flex items-center justify-center gap-2 text-sm font-semibold"
                         >
                           Перейти в корзину <ArrowRight size={16} />
@@ -278,7 +368,6 @@ const Header: React.FC<HeaderProps> = ({
             whileTap={{ scale: 0.9 }}
           >
             <MessageSquare size={20} />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-success rounded-full" />
           </motion.button>
 
           {/* Notifications */}
@@ -291,7 +380,7 @@ const Header: React.FC<HeaderProps> = ({
             >
               <Bell size={20} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse-glow">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold">
                   {unreadCount}
                 </span>
               )}
@@ -303,42 +392,47 @@ const Header: React.FC<HeaderProps> = ({
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute right-0 top-full mt-2 w-80 notif-panel bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-80 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden"
                 >
                   <div className="p-4 border-b border-purple-900/20">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-text-primary">Уведомления</h3>
-                      <span className="badge text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-soft">{unreadCount} новых</span>
+                      {unreadCount > 0 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-soft">
+                          {unreadCount} новых
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notif, i) => (
-                      <motion.div
-                        key={notif.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className={`p-3 border-b border-purple-900/10 hover:bg-purple-900/10 transition-colors cursor-pointer ${
-                          !notif.isRead ? 'border-l-2 border-l-accent' : ''
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="text-lg">{notif.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-text-primary truncate">{notif.title}</p>
-                            <p className="text-xs text-text-secondary truncate">{notif.text}</p>
-                            <p className="text-xs text-purple-600 mt-0.5">{notif.time}</p>
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-text-secondary text-sm">
+                        Уведомлений пока нет
+                      </div>
+                    ) : (
+                      notifications.map((notif, i) => (
+                        <motion.div
+                          key={notif.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`p-3 border-b border-purple-900/10 hover:bg-purple-900/10 transition-colors cursor-pointer ${
+                            !notif.is_read ? 'border-l-2 border-l-accent bg-purple-900/5' : ''
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="text-lg">{notif.icon || notifIcon(notif.type)}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-text-primary truncate">{notif.title}</p>
+                              <p className="text-xs text-text-secondary truncate">{notif.text}</p>
+                              <p className="text-xs text-purple-600 mt-0.5">{timeAgo(notif.created_at)}</p>
+                            </div>
+                            {!notif.is_read && <div className="w-2 h-2 bg-accent rounded-full mt-1 flex-shrink-0" />}
                           </div>
-                          {!notif.isRead && <div className="w-2 h-2 bg-accent rounded-full mt-1 flex-shrink-0" />}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                  <div className="p-3 text-center">
-                    <button className="text-sm text-accent hover:text-accent-hover transition-colors">
-                      Все уведомления
-                    </button>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -352,9 +446,9 @@ const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2"
               whileHover={{ scale: 1.03 }}
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center avatar-ring">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center">
                 <span className="text-xs font-bold text-white">
-                  {user?.email?.[0]?.toUpperCase() || currentUser.avatar}
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
               <ChevronDown size={14} className="hidden sm:block text-text-secondary" />
@@ -366,26 +460,25 @@ const Header: React.FC<HeaderProps> = ({
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute right-0 top-full mt-2 w-56 dropdown bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-56 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden"
                 >
                   <div className="p-4 border-b border-purple-900/20">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center avatar-ring">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center">
                         <span className="text-sm font-bold text-white">
-                          {user?.email?.[0]?.toUpperCase() || currentUser.avatar}
+                          {user?.email?.[0]?.toUpperCase() || 'U'}
                         </span>
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-text-primary text-sm truncate">
-                          {user?.email?.split('@')[0] || currentUser.username}
+                          {user?.email?.split('@')[0] || 'User'}
                         </p>
-                        <p className="text-xs text-text-secondary">{currentUser.level} уровень</p>
+                        <p className="text-xs text-text-secondary truncate">{user?.email}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-xs text-text-secondary">Баланс</span>
-                      <span className="text-sm font-bold text-accent-soft">{currentUser.balance.toLocaleString()} ₽</span>
+                      <span className="text-sm font-bold text-accent-soft">{balance.toLocaleString('ru-RU')} ₽</span>
                     </div>
                   </div>
                   {[

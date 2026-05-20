@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, ArrowDownLeft, ArrowLeftRight,
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code,
-  ChevronDown, ChevronRight, Plus, MessageSquare
+  ChevronDown, Plus, MessageSquare, X
 } from 'lucide-react';
-import { currentUser, categories } from '../data/mockData';
+import { categories } from '../data/mockData';
+import { supabase } from '../lib/supabase';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
@@ -16,6 +17,8 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type BalanceAction = 'deposit' | 'withdraw' | 'transfer' | null;
 
 const Sidebar: React.FC<SidebarProps> = ({
   currentPage,
@@ -27,6 +30,28 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const [activeCategory, setActiveCategory] = useState('');
   const [expandedCategory, setExpandedCategory] = useState('');
+  const [user, setUser] = useState<any>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const [action, setAction] = useState<BalanceAction>(null);
+
+  /* ============ загрузка пользователя и баланса ============ */
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+
+      if (data.user) {
+        // Пытаемся достать баланс из profiles, если такой таблицы нет — просто 0
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        if (profile?.balance != null) setBalance(profile.balance);
+      }
+    };
+    init();
+  }, []);
 
   const navItems = [
     { icon: Package, label: 'Мои аккаунты', page: 'sell' as Page },
@@ -37,7 +62,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { icon: Zap, label: 'Автопокупки', page: 'autobuy' as Page },
     { icon: Settings, label: 'Настройки', page: 'settings' as Page },
 
-    // ✅ Фильтр форума
     { icon: Shield, label: 'Правила и гарантии', page: 'forum' as Page, filter: 'Правила' },
     { icon: MessageSquare, label: 'Форум', page: 'forum' as Page, filter: null },
 
@@ -56,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const sidebarContent = (
     <div className="h-full flex flex-col overflow-y-auto">
 
-      {/* Balance */}
+      {/* Balance + Actions */}
       <div className="p-4 border-b border-purple-900/20">
         <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20">
           <div className="flex items-center justify-between mb-1">
@@ -64,8 +88,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Wallet size={14} className="text-accent" />
           </div>
           <p className="text-2xl font-bold text-text-primary">
-            {currentUser.balance.toLocaleString('ru-RU')} ₽
+            {balance.toLocaleString('ru-RU')} <span className="text-base text-text-secondary">₽</span>
           </p>
+          {user?.email && (
+            <p className="text-xs text-text-secondary mt-1 truncate">{user.email}</p>
+          )}
+        </div>
+
+        {/* Пополнить / Вывести / Перевести */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {[
+            { icon: Plus, label: 'Пополнить', color: 'text-success', act: 'deposit' as BalanceAction },
+            { icon: ArrowDownLeft, label: 'Вывести', color: 'text-error', act: 'withdraw' as BalanceAction },
+            { icon: ArrowLeftRight, label: 'Перевести', color: 'text-accent-soft', act: 'transfer' as BalanceAction },
+          ].map(item => (
+            <motion.button
+              key={item.label}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setAction(item.act)}
+              className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
+            >
+              <item.icon size={14} className={item.color} />
+              <span className="text-[10px] text-text-secondary">{item.label}</span>
+            </motion.button>
+          ))}
         </div>
       </div>
 
@@ -75,12 +122,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {navItems.map(item => {
           const active = isItemActive(item);
-
           return (
             <motion.button
-              key={item.label + (item.filter ?? '')}
+              key={item.label + ((item as any).filter ?? '')}
               onClick={() => {
-                setCurrentPage(item.page, item.filter ?? null);
+                setCurrentPage(item.page, (item as any).filter ?? null);
                 onClose();
               }}
               whileHover={{ x: 2 }}
@@ -120,6 +166,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               {cat.icon} {cat.name}
+              {cat.subcategories && (
+                <ChevronDown size={14} className={`ml-auto transition-transform ${
+                  expandedCategory === cat.id ? 'rotate-180' : ''
+                }`} />
+              )}
             </motion.button>
 
             <AnimatePresence>
@@ -178,7 +229,146 @@ const Sidebar: React.FC<SidebarProps> = ({
           </>
         )}
       </AnimatePresence>
+
+      {/* Модалка для Пополнить / Вывести / Перевести */}
+      <BalanceActionModal
+        action={action}
+        onClose={() => setAction(null)}
+        currentBalance={balance}
+      />
     </>
+  );
+};
+
+/* =================== МОДАЛКА действий с балансом =================== */
+const BalanceActionModal: React.FC<{
+  action: BalanceAction;
+  onClose: () => void;
+  currentBalance: number;
+}> = ({ action, onClose, currentBalance }) => {
+  const [amount, setAmount] = useState('');
+  const [recipient, setRecipient] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (action) {
+      setAmount('');
+      setRecipient('');
+      setMessage(null);
+    }
+  }, [action]);
+
+  if (!action) return null;
+
+  const titles: Record<Exclude<BalanceAction, null>, string> = {
+    deposit: 'Пополнить баланс',
+    withdraw: 'Вывести средства',
+    transfer: 'Перевести пользователю'
+  };
+
+  const handleSubmit = async () => {
+    const num = parseFloat(amount);
+    if (!num || num <= 0) {
+      setMessage('Введите корректную сумму');
+      return;
+    }
+    if (action !== 'deposit' && num > currentBalance) {
+      setMessage('Недостаточно средств на балансе');
+      return;
+    }
+    if (action === 'transfer' && !recipient.trim()) {
+      setMessage('Укажите получателя');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Записываем в operations (если таблицы нет — словим тихую ошибку)
+      const { data: u } = await supabase.auth.getUser();
+      await supabase.from('operations').insert({
+        user_id: u.user?.id,
+        type: action,
+        amount: num,
+        recipient: action === 'transfer' ? recipient : null,
+        status: 'pending'
+      });
+      setMessage('✅ Операция создана. Она появится в "Мои операции"');
+      setTimeout(onClose, 1500);
+    } catch (e: any) {
+      setMessage('⚠️ Операция временно недоступна. Подключите таблицу operations в Supabase.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={e => e.stopPropagation()}
+          className="bg-bg-card border border-purple-900/30 rounded-2xl p-6 w-full max-w-md"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white">{titles[action]}</h2>
+            <button onClick={onClose} className="text-text-secondary hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="text-xs text-text-secondary mb-4">
+            Текущий баланс: <span className="text-accent-soft font-semibold">{currentBalance.toLocaleString('ru-RU')} ₽</span>
+          </div>
+
+          <label className="text-sm text-text-secondary mb-1.5 block">Сумма (₽)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder="1000"
+            className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3"
+          />
+
+          {action === 'transfer' && (
+            <>
+              <label className="text-sm text-text-secondary mb-1.5 block">Получатель (email или ID)</label>
+              <input
+                type="text"
+                value={recipient}
+                onChange={e => setRecipient(e.target.value)}
+                placeholder="user@example.com"
+                className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3"
+              />
+            </>
+          )}
+
+          {message && (
+            <div className={`text-sm mb-3 p-2 rounded-lg ${
+              message.startsWith('✅') ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+            }`}>
+              {message}
+            </div>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3 bg-accent hover:bg-accent-hover text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+          >
+            {loading ? 'Обработка...' : titles[action]}
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
