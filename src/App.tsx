@@ -80,6 +80,10 @@ const App: React.FC = () => {
     setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
 
+  const handleClearCart = useCallback(() => {
+    setCartItems([]);
+  }, []);
+
   return (
     <div className="min-h-screen bg-bg-primary">
 
@@ -99,6 +103,9 @@ const App: React.FC = () => {
             currentPage={currentPage}
             setCurrentPage={handleSetPage}
             cartCount={cartItems.length}
+            cartItems={cartItems}
+            onRemoveFromCart={handleRemoveFromCart}
+            onClearCart={handleClearCart}
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMobileMenuOpen={isMobileMenuOpen}
           />

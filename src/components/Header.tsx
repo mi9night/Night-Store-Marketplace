@@ -20,9 +20,9 @@ interface HeaderProps {
   currentPage: Page;
   setCurrentPage: (page: Page, filter?: string | null) => void;
   cartCount: number;
-  cartItems: Account[];
-  onRemoveFromCart: (id: string) => void;
-  onClearCart: () => void;
+  cartItems?: Account[];
+  onRemoveFromCart?: (id: string) => void;
+  onClearCart?: () => void;
   onMenuToggle: () => void;
   isMobileMenuOpen: boolean;
 }
@@ -31,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({
   currentPage,
   setCurrentPage,
   cartCount,
-  cartItems,
+  cartItems = [],
   onRemoveFromCart,
   onClearCart,
   onMenuToggle,
@@ -90,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const cartTotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.price, 0),
+    () => (cartItems ?? []).reduce((sum, item) => sum + (item?.price ?? 0), 0),
     [cartItems]
   );
 
@@ -197,7 +197,7 @@ const Header: React.FC<HeaderProps> = ({
                           </span>
                           <button
                             onClick={() =>
-                              onRemoveFromCart(item.id)
+                              onRemoveFromCart?.(item.id)
                             }
                             className="text-error"
                           >
