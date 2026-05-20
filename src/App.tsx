@@ -29,7 +29,6 @@ import type { Page } from './types/pages';
 import { Account } from './types';
 
 const App: React.FC = () => {
-
   /* ================= AUTH ================= */
 
   const [user, setUser] = useState<any>(null);
@@ -38,63 +37,63 @@ const App: React.FC = () => {
   const [emailConfirmed, setEmailConfirmed] = useState(false);
 
   useEffect(() => {
-
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
 
     if (type === 'signup') {
       setEmailConfirmed(true);
-      window.history.replaceState({}, document.title, "/");
+      window.history.replaceState({}, document.title, '/');
     }
 
     const initAuth = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      const { data } = await supabase.auth.getSession();
-      const currentUser = data.session?.user ?? null;
+        if (error) throw error;
 
-      setUser(currentUser);
+        const currentUser = data.session?.user ?? null;
+        setUser(currentUser);
 
-      if (currentUser) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
-
-        if (userProfile) setProfile(userProfile);
+        if (currentUser) {
+          setProfile({
+            username: currentUser.user_metadata?.username || '',
+            role: currentUser.user_metadata?.role || 'user',
+          });
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error('Auth error:', err);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        setAuthLoading(false);
       }
-
-      setAuthLoading(false);
     };
 
     initAuth();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
 
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          const { data: userProfile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-
-          if (userProfile) setProfile(userProfile);
-        } else {
-          setProfile(null);
-        }
-
-        setAuthLoading(false);
+      if (currentUser) {
+        setProfile({
+          username: currentUser.user_metadata?.username || '',
+          role: currentUser.user_metadata?.role || 'user',
+        });
+      } else {
+        setProfile(null);
       }
-    );
+
+      setAuthLoading(false);
+    });
 
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-
   }, []);
 
   /* ================= AUTH STATES ================= */
@@ -158,7 +157,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-bg-primary">
-
       <Header
         currentPage={currentPage}
         setCurrentPage={handleSetPage}
@@ -180,7 +178,6 @@ const App: React.FC = () => {
 
       <main className="lg:ml-60 pt-16 min-h-screen">
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
-
           {currentPage === 'market' && (
             <MarketPage
               onSelectAccount={handleSelectAccount}
@@ -211,14 +208,12 @@ const App: React.FC = () => {
           {currentPage === 'sell' && <SellPage />}
           {currentPage === 'bulk' && <BulkPage />}
           {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
-
           {currentPage === 'purchases' && (
             <PurchasesPage
               onSelectAccount={handleSelectAccount}
               setCurrentPage={handleSetPage}
             />
           )}
-
           {currentPage === 'favorites' && (
             <FavoritesPage
               onSelectAccount={handleSelectAccount}
@@ -226,7 +221,6 @@ const App: React.FC = () => {
               onAddToCart={handleAddToCart}
             />
           )}
-
           {currentPage === 'settings' && <SettingsPage />}
           {currentPage === 'api' && <ApiPage />}
           {currentPage === 'operations' && <OperationsPage />}
@@ -234,12 +228,10 @@ const App: React.FC = () => {
           {currentPage === 'labels' && <LabelsPage />}
           {currentPage === 'autobuy' && <AutobuyPage />}
           {currentPage === 'topSellers' && <StatusPage />}
-
         </div>
       </main>
 
       <RealTimeNotification />
-
     </div>
   );
 };
