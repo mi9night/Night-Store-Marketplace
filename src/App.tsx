@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from './lib/supabase';
+import { dbToAccount } from './lib/db';
 
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -18,6 +19,7 @@ import PurchasesPage from './pages/PurchasesPage';
 import FavoritesPage from './pages/FavoritesPage';
 import SettingsPage from './pages/SettingsPage';
 import TopSellersPage from './pages/TopSellersPage';
+import TopicPage from './pages/TopicPage';
 import OperationsPage from './pages/OperationsPage';
 import LabelsPage from './pages/LabelsPage';
 import AutobuyPage from './pages/AutobuyPage';
@@ -37,6 +39,7 @@ const App: React.FC = () => {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [cartItems, setCartItems] = useState<Account[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
   useEffect(() => {
 
@@ -81,6 +84,19 @@ const App: React.FC = () => {
     );
   }, []);
 
+  const handleOpenTopic = useCallback((id: string) => {
+    setSelectedTopicId(id);
+    setCurrentPage('topic' as Page);
+  }, []);
+
+  const handleOpenAccount = useCallback(async (id: string) => {
+    const { data } = await supabase.from('accounts').select('*').eq('id', id).maybeSingle();
+    if (data) {
+      setSelectedAccount(dbToAccount(data));
+      setCurrentPage('product');
+    }
+  }, []);
+
   const handleRemoveFromCart = useCallback((id: string) => {
     setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
@@ -113,6 +129,7 @@ const App: React.FC = () => {
             onClearCart={handleClearCart}
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMobileMenuOpen={isMobileMenuOpen}
+            onOpenAccount={handleOpenAccount}
           />
 
           <Sidebar
@@ -151,7 +168,7 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'profile' && <ProfilePage />}
+                  {currentPage === 'profile' && <ProfilePage setCurrentPage={handleSetPage} onOpenTopic={handleOpenTopic} onOpenAccount={handleOpenAccount} />}
 
                   {currentPage === 'cart' && (
                     <CartPage
@@ -165,7 +182,7 @@ const App: React.FC = () => {
 
                   {currentPage === 'sell' && <SellPage />}
                   {currentPage === 'bulk' && <BulkPage />}
-                  {currentPage === 'forum' && <ForumPage filter={forumFilter} />}
+                  {currentPage === 'forum' && <ForumPage filter={forumFilter} onOpenTopic={handleOpenTopic} />}
 
                   {currentPage === 'purchases' && (
                     <PurchasesPage
@@ -182,8 +199,20 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'settings' && <SettingsPage />}
+                  {currentPage === 'settings' && (
+                    <SettingsPage
+                      onNavigate={(page: any, payload?: any) => {
+                        if (page === 'product' && payload?.id) handleOpenAccount(payload.id);
+                        else if (page === 'topic' && payload?.id) handleOpenTopic(payload.id);
+                        else handleSetPage(page);
+                      }}
+                    />
+                  )}
                   {currentPage === 'topSellers' && <TopSellersPage />}
+
+                  {currentPage === ('topic' as any) && selectedTopicId && (
+                    <TopicPage topicId={selectedTopicId} setCurrentPage={handleSetPage} />
+                  )}
 
                   {/* ✅ Восстановленные страницы */}
                   {currentPage === 'operations' && <OperationsPage />}

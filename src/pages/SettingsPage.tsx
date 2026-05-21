@@ -9,7 +9,11 @@ import ModerationPanel from '../components/ModerationPanel';
 
 type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+  onNavigate?: (page: any, payload?: any) => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const [activeSection, setActiveSection] = useState('profile');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -490,7 +494,7 @@ const SettingsPage: React.FC = () => {
           )}
 
           {/* === МОДЕРАЦИЯ === */}
-          {activeSection === 'moderation' && isMod && <ModerationPanel />}
+          {activeSection === 'moderation' && isMod && <ModerationPanel onNavigate={onNavigate} />}
         </motion.div>
       </div>
 

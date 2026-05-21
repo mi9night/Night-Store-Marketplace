@@ -30,9 +30,13 @@ interface UserData {
   created_at?: string;
 }
 
-interface ProfilePageProps { setCurrentPage?: (page: any) => void; }
+interface ProfilePageProps {
+  setCurrentPage?: (page: any) => void;
+  onOpenTopic?: (id: string) => void;
+  onOpenAccount?: (id: string) => void;
+}
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, onOpenAccount }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +107,20 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
     };
     load();
   }, []);
+
+  // Realtime синк профиля (баланс, аватарка обновляются мгновенно)
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel('profile_sync')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+        async () => {
+          const { data: p } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+          if (p) setProfile(p);
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
 
   /* ============ Загрузка аватарки/баннера ============ */
   const handleUpload = async (type: 'avatar' | 'banner', file: File) => {
@@ -221,8 +239,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
 
         <div className="px-6 pb-6">
           {/* Аватарка отдельно — наполовину в баннер, наполовину под ним */}
-          <div className="-mt-12 mb-3 flex items-end justify-between gap-3">
-            <div className="relative flex-shrink-0">
+          <div className="-mt-12 mb-3">
+            <div className="relative inline-block">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -245,36 +263,38 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
                 onChange={e => e.target.files?.[0] && handleUpload('avatar', e.target.files[0])}
               />
             </div>
+          </div>
 
-            {/* Баланс справа от аватарки */}
-            <div className="text-right">
+          {/* Имя + бейджи (слева) + Баланс (справа) — одной строкой */}
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-bold text-white">{displayName}</h2>
+                {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
+                <RoleBadge role={profile?.role} />
+                <LevelBadge level={profile?.level || 1} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
+                <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={12} /> С {registeredDate}
+                </span>
+                <span>•</span>
+                <span className="text-green-400">Онлайн</span>
+              </div>
+              {profile?.bio && (
+                <p className="text-sm text-text-secondary mt-2 italic line-clamp-2">"{profile.bio}"</p>
+              )}
+            </div>
+
+            {/* Баланс справа на одной строке с ником */}
+            <div className="text-left sm:text-right flex-shrink-0">
               <p className="text-xs text-text-secondary">Баланс</p>
               <p className="text-xl sm:text-2xl font-bold text-purple-300">
                 {(profile?.balance || 0).toLocaleString('ru-RU')} ₽
               </p>
             </div>
-          </div>
-
-          {/* Имя + инфа — отдельным блоком ПОД аватаром */}
-          <div className="mb-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-bold text-white">{displayName}</h2>
-              {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
-              <RoleBadge role={profile?.role} />
-              <LevelBadge level={profile?.level || 1} />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
-              <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Calendar size={12} /> С {registeredDate}
-              </span>
-              <span>•</span>
-              <span className="text-green-400">Онлайн</span>
-            </div>
-            {profile?.bio && (
-              <p className="text-sm text-text-secondary mt-2 italic line-clamp-2">"{profile.bio}"</p>
-            )}
           </div>
 
           {/* Stats */}
@@ -357,7 +377,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 hover:border-purple-700/40 transition-all"
+                    onClick={() => onOpenAccount?.(a.id)}
+                    className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 hover:border-purple-700/40 transition-all cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <span className="text-[10px] uppercase tracking-wider text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded-full font-semibold">
@@ -439,6 +460,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
+                    onClick={() => onOpenTopic?.(t.id)}
                     className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 hover:border-purple-700/40 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-2 mb-1">
