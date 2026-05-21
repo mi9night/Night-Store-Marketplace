@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { useCurrency } from '../lib/CurrencyContext';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
@@ -34,6 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [action, setAction] = useState<BalanceAction>(null);
 
+  const { convert, symbol, currency } = useCurrency();
+
   /* ============ загрузка пользователя и баланса ============ */
   useEffect(() => {
     const init = async () => {
@@ -43,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       if (data.user) {
         // Пытаемся достать баланс из profiles, если такой таблицы нет — просто 0
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('users')
           .select('balance')
           .eq('id', data.user.id)
           .maybeSingle();
@@ -52,6 +55,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     init();
   }, []);
+
+  // Realtime синк баланса с шапкой
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel('sidebar_balance_sync')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+        async () => {
+          const { data: p } = await supabase.from('users')
+            .select('balance').eq('id', user.id).maybeSingle();
+          if (p?.balance != null) setBalance(p.balance);
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
 
   const navItems = [
     { icon: Package, label: 'Мои аккаунты', page: 'sell' as Page },
@@ -88,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Wallet size={14} className="text-accent" />
           </div>
           <p className="text-2xl font-bold text-text-primary">
-            {balance.toLocaleString('ru-RU')} <span className="text-base text-text-secondary">₽</span>
+            {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span>
           </p>
           {user?.email && (
             <p className="text-xs text-text-secondary mt-1 truncate">{user.email}</p>
@@ -284,19 +302,41 @@ const BalanceActionModal: React.FC<{
 
     setLoading(true);
     try {
-      // Записываем в operations (если таблицы нет — словим тихую ошибку)
+      const errMap: Record<string, string> = {
+        not_authenticated: 'Войдите в систему',
+        invalid_amount: 'Неверная сумма',
+        insufficient_balance: 'Недостаточно средств',
+        recipient_not_found: 'Получатель не найден',
+        cannot_transfer_to_self: 'Нельзя переводить самому себе',
+      };
+
+      // Все операции уходят в pending → ждут одобрения модерации
+      if ((action === 'withdraw' || action === 'transfer') && num > currentBalance) {
+        setMessage('⚠️ Недостаточно средств');
+        setLoading(false);
+        return;
+      }
+      if (action === 'transfer' && !recipient.trim()) {
+        setMessage('⚠️ Укажите получателя');
+        setLoading(false);
+        return;
+      }
+
       const { data: u } = await supabase.auth.getUser();
-      await supabase.from('operations').insert({
+      const { error: insErr } = await supabase.from('operations').insert({
         user_id: u.user?.id,
         type: action,
         amount: num,
         recipient: action === 'transfer' ? recipient : null,
-        status: 'pending'
+        status: 'pending',
       });
-      setMessage('✅ Операция создана. Она появится в "Мои операции"');
-      setTimeout(onClose, 1500);
+      if (insErr) throw insErr;
+
+      setMessage('✅ Заявка отправлена модерации. Появится в "Мои операции"');
+
+      setTimeout(() => onClose(), 1500);
     } catch (e: any) {
-      setMessage('⚠️ Операция временно недоступна. Подключите таблицу operations в Supabase.');
+      setMessage('⚠️ ' + (e.message || 'Ошибка'));
     } finally {
       setLoading(false);
     }

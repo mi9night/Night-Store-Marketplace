@@ -4,6 +4,7 @@ import { ShoppingCart, Trash2, Zap, Shield, ArrowRight, Package, CheckCircle2, A
 import { Account } from '../types';
 import { Page } from '../types/pages';
 import { supabase } from '../lib/supabase';
+import { useCurrency } from '../lib/CurrencyContext';
 
 interface CartPageProps {
   cartItems: Account[];
@@ -20,6 +21,8 @@ const CartPage: React.FC<CartPageProps> = ({ cartItems, onRemove, setCurrentPage
 
   const [buying, setBuying] = useState(false);
   const [result, setResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const { convert, symbol, currency } = useCurrency();
+  const fmt = (n: number) => convert(n).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 }) + ' ' + symbol;
 
   const handleCheckout = async () => {
     setResult(null);
@@ -122,9 +125,9 @@ const CartPage: React.FC<CartPageProps> = ({ cartItems, onRemove, setCurrentPage
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-text-primary">{item.price.toLocaleString()} ₽</p>
+                    <p className="text-base font-bold text-text-primary">{fmt(item.price)}</p>
                     {item.oldPrice && (
-                      <p className="text-xs text-text-secondary line-through">{item.oldPrice.toLocaleString()} ₽</p>
+                      <p className="text-xs text-text-secondary line-through">{fmt(item.oldPrice)}</p>
                     )}
                   </div>
                   <motion.button onClick={() => onRemove(item.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="p-2 text-text-secondary hover:text-error transition-colors">
@@ -146,23 +149,23 @@ const CartPage: React.FC<CartPageProps> = ({ cartItems, onRemove, setCurrentPage
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Товары ({cartItems.length})</span>
-                <span className="text-text-primary">{(total + discount).toLocaleString()} ₽</span>
+                <span className="text-text-primary">{fmt(total + discount)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Скидка</span>
-                  <span className="text-success">-{discount.toLocaleString()} ₽</span>
+                  <span className="text-success">-{fmt(discount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Комиссия сервиса (3%)</span>
-                <span className="text-text-primary">{fee.toLocaleString()} ₽</span>
+                <span className="text-text-primary">{fmt(fee)}</span>
               </div>
               <div className="border-t border-purple-900/20 pt-3">
                 <div className="flex justify-between">
                   <span className="font-semibold text-text-primary">К оплате</span>
                   <span className="text-xl font-bold text-accent-soft">
-                    {(total + fee).toLocaleString()} ₽
+                    {fmt(total + fee)}
                   </span>
                 </div>
               </div>

@@ -11,6 +11,7 @@ import { Page } from '../types/pages';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/ModerationPanel';
 import { LevelBadge } from '../components/LevelBadge';
+import { useCurrency } from '../lib/CurrencyContext';
 
 interface ProductPageProps {
   account: Account;
@@ -40,6 +41,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
 
   // Чат с продавцом
   const [showChat, setShowChat] = useState(false);
+  const { convert, symbol, currency } = useCurrency();
   const [chatMsg, setChatMsg] = useState('');
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
@@ -292,7 +294,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                   {[
                     { label: 'Просмотров', value: (account.views || 0).toLocaleString('ru-RU'), icon: Eye },
                     { label: 'Продавец онлайн', value: '~1ч назад', icon: Clock },
-                    { label: 'Цена в среднем', value: `${account.price.toLocaleString('ru-RU')} ₽`, icon: Tag },
+                    { label: 'Цена в среднем', value: `${convert(account.price).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} ${symbol}`, icon: Tag },
                   ].map(s => (
                     <div key={s.label} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
                       <s.icon size={14} className="text-purple-400 mb-2" />
@@ -320,10 +322,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 lg:sticky lg:top-20">
             <div className="mb-4">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-white">{account.price.toLocaleString('ru-RU')}</span>
-                <span className="text-text-secondary">₽</span>
+                <span className="text-3xl font-bold text-white">
+                  {convert(account.price).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })}
+                </span>
+                <span className="text-text-secondary">{symbol}</span>
                 {account.oldPrice && (
-                  <span className="text-sm text-text-secondary line-through">{account.oldPrice.toLocaleString('ru-RU')} ₽</span>
+                  <span className="text-sm text-text-secondary line-through">
+                    {convert(account.oldPrice).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}
+                  </span>
                 )}
               </div>
               {account.oldPrice && account.oldPrice > account.price && (

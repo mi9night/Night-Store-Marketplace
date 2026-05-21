@@ -8,6 +8,7 @@ import { Account } from '../types';
 import type { Page } from '../types/pages';
 import { RoleBadge } from './ModerationPanel';
 import { LevelBadge } from './LevelBadge';
+import { useCurrency } from '../lib/CurrencyContext';
 import { supabase } from '../lib/supabase';
 
 interface AccountCardProps {
@@ -42,6 +43,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
 }) => {
   const [isFav, setIsFav] = useState<boolean>(account?.isFavorite ?? false);
   const [me, setMe] = useState<string | null>(null);
+  const { convert, symbol, currency } = useCurrency();
   const risk = riskConfig[account?.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
   // Узнаём, в избранном ли (даже свои товары)
@@ -175,12 +177,14 @@ const AccountCard: React.FC<AccountCardProps> = ({
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-white">{(account?.price ?? 0).toLocaleString('ru-RU')}</span>
-              <span className="text-xs text-text-secondary">₽</span>
+              <span className="text-lg font-bold text-white">
+                {convert(account?.price ?? 0).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })}
+              </span>
+              <span className="text-xs text-text-secondary">{symbol}</span>
             </div>
             {account?.oldPrice && account.oldPrice > account.price && (
               <span className="text-[10px] text-text-secondary line-through">
-                {account.oldPrice.toLocaleString('ru-RU')} ₽
+                {convert(account.oldPrice).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}
               </span>
             )}
           </div>

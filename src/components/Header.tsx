@@ -12,6 +12,7 @@ import type { Page } from '../types/pages';
 import MessagesModal from './MessagesModal';
 import { RoleBadge } from './ModerationPanel';
 import { LevelBadge } from './LevelBadge';
+import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
 
 interface HeaderProps {
   currentPage: Page;
@@ -37,11 +38,6 @@ interface Notif {
   icon?: string;
 }
 
-const CURRENCIES = [
-  { code: 'RUB', flag: '🇷🇺' }, { code: 'USD', flag: '🇺🇸' },
-  { code: 'EUR', flag: '🇪🇺' }, { code: 'UAH', flag: '🇺🇦' }, { code: 'KZT', flag: '🇰🇿' },
-];
-
 const Header: React.FC<HeaderProps> = ({
   currentPage, setCurrentPage, cartCount, cartItems = [],
   onRemoveFromCart, onMenuToggle, isMobileMenuOpen, onOpenAccount
@@ -60,12 +56,12 @@ const Header: React.FC<HeaderProps> = ({
   const [myProfile, setMyProfile] = useState<any>(null);
   const [showMessages, setShowMessages] = useState(false);
 
+  const { currency, setCurrency, convert, symbol } = useCurrency();
+
   // Balance menu state
   const [balAction, setBalAction] = useState<'deposit' | 'withdraw' | 'transfer' | null>(null);
   const [balAmount, setBalAmount] = useState('');
   const [balRecipient, setBalRecipient] = useState('');
-  const [balCurrency, setBalCurrency] = useState('RUB');
-  const [balRates, setBalRates] = useState<Record<string, number>>({ RUB: 1 });
   const [balLoading, setBalLoading] = useState(false);
   const [balResult, setBalResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -160,15 +156,6 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, [user?.id]);
 
-  /* ============ Курсы валют (для меню баланса) ============ */
-  useEffect(() => {
-    if (!showBalance) return;
-    fetch('https://open.er-api.com/v6/latest/RUB')
-      .then(r => r.json())
-      .then(d => { if (d.result === 'success') setBalRates({ RUB: 1, ...d.rates }); })
-      .catch(() => {});
-  }, [showBalance]);
-
   /* ============ Клик вне ============ */
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -196,7 +183,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   /* ============ Баланс операции ============ */
-  const balanceInCurrency = balCurrency === 'RUB' ? balance : (balRates[balCurrency] ? balance * balRates[balCurrency] : 0);
+  const balanceInCurrency = convert(balance);
 
   const submitBalance = async () => {
     setBalResult(null);
@@ -210,22 +197,29 @@ const Header: React.FC<HeaderProps> = ({
         recipient_not_found: 'Получатель не найден',
         cannot_transfer_to_self: 'Нельзя самому себе',
       };
-      if (balAction === 'deposit') {
-        const { data } = await supabase.rpc('demo_deposit', { p_amount: num });
-        if (!data?.ok) { setBalResult({ type: 'err', text: errMap[data?.error] || data?.error }); return; }
-        setBalResult({ type: 'ok', text: `✅ +${num} ₽` });
-      } else if (balAction === 'transfer') {
-        if (!balRecipient.trim()) { setBalResult({ type: 'err', text: 'Укажите получателя' }); return; }
-        const { data } = await supabase.rpc('transfer_to_user', { p_recipient: balRecipient, p_amount: num });
-        if (!data?.ok) { setBalResult({ type: 'err', text: errMap[data?.error] || data?.error }); return; }
-        setBalResult({ type: 'ok', text: '✅ Перевод выполнен' });
-      } else if (balAction === 'withdraw') {
-        if (num > balance) { setBalResult({ type: 'err', text: 'Недостаточно средств' }); return; }
-        await supabase.from('operations').insert({
-          user_id: user?.id, type: 'withdraw', amount: num, status: 'pending',
-        });
-        setBalResult({ type: 'ok', text: '✅ Заявка создана' });
+      // Все операции уходят в pending → ждут одобрения модерации
+      if (balAction === 'transfer' && !balRecipient.trim()) {
+        setBalResult({ type: 'err', text: 'Укажите получателя' });
+        return;
       }
+      if ((balAction === 'withdraw' || balAction === 'transfer') && num > balance) {
+        setBalResult({ type: 'err', text: 'Недостаточно средств' });
+        return;
+      }
+
+      const { error: insertErr } = await supabase.from('operations').insert({
+        user_id: user?.id,
+        type: balAction,
+        amount: num,
+        recipient: balAction === 'transfer' ? balRecipient : null,
+        status: 'pending',
+      });
+      if (insertErr) throw insertErr;
+
+      setBalResult({
+        type: 'ok',
+        text: '✅ Заявка отправлена модерации. Появится в "Мои операции"',
+      });
       setTimeout(() => {
         setBalAction(null); setBalAmount(''); setBalRecipient('');
       }, 1500);
@@ -342,7 +336,7 @@ const Header: React.FC<HeaderProps> = ({
               whileHover={{ scale: 1.03 }}>
               <Wallet size={14} className="text-accent" />
               <span className="text-sm font-semibold text-text-primary">
-                {balance.toLocaleString('ru-RU')} ₽
+                {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}
               </span>
             </motion.button>
 
@@ -363,13 +357,18 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
                       <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-1">Доступно</div>
                       <div className="text-2xl font-bold text-white mb-2">
-                        {balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} {balCurrency === 'RUB' ? '₽' : balCurrency}
+                        {balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} {symbol}
                       </div>
+                      {currency !== 'RUB' && (
+                        <div className="text-[10px] text-text-secondary mb-2">
+                          ≈ {balance.toLocaleString('ru-RU')} ₽ · валюта применится ко всему сайту
+                        </div>
+                      )}
                       <div className="flex gap-1 flex-wrap">
                         {CURRENCIES.map(c => (
-                          <button key={c.code} onClick={() => setBalCurrency(c.code)}
+                          <button key={c.code} onClick={() => setCurrency(c.code)}
                             className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                              balCurrency === c.code ? 'bg-purple-600 border-purple-400 text-white'
+                              currency === c.code ? 'bg-purple-600 border-purple-400 text-white'
                                 : 'bg-purple-900/30 border-purple-800/30 text-text-secondary'
                             }`}>
                             {c.flag} {c.code}
