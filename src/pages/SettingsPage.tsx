@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Shield, Bell, Palette, Key, CreditCard,
-  Eye, EyeOff, Save, X, Clock, Check, AlertCircle
+  Eye, EyeOff, Save, X, Clock, Check, AlertCircle, Camera, Image
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ModerationPanel from '../components/ModerationPanel';
 
-type ActionType = 'username' | 'email' | 'password' | null;
+type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
 
 const SettingsPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('profile');
@@ -23,6 +23,26 @@ const SettingsPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const bannerInput = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (type: 'avatar' | 'banner', file: File) => {
+    if (!user) return;
+    try {
+      const bucket = type === 'avatar' ? 'avatars' : 'banners';
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${user.id}/${type}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+      const field = type === 'avatar' ? 'avatar_url' : 'banner_url';
+      await supabase.from('users').update({ [field]: urlData.publicUrl }).eq('id', user.id);
+      setProfile((p: any) => p ? { ...p, [field]: urlData.publicUrl } : p);
+    } catch (e: any) {
+      alert('Ошибка загрузки: ' + e.message);
+    }
+  };
 
   // Уведомления
   const [notifications, setNotifications] = useState({
@@ -94,6 +114,12 @@ const SettingsPage: React.FC = () => {
         return;
       }
     }
+    if (action === 'custom_id') {
+      if (!/^[0-9]{4,10}$/.test(newValue)) {
+        setActionMessage({ type: 'err', text: 'ID должен быть из 4-10 цифр' });
+        return;
+      }
+    }
     if (action === 'email') {
       if (!newValue.includes('@')) {
         setActionMessage({ type: 'err', text: 'Введите корректный email' });
@@ -110,7 +136,9 @@ const SettingsPage: React.FC = () => {
         return;
       }
     }
-    if (!currentPassword) {
+    if (action === 'custom_id' && !currentPassword) {
+      // пропускаем проверку пароля
+    } else if (!currentPassword) {
       setActionMessage({ type: 'err', text: 'Введите текущий пароль' });
       return;
     }
@@ -125,6 +153,26 @@ const SettingsPage: React.FC = () => {
       if (signInError) {
         setActionMessage({ type: 'err', text: 'Неверный текущий пароль' });
         setActionLoading(false);
+        return;
+      }
+
+      // Custom ID — отдельная логика (через buy_custom_id RPC, баланс уже проверяется внутри)
+      if (action === 'custom_id') {
+        const { data, error } = await supabase.rpc('buy_custom_id', { p_new_id: newValue });
+        if (error) throw error;
+        if (!data?.ok) {
+          const errMap: Record<string, string> = {
+            invalid_format: 'ID должен состоять из 4-10 цифр',
+            id_taken: 'Этот ID уже занят',
+            insufficient_balance: 'Недостаточно средств (нужно 350₽)',
+          };
+          setActionMessage({ type: 'err', text: errMap[data?.error] || data?.error || 'Ошибка' });
+          setActionLoading(false);
+          return;
+        }
+        setProfile((p: any) => p ? { ...p, custom_id: newValue } : p);
+        setActionMessage({ type: 'ok', text: '✅ ID изменён! С баланса списано 350₽' });
+        setTimeout(() => setAction(null), 1500);
         return;
       }
 
@@ -215,6 +263,53 @@ const SettingsPage: React.FC = () => {
             <>
               <h3 className="text-base font-semibold text-white">Данные профиля</h3>
 
+              {/* Аватар и баннер */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <label className="text-sm text-text-secondary mb-3 block">Аватарка и баннер</label>
+
+                {/* Баннер превью */}
+                <div
+                  className="h-24 rounded-xl mb-3 relative overflow-hidden bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
+                  style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
+                >
+                  <button
+                    onClick={() => bannerInput.current?.click()}
+                    className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur rounded-lg text-xs text-white hover:bg-black/80"
+                  >
+                    <Image size={12} /> Загрузить баннер
+                  </button>
+                  <input ref={bannerInput} type="file" accept="image/*" className="hidden"
+                    onChange={e => e.target.files?.[0] && handleUpload('banner', e.target.files[0])} />
+                </div>
+
+                {/* Аватар */}
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden border-2 border-purple-900/40">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl font-bold text-white">
+                          {(profile?.username?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => avatarInput.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center border-2 border-bg-card"
+                    >
+                      <Camera size={12} className="text-white" />
+                    </button>
+                    <input ref={avatarInput} type="file" accept="image/*" className="hidden"
+                      onChange={e => e.target.files?.[0] && handleUpload('avatar', e.target.files[0])} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">Нажмите на иконку 📷 чтобы сменить аватарку</p>
+                    <p className="text-xs text-text-secondary mt-0.5">PNG / JPG / GIF, до 2 МБ</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Никнейм */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -240,6 +335,28 @@ const SettingsPage: React.FC = () => {
                 </div>
                 <p className="text-xs text-text-secondary mt-2">
                   💡 Никнейм можно менять раз в 7 дней
+                </p>
+              </div>
+
+              {/* Кастомный ID */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-text-secondary">ID профиля</label>
+                  <span className="text-[10px] text-text-secondary">💎 350₽ за смену</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
+                    #{profile?.custom_id || '—'}
+                  </div>
+                  <button
+                    onClick={() => openAction('custom_id')}
+                    className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
+                  >
+                    Изменить
+                  </button>
+                </div>
+                <p className="text-xs text-text-secondary mt-2">
+                  💡 Хочешь короткий красивый ID? Можно купить за 350₽
                 </p>
               </div>
 
@@ -388,6 +505,7 @@ const SettingsPage: React.FC = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-white">
+                  {action === 'custom_id' && 'Купить кастомный ID'}
                   {action === 'username' && 'Изменить никнейм'}
                   {action === 'email' && 'Изменить email'}
                   {action === 'password' && 'Изменить пароль'}
@@ -398,6 +516,23 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* Новое значение */}
+              {action === 'custom_id' && (
+                <>
+                  <div className="bg-purple-900/20 border border-purple-700/30 rounded-xl p-3 mb-3 text-xs text-purple-300">
+                    💎 Смена ID стоит <b>350 ₽</b> · спишется с баланса
+                  </div>
+                  <label className="text-sm text-text-secondary mb-1.5 block">Новый ID (4-10 цифр)</label>
+                  <input
+                    type="text"
+                    value={newValue}
+                    onChange={e => setNewValue(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="100001"
+                    maxLength={10}
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3 font-mono"
+                  />
+                </>
+              )}
+
               {action === 'username' && (
                 <>
                   <label className="text-sm text-text-secondary mb-1.5 block">Новый никнейм</label>
@@ -446,8 +581,9 @@ const SettingsPage: React.FC = () => {
                 </>
               )}
 
-              {/* Текущий пароль */}
-              <label className="text-sm text-text-secondary mb-1.5 block flex items-center gap-2">
+              {/* Текущий пароль (не нужен для custom_id) */}
+              {action !== 'custom_id' && (
+              <><label className="text-sm text-text-secondary mb-1.5 block flex items-center gap-2">
                 <Shield size={12} /> Текущий пароль (для подтверждения)
               </label>
               <div className="relative mb-3">
@@ -464,7 +600,7 @@ const SettingsPage: React.FC = () => {
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              </div>
+              </div></>)}
 
               {actionMessage && (
                 <div className={`text-sm mb-3 p-2 rounded-lg flex items-center gap-2 ${

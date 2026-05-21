@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/ModerationPanel';
+import { LevelBadge } from '../components/LevelBadge';
 
 interface UserData {
   id: string;
@@ -29,7 +30,9 @@ interface UserData {
   created_at?: string;
 }
 
-const ProfilePage: React.FC = () => {
+interface ProfilePageProps { setCurrentPage?: (page: any) => void; }
+
+const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -199,7 +202,7 @@ const ProfilePage: React.FC = () => {
               Сменить баннер
             </motion.button>
             <motion.button
-              onClick={() => { setShowEdit(true); setEditMsg(null); }}
+              onClick={() => setCurrentPage ? setCurrentPage('settings') : setShowEdit(true)}
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur rounded-lg text-xs text-white hover:bg-black/70 transition-colors border border-purple-900/40"
             >
@@ -249,12 +252,10 @@ const ProfilePage: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
                 {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
                 <RoleBadge role={profile?.role} />
-                <span className="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded-full font-semibold">
-                  Lvl {profile?.level || 1}
-                </span>
+<LevelBadge level={profile?.level || 1} />
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
-                <span>ID: {profile?.id?.slice(0, 8)}</span>
+                <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Calendar size={12} /> С {registeredDate}

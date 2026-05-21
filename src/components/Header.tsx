@@ -10,6 +10,8 @@ import { supabase } from '../lib/supabase';
 import { Account } from '../types';
 import MessagesModal from './MessagesModal';
 import { RoleBadge } from './ModerationPanel';
+import { LevelBadge } from './LevelBadge';
+import BalanceMenu from './BalanceMenu';
 import type { Page } from '../types/pages';
 
 interface HeaderProps {
@@ -56,6 +58,7 @@ const Header: React.FC<HeaderProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [showMessages, setShowMessages] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [showBalanceMenu, setShowBalanceMenu] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
   const [notifications, setNotifications] = useState<Notif[]>([]);
 
@@ -75,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({
         // Профиль с балансом
         const { data: profile } = await supabase
           .from('users')
-          .select('balance, role, verified, username')
+          .select('balance, role, verified, username, level, custom_id, avatar_url')
           .eq('id', data.user.id)
           .maybeSingle();
         if (profile?.balance != null) setBalance(profile.balance);
@@ -145,9 +148,28 @@ const Header: React.FC<HeaderProps> = ({
       )
       .subscribe();
 
+    // Real-time свой профиль (аватарка, баланс, ID)
+    const profileChannel = supabase
+      .channel('my_profile_sync')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+        async () => {
+          const { data: p } = await supabase
+            .from('users')
+            .select('balance, role, verified, username, level, custom_id, avatar_url')
+            .eq('id', user.id).maybeSingle();
+          if (p) {
+            setMyProfile(p);
+            if (p.balance != null) setBalance(p.balance);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(notifChannel);
       supabase.removeChannel(msgChannel);
+      supabase.removeChannel(profileChannel);
     };
   }, [user?.id]);
 
@@ -318,7 +340,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2">
           {/* Balance */}
           <motion.button
-            onClick={() => setCurrentPage('profile')}
+            onClick={() => setShowBalanceMenu(true)}
             className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:border-purple-600/50 transition-all"
             whileHover={{ scale: 1.03 }}
           >
@@ -483,10 +505,14 @@ const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2"
               whileHover={{ scale: 1.03 }}
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </span>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+                {myProfile?.avatar_url ? (
+                  <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-white">
+                    {user?.email?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                )}
               </div>
               <ChevronDown size={14} className="hidden sm:block text-text-secondary" />
             </motion.button>
@@ -501,16 +527,24 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="p-4 border-b border-purple-900/20">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center">
-                        <span className="text-sm font-bold text-white">
-                          {user?.email?.[0]?.toUpperCase() || 'U'}
-                        </span>
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+                        {myProfile?.avatar_url ? (
+                          <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-bold text-white">
+                            {user?.email?.[0]?.toUpperCase() || 'U'}
+                          </span>
+                        )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-text-primary text-sm truncate flex items-center gap-1.5">
+                        <p className="font-semibold text-text-primary text-sm truncate flex items-center gap-1.5 flex-wrap">
                           {myProfile?.username || user?.email?.split('@')[0] || 'User'}
                           <RoleBadge role={myProfile?.role} />
+                          <LevelBadge level={myProfile?.level || 1} compact />
                         </p>
+                        {myProfile?.custom_id && (
+                          <p className="text-[10px] text-purple-300 font-mono mt-0.5">#{myProfile.custom_id}</p>
+                        )}
                         <p className="text-xs text-text-secondary truncate">{user?.email}</p>
                       </div>
                     </div>
@@ -555,6 +589,13 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Модалка сообщений */}
       <MessagesModal isOpen={showMessages} onClose={() => setShowMessages(false)} />
+
+      {/* Меню баланса */}
+      <BalanceMenu
+        isOpen={showBalanceMenu}
+        onClose={() => setShowBalanceMenu(false)}
+        balance={balance}
+      />
     </header>
   );
 };
