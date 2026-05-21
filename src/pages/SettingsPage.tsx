@@ -115,8 +115,13 @@ const SettingsPage: React.FC = () => {
       }
     }
     if (action === 'custom_id') {
-      if (!/^[0-9]{4,10}$/.test(newValue)) {
-        setActionMessage({ type: 'err', text: 'ID должен быть из 4-10 цифр' });
+      const clean = newValue.toLowerCase().trim();
+      if (!/^[a-z0-9_.]{3,15}$/.test(clean)) {
+        setActionMessage({ type: 'err', text: 'ID: 3-15 символов (a-z, 0-9, _ .)' });
+        return;
+      }
+      if (/^[0-9]+$/.test(clean) && clean.length < 8) {
+        setActionMessage({ type: 'err', text: 'Чисто цифровой ID должен быть от 8 цифр' });
         return;
       }
     }
@@ -162,8 +167,10 @@ const SettingsPage: React.FC = () => {
         if (error) throw error;
         if (!data?.ok) {
           const errMap: Record<string, string> = {
-            invalid_format: 'ID должен состоять из 4-10 цифр',
+            invalid_format: 'Можно: a-z, 0-9, _ . (3-15 символов)',
+            numeric_too_short: 'Чисто цифровой ID должен быть от 8 цифр',
             id_taken: 'Этот ID уже занят',
+            reserved: 'Это зарезервированный ID',
             insufficient_balance: 'Недостаточно средств (нужно 350₽)',
           };
           setActionMessage({ type: 'err', text: errMap[data?.error] || data?.error || 'Ошибка' });
@@ -521,15 +528,19 @@ const SettingsPage: React.FC = () => {
                   <div className="bg-purple-900/20 border border-purple-700/30 rounded-xl p-3 mb-3 text-xs text-purple-300">
                     💎 Смена ID стоит <b>350 ₽</b> · спишется с баланса
                   </div>
-                  <label className="text-sm text-text-secondary mb-1.5 block">Новый ID (4-10 цифр)</label>
+                  <label className="text-sm text-text-secondary mb-1.5 block">Новый ID</label>
                   <input
                     type="text"
                     value={newValue}
-                    onChange={e => setNewValue(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="100001"
-                    maxLength={10}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3 font-mono"
+                    onChange={e => setNewValue(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                    placeholder="midnight"
+                    maxLength={15}
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-1 font-mono"
                   />
+                  <p className="text-[11px] text-text-secondary mb-3">
+                    💡 От 3 до 15 символов: буквы (a-z), цифры (0-9), <code className="text-purple-300">_</code> и <code className="text-purple-300">.</code><br/>
+                    🔢 Чисто цифровой — минимум 8 цифр (короткие зарезервированы)
+                  </p>
                 </>
               )}
 
