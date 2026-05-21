@@ -1,9 +1,9 @@
 // src/pages/TopicPage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MessageSquare, Eye, ThumbsUp, ThumbsDown,
-  Send, Trash2, Pin, Clock
+  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/ModerationPanel';
@@ -23,93 +23,106 @@ const categoryColors: Record<string, string> = {
   'Дискуссии': 'text-cyan-400 bg-cyan-900/20 border-cyan-800/30',
 };
 
+interface Comment {
+  id: string;
+  topic_id: string;
+  parent_id?: string | null;
+  author_id: string;
+  author_name?: string;
+  author_avatar?: string;
+  content: string;
+  images?: string[];
+  likes: number;
+  dislikes?: number;
+  created_at: string;
+}
+
 const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const [topic, setTopic] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<any>(null);
   const [myProfile, setMyProfile] = useState<any>(null);
   const [myVotes, setMyVotes] = useState<Record<string, number>>({});
   const [newComment, setNewComment] = useState('');
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [commentImages, setCommentImages] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  /* ============ Загрузка темы и комментариев ============ */
+  /* ============ Загрузка ============ */
   const load = async () => {
     setLoading(true);
-
     const { data: u } = await supabase.auth.getUser();
     setMe(u.user);
-
     if (u.user) {
       const { data: p } = await supabase
-        .from('users').select('username, role, avatar_url, email')
-        .eq('id', u.user.id).maybeSingle();
+        .from('users').select('username, role, avatar_url, email').eq('id', u.user.id).maybeSingle();
       setMyProfile(p);
     }
-
     const { data: t } = await supabase.from('forum_topics').select('*').eq('id', topicId).maybeSingle();
     setTopic(t);
-
     const { data: c } = await supabase.from('forum_comments')
       .select('*').eq('topic_id', topicId).order('created_at', { ascending: true });
     setComments(c || []);
 
-    // Мои голоса
     if (u.user) {
       const ids = [topicId, ...((c || []).map(x => x.id))];
       const { data: votes } = await supabase
-        .from('forum_likes')
-        .select('target_type, target_id, vote')
-        .eq('user_id', u.user.id)
-        .in('target_id', ids);
+        .from('forum_likes').select('target_type, target_id, vote')
+        .eq('user_id', u.user.id).in('target_id', ids);
       const map: Record<string, number> = {};
       votes?.forEach(v => { map[`${v.target_type}:${v.target_id}`] = v.vote; });
       setMyVotes(map);
     }
-
     setLoading(false);
-
-    // +1 просмотр
     await supabase.rpc('bump_topic_view', { p_topic_id: topicId });
   };
 
   useEffect(() => {
     load();
-
-    const ch = supabase
-      .channel('topic_realtime')
+    const ch = supabase.channel('topic_realtime')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'forum_comments', filter: `topic_id=eq.${topicId}` },
         () => load()
-      )
-      .subscribe();
+      ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [topicId]);
 
-  /* ============ Голосование ============ */
   const vote = async (targetType: 'topic' | 'comment', targetId: string, v: 1 | -1) => {
     if (!me) { alert('Войдите в систему'); return; }
     const key = `${targetType}:${targetId}`;
-    const prev = myVotes[key];
-    // Оптимистичное обновление
     setMyVotes(p => {
       const c = { ...p };
-      if (prev === v) delete c[key]; else c[key] = v;
+      if (c[key] === v) delete c[key]; else c[key] = v;
       return c;
     });
     await supabase.rpc('toggle_forum_vote', {
-      p_target_type: targetType,
-      p_target_id: targetId,
-      p_vote: v,
+      p_target_type: targetType, p_target_id: targetId, p_vote: v,
     });
     load();
   };
 
-  /* ============ Отправить комментарий ============ */
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    if (!me) return [];
+    const urls: string[] = [];
+    for (const f of files) {
+      const ext = f.name.split('.').pop() || 'png';
+      const path = `${me.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('forum').upload(path, f);
+      if (!error) {
+        const { data } = supabase.storage.from('forum').getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+    }
+    return urls;
+  };
+
   const sendComment = async () => {
-    if (!newComment.trim() || !me) return;
+    if ((!newComment.trim() && commentImages.length === 0) || !me) return;
     setSending(true);
     try {
+      const imgUrls = commentImages.length > 0 ? await uploadImages(commentImages) : [];
       const name = myProfile?.username || me.email?.split('@')[0] || 'User';
       await supabase.from('forum_comments').insert({
         topic_id: topicId,
@@ -117,15 +130,20 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         author_name: name,
         author_avatar: name[0]?.toUpperCase(),
         content: newComment.trim(),
+        parent_id: replyTo?.id || null,
+        images: imgUrls,
       });
       setNewComment('');
+      setCommentImages([]);
+      setReplyTo(null);
 
-      // Уведомление автору темы
-      if (topic && topic.author_id && topic.author_id !== me.id) {
+      // Уведомление
+      const recipient = replyTo?.author_id || topic.author_id;
+      if (recipient && recipient !== me.id) {
         await supabase.from('notifications').insert({
-          user_id: topic.author_id,
+          user_id: recipient,
           type: 'message',
-          title: '💬 Новый комментарий',
+          title: replyTo ? '💬 Ответ на комментарий' : '💬 Новый комментарий',
           text: `${name}: ${newComment.trim().slice(0, 60)}`,
           icon: '💬',
           link_type: 'forum',
@@ -137,11 +155,16 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     }
   };
 
-  /* ============ Удалить комментарий ============ */
   const delComment = async (id: string) => {
     if (!confirm('Удалить комментарий?')) return;
     await supabase.from('forum_comments').delete().eq('id', id);
     load();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files).slice(0, 4 - commentImages.length);
+    setCommentImages([...commentImages, ...files]);
   };
 
   if (loading) return <div className="text-center py-12 text-text-secondary">Загрузка...</div>;
@@ -157,28 +180,27 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const topicVote = myVotes[`topic:${topic.id}`];
   const catColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
 
+  // Группируем комменты по parent_id
+  const topLevel = comments.filter(c => !c.parent_id);
+  const repliesOf = (id: string) => comments.filter(c => c.parent_id === id);
+
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <button
-        onClick={() => setCurrentPage('forum')}
-        className="flex items-center gap-2 text-sm text-text-secondary hover:text-white"
-      >
+      <button onClick={() => setCurrentPage('forum')} className="flex items-center gap-2 text-sm text-text-secondary hover:text-white">
         <ArrowLeft size={16} /> Назад к форуму
       </button>
 
       {/* Тема */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
         <div className="flex items-center gap-2 flex-wrap mb-3">
           {topic.is_pinned && <Pin size={12} className="text-purple-400" />}
           <span className={`text-xs px-2 py-0.5 rounded-full border ${catColor}`}>{topic.category}</span>
+          {topic.subcategory && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900/20 text-purple-300">{topic.subcategory}</span>
+          )}
           {topic.is_hot && (
-            <span className="text-xs text-orange-400 bg-orange-900/20 border border-orange-800/30 px-1.5 py-0.5 rounded-full">
-              🔥 Горячее
-            </span>
+            <span className="text-xs text-orange-400 bg-orange-900/20 border border-orange-800/30 px-1.5 py-0.5 rounded-full">🔥 Горячее</span>
           )}
         </div>
 
@@ -194,27 +216,33 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         </div>
 
         {topic.content && (
-          <div className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-5 p-4 bg-[#0B0A12] rounded-xl border border-purple-900/20">
+          <div className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-4 p-4 bg-[#0B0A12] rounded-xl border border-purple-900/20">
             {topic.content}
           </div>
         )}
 
-        {/* Действия */}
+        {/* Фото темы */}
+        {topic.images && topic.images.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {topic.images.map((url: string, i: number) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                <img src={url} alt="" className="w-full h-40 object-cover rounded-xl border border-purple-900/20 hover:border-purple-700/50 transition-colors" />
+              </a>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 pt-3 border-t border-purple-900/20">
-          <button
-            onClick={() => vote('topic', topic.id, 1)}
+          <button onClick={() => vote('topic', topic.id, 1)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
               topicVote === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:bg-green-900/30 hover:text-green-400'
-            }`}
-          >
+            }`}>
             <ThumbsUp size={14} /> {topic.likes || 0}
           </button>
-          <button
-            onClick={() => vote('topic', topic.id, -1)}
+          <button onClick={() => vote('topic', topic.id, -1)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
               topicVote === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:bg-red-900/30 hover:text-red-400'
-            }`}
-          >
+            }`}>
             <ThumbsDown size={14} /> {topic.dislikes || 0}
           </button>
           <div className="flex items-center gap-1 text-xs text-text-secondary ml-auto">
@@ -229,80 +257,74 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
       <div className="space-y-3">
         <h3 className="text-base font-semibold text-white">Комментарии ({comments.length})</h3>
 
-        {comments.length === 0 ? (
+        {topLevel.length === 0 ? (
           <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-8 text-center text-sm text-text-secondary">
             Пока нет комментариев. Будь первым!
           </div>
         ) : (
-          comments.map((c, i) => {
-            const v = myVotes[`comment:${c.id}`];
-            const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myProfile?.role));
-            return (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="bg-[#171425] border border-purple-900/20 rounded-xl p-4"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-white">{c.author_avatar || 'U'}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-white">{c.author_name}</span>
-                  <span className="text-xs text-text-secondary ml-auto">
-                    {new Date(c.created_at).toLocaleString('ru-RU')}
-                  </span>
-                </div>
-                <p className="text-sm text-white whitespace-pre-wrap mb-3">{c.content}</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => vote('comment', c.id, 1)}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                      v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
-                    }`}
-                  >
-                    <ThumbsUp size={11} /> {c.likes || 0}
-                  </button>
-                  <button
-                    onClick={() => vote('comment', c.id, -1)}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                      v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
-                    }`}
-                  >
-                    <ThumbsDown size={11} />
-                  </button>
-                  {canDelete && (
-                    <button
-                      onClick={() => delComment(c.id)}
-                      className="ml-auto text-text-secondary hover:text-red-400 p-1"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })
+          topLevel.map((c, i) => (
+            <CommentItem
+              key={c.id}
+              comment={c}
+              replies={repliesOf(c.id)}
+              myVotes={myVotes}
+              me={me}
+              myRole={myProfile?.role}
+              onVote={vote}
+              onReply={setReplyTo}
+              onDelete={delComment}
+              index={i}
+            />
+          ))
         )}
 
         {/* Форма комментария */}
         {me ? (
           <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4">
-            <textarea
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              placeholder="Напишите комментарий..."
+            {replyTo && (
+              <div className="flex items-center gap-2 mb-2 p-2 bg-purple-900/10 rounded-lg text-xs">
+                <Reply size={12} className="text-purple-400" />
+                <span className="text-text-secondary">Ответ для</span>
+                <span className="text-purple-300 font-semibold">{replyTo.author_name}</span>
+                <button onClick={() => setReplyTo(null)} className="ml-auto text-text-secondary hover:text-white">
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+            <textarea value={newComment} onChange={e => setNewComment(e.target.value)}
+              placeholder={replyTo ? `Ответ для ${replyTo.author_name}...` : 'Напишите комментарий...'}
               rows={3}
-              className="w-full px-4 py-3 rounded-xl text-sm bg-[#0B0A12] border border-purple-900/30 text-white resize-none mb-2"
-            />
-            <button
-              onClick={sendComment}
-              disabled={sending || !newComment.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 ml-auto"
-            >
-              <Send size={14} /> {sending ? 'Отправка...' : 'Отправить'}
-            </button>
+              className="w-full px-4 py-3 rounded-xl text-sm bg-[#0B0A12] border border-purple-900/30 text-white resize-none mb-2" />
+
+            {/* Превью фоток */}
+            {commentImages.length > 0 && (
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {commentImages.map((f, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-purple-900/30">
+                    <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => setCommentImages(commentImages.filter((_, idx) => idx !== i))}
+                      className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5">
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button onClick={() => fileInput.current?.click()}
+                disabled={commentImages.length >= 4}
+                className="p-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg disabled:opacity-50"
+                title="Добавить фото (макс 4)">
+                <ImageIcon size={16} />
+              </button>
+              <input ref={fileInput} type="file" multiple accept="image/*" className="hidden" onChange={handleFileSelect} />
+              <span className="text-xs text-text-secondary">{commentImages.length}/4</span>
+              <button onClick={sendComment} disabled={sending || (!newComment.trim() && commentImages.length === 0)}
+                className="ml-auto flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                <Send size={14} /> {sending ? 'Отправка...' : 'Отправить'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4 text-center text-sm text-text-secondary">
@@ -311,6 +333,98 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         )}
       </div>
     </div>
+  );
+};
+
+/* ============ Компонент одного комментария ============ */
+const CommentItem: React.FC<{
+  comment: Comment;
+  replies: Comment[];
+  myVotes: Record<string, number>;
+  me: any;
+  myRole?: string;
+  onVote: (t: 'comment', id: string, v: 1 | -1) => void;
+  onReply: (c: Comment) => void;
+  onDelete: (id: string) => void;
+  index: number;
+  depth?: number;
+}> = ({ comment: c, replies, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
+  const v = myVotes[`comment:${c.id}`];
+  const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myRole || ''));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+      className={`bg-[#171425] border border-purple-900/20 rounded-xl p-4 ${depth > 0 ? 'ml-6 sm:ml-10 border-l-2 border-l-purple-700/40' : ''}`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
+          <span className="text-xs font-bold text-white">{c.author_avatar || 'U'}</span>
+        </div>
+        <span className="text-sm font-semibold text-white">{c.author_name}</span>
+        <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
+      </div>
+      <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>
+
+      {/* Фото в комменте */}
+      {c.images && c.images.length > 0 && (
+        <div className="flex gap-2 mb-3 flex-wrap">
+          {c.images.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+              <img src={url} alt="" className="w-24 h-24 object-cover rounded-lg border border-purple-900/30 hover:border-purple-700/50" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button onClick={() => onVote('comment', c.id, 1)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+            v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
+          }`}>
+          <ThumbsUp size={11} /> {c.likes || 0}
+        </button>
+        <button onClick={() => onVote('comment', c.id, -1)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+            v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
+          }`}>
+          <ThumbsDown size={11} /> {c.dislikes || 0}
+        </button>
+        {depth < 2 && me && (
+          <button onClick={() => onReply(c)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-purple-900/20 text-text-secondary hover:text-purple-300">
+            <Reply size={11} /> Ответить
+          </button>
+        )}
+        {canDelete && (
+          <button onClick={() => onDelete(c.id)} className="ml-auto text-text-secondary hover:text-red-400 p-1">
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* Ответы */}
+      {replies.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {replies.map((r, i) => (
+            <CommentItem
+              key={r.id}
+              comment={r}
+              replies={[]}
+              myVotes={myVotes}
+              me={me}
+              myRole={myRole}
+              onVote={onVote}
+              onReply={onReply}
+              onDelete={onDelete}
+              index={i}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 };
 
