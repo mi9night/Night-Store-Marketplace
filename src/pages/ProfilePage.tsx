@@ -220,9 +220,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
         </div>
 
         <div className="px-6 pb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-12 mb-4">
-            {/* Аватар */}
-            <div className="relative">
+          {/* Аватарка отдельно — наполовину в баннер, наполовину под ним */}
+          <div className="-mt-12 mb-3 flex items-end justify-between gap-3">
+            <div className="relative flex-shrink-0">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -246,35 +246,35 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage }) => {
               />
             </div>
 
-            {/* Имя + инфа */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-bold text-white">{displayName}</h2>
-                {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
-                <RoleBadge role={profile?.role} />
-<LevelBadge level={profile?.level || 1} />
-              </div>
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
-                <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Calendar size={12} /> С {registeredDate}
-                </span>
-                <span>•</span>
-                <span className="text-green-400">Онлайн</span>
-              </div>
-              {profile?.bio && (
-                <p className="text-sm text-text-secondary mt-2 italic line-clamp-2">"{profile.bio}"</p>
-              )}
-            </div>
-
-            {/* Баланс */}
+            {/* Баланс справа от аватарки */}
             <div className="text-right">
               <p className="text-xs text-text-secondary">Баланс</p>
-              <p className="text-2xl font-bold text-purple-300">
+              <p className="text-xl sm:text-2xl font-bold text-purple-300">
                 {(profile?.balance || 0).toLocaleString('ru-RU')} ₽
               </p>
             </div>
+          </div>
+
+          {/* Имя + инфа — отдельным блоком ПОД аватаром */}
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-bold text-white">{displayName}</h2>
+              {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
+              <RoleBadge role={profile?.role} />
+              <LevelBadge level={profile?.level || 1} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
+              <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Calendar size={12} /> С {registeredDate}
+              </span>
+              <span>•</span>
+              <span className="text-green-400">Онлайн</span>
+            </div>
+            {profile?.bio && (
+              <p className="text-sm text-text-secondary mt-2 italic line-clamp-2">"{profile.bio}"</p>
+            )}
           </div>
 
           {/* Stats */}
