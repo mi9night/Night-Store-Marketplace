@@ -141,24 +141,25 @@ const SettingsPage: React.FC = () => {
         return;
       }
     }
-    if (action === 'custom_id' && !currentPassword) {
-      // пропускаем проверку пароля
-    } else if (!currentPassword) {
+    // Для custom_id пароль не нужен (это просто покупка)
+    if (action !== 'custom_id' && !currentPassword) {
       setActionMessage({ type: 'err', text: 'Введите текущий пароль' });
       return;
     }
 
     setActionLoading(true);
     try {
-      // 1. Проверка текущего пароля через signIn
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword
-      });
-      if (signInError) {
-        setActionMessage({ type: 'err', text: 'Неверный текущий пароль' });
-        setActionLoading(false);
-        return;
+      // 1. Проверка текущего пароля через signIn (только если он нужен)
+      if (action !== 'custom_id') {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword
+        });
+        if (signInError) {
+          setActionMessage({ type: 'err', text: 'Неверный текущий пароль' });
+          setActionLoading(false);
+          return;
+        }
       }
 
       // Custom ID — отдельная логика (через buy_custom_id RPC, баланс уже проверяется внутри)
