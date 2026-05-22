@@ -15,19 +15,11 @@ interface MarketPageProps {
   onSelectAccount: (account: Account) => void;
   setCurrentPage: (page: Page) => void;
   onAddToCart: (account: Account) => void;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
 }
 
 type SortOption = 'default' | 'cheap' | 'expensive' | 'new' | 'old' | 'popular';
 
-const MarketPage: React.FC<MarketPageProps> = ({ 
-  onSelectAccount, 
-  setCurrentPage, 
-  onAddToCart,
-  searchQuery,
-  setSearchQuery
-}) => {
+const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage, onAddToCart }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +31,7 @@ const MarketPage: React.FC<MarketPageProps> = ({
   const [showGuaranteeOnly, setShowGuaranteeOnly] = useState(false);
   const [showEscrowOnly, setShowEscrowOnly] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<string>('all');
+  const [search, setSearch] = useState('');
 
   /* ============ Загрузка товаров ============ */
   useEffect(() => {
@@ -105,13 +98,12 @@ const MarketPage: React.FC<MarketPageProps> = ({
     if (selectedCategory !== 'all') {
       result = result.filter(a => a.category === selectedCategory || a.subcategory === selectedCategory);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (search.trim()) {
+      const q = search.toLowerCase();
       result = result.filter(a =>
         a.title?.toLowerCase().includes(q) ||
         a.description?.toLowerCase().includes(q) ||
-        a.seller?.username?.toLowerCase().includes(q) ||
-        a.category?.toLowerCase().includes(q)
+        a.seller?.username?.toLowerCase().includes(q)
       );
     }
     if (minPrice) result = result.filter(a => a.price >= parseInt(minPrice));
@@ -128,7 +120,7 @@ const MarketPage: React.FC<MarketPageProps> = ({
       case 'popular': result.sort((a, b) => (b.views || 0) - (a.views || 0)); break;
     }
     return result;
-  }, [accounts, selectedCategory, minPrice, maxPrice, showGuaranteeOnly, showEscrowOnly, selectedRisk, sortBy, searchQuery]);
+  }, [accounts, selectedCategory, minPrice, maxPrice, showGuaranteeOnly, showEscrowOnly, selectedRisk, sortBy, search]);
 
   const resetFilters = () => {
     setSelectedCategory('all');
@@ -137,7 +129,7 @@ const MarketPage: React.FC<MarketPageProps> = ({
     setShowGuaranteeOnly(false);
     setShowEscrowOnly(false);
     setSelectedRisk('all');
-    setSearchQuery('');
+    setSearch('');
   };
 
   const activeFiltersCount = [
@@ -211,8 +203,8 @@ const MarketPage: React.FC<MarketPageProps> = ({
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Поиск товаров..."
             className="w-full pl-9 pr-4 py-2.5 bg-bg-card border border-purple-900/30 rounded-xl text-sm text-white placeholder:text-text-secondary"
           />
@@ -260,7 +252,7 @@ const MarketPage: React.FC<MarketPageProps> = ({
         Найдено: <span className="text-white font-semibold">{filteredAccounts.length}</span>
       </div>
 
-      {/* === ТОВАРЫ === */}
+      {/* === ТОВАРЫ — вертикальные прямоугольники, 3 в ряд === */}
       {loading ? (
         <div className="text-center py-20 text-text-secondary">Загрузка аккаунтов...</div>
       ) : filteredAccounts.length === 0 ? (
@@ -268,16 +260,16 @@ const MarketPage: React.FC<MarketPageProps> = ({
           className="bg-[#171425] border border-purple-900/20 rounded-2xl p-12 text-center">
           <ShoppingBag size={48} className="mx-auto text-purple-700/50 mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">
-            Ничего не найдено
+            {accounts.length === 0 ? 'Пока нет аккаунтов в продаже' : 'Ничего не найдено'}
           </h3>
           <p className="text-sm text-text-secondary mb-6">
-            Попробуйте изменить запрос или фильтры
+            {accounts.length === 0 ? 'Станьте первым продавцом!' : 'Попробуйте изменить фильтры'}
           </p>
           <button
-            onClick={resetFilters}
+            onClick={() => accounts.length === 0 ? setCurrentPage('sell') : resetFilters()}
             className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold"
           >
-            Сбросить фильтры
+            {accounts.length === 0 ? 'Выложить аккаунт' : 'Сбросить фильтры'}
           </button>
         </motion.div>
       ) : (
@@ -318,6 +310,7 @@ const MarketPage: React.FC<MarketPageProps> = ({
               </div>
 
               <div className="space-y-5">
+                {/* Цена */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block font-semibold">💰 Цена, ₽</label>
                   <div className="flex gap-2">
@@ -327,6 +320,8 @@ const MarketPage: React.FC<MarketPageProps> = ({
                       className="w-full px-3 py-2.5 bg-bg-secondary border border-purple-900/30 rounded-xl text-sm text-white" />
                   </div>
                 </div>
+
+                {/* Защита */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block font-semibold">🛡️ Защита</label>
                   <div className="space-y-2">
@@ -334,17 +329,46 @@ const MarketPage: React.FC<MarketPageProps> = ({
                       <input type="checkbox" checked={showGuaranteeOnly} onChange={e => setShowGuaranteeOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
                       <span className="text-sm text-white">Только с гарантией</span>
                     </label>
+                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg-secondary rounded-xl">
+                      <input type="checkbox" checked={showEscrowOnly} onChange={e => setShowEscrowOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
+                      <span className="text-sm text-white">Только эскроу</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Риск */}
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block font-semibold">🚦 Уровень риска</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'all', label: 'Любой', cls: '' },
+                      { id: 'low', label: 'Низкий', cls: 'green' },
+                      { id: 'medium', label: 'Средний', cls: 'yellow' },
+                      { id: 'high', label: 'Высокий', cls: 'red' },
+                    ].map(r => (
+                      <button key={r.id} onClick={() => setSelectedRisk(r.id)}
+                        className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
+                          selectedRisk === r.id
+                            ? r.cls === 'green' ? 'bg-green-900/30 border-green-500 text-green-400' :
+                              r.cls === 'yellow' ? 'bg-yellow-900/30 border-yellow-500 text-yellow-400' :
+                              r.cls === 'red' ? 'bg-red-900/30 border-red-500 text-red-400' :
+                              'bg-purple-900/30 border-purple-500 text-white'
+                            : 'bg-bg-secondary border-purple-900/30 text-text-secondary'
+                        }`}>
+                        {r.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-2 mt-6">
                 <button onClick={() => { resetFilters(); setShowFiltersModal(false); }}
-                  className="flex-1 py-3 bg-purple-900/20 text-white rounded-xl text-sm font-semibold">
+                  className="flex-1 py-3 bg-purple-900/20 hover:bg-purple-900/40 text-white rounded-xl text-sm font-semibold">
                   Сбросить
                 </button>
                 <button onClick={() => setShowFiltersModal(false)}
-                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl text-sm font-semibold">
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold">
                   Показать
                 </button>
               </div>
