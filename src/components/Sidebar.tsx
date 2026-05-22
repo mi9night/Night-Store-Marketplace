@@ -4,11 +4,11 @@ import {
   Wallet, ArrowDownLeft, ArrowLeftRight,
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code,
-  ChevronDown, Plus, MessageSquare, X, Eye, EyeOff, TrendingDown
+  ChevronDown, Plus, MessageSquare, X
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
+import { useCurrency } from '../lib/CurrencyContext';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
@@ -35,20 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [action, setAction] = useState<BalanceAction>(null);
 
-  // Скрытие баланса и почты
-  const [hideBalance, setHideBalance] = useState(() => localStorage.getItem('hideBalance') === 'true');
-  const [hideEmail, setHideEmail] = useState(() => localStorage.getItem('hideEmail') === 'true');
-  const [showCurrencySelect, setShowCurrencySelect] = useState(false);
-
-  const { convert, symbol, currency, setCurrency } = useCurrency();
-
-  useEffect(() => {
-    localStorage.setItem('hideBalance', hideBalance.toString());
-  }, [hideBalance]);
-
-  useEffect(() => {
-    localStorage.setItem('hideEmail', hideEmail.toString());
-  }, [hideEmail]);
+  const { convert, symbol, currency } = useCurrency();
 
   /* ============ загрузка пользователя и баланса ============ */
   useEffect(() => {
@@ -57,6 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setUser(data.user);
 
       if (data.user) {
+        // Пытаемся достать баланс из profiles, если такой таблицы нет — просто 0
         const { data: profile } = await supabase
           .from('users')
           .select('balance')
@@ -68,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     init();
   }, []);
 
-  // Realtime синк баланса
+  // Realtime синк баланса с шапкой
   useEffect(() => {
     if (!user?.id) return;
     const ch = supabase.channel('sidebar_balance_sync')
@@ -91,8 +79,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     { icon: Tag, label: 'Управление метками', page: 'labels' as Page },
     { icon: Zap, label: 'Автопокупки', page: 'autobuy' as Page },
     { icon: Settings, label: 'Настройки', page: 'settings' as Page },
+
     { icon: Shield, label: 'Правила и гарантии', page: 'forum' as Page, filter: 'Правила' },
     { icon: MessageSquare, label: 'Форум', page: 'forum' as Page, filter: null },
+
     { icon: TrendingUp, label: 'Повышение статуса', page: 'topSellers' as Page },
     { icon: DollarSign, label: 'Курсы валют', page: 'rates' as Page },
     { icon: Code, label: 'API', page: 'api' as Page },
@@ -110,98 +100,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Balance + Actions */}
       <div className="p-4 border-b border-purple-900/20">
-        <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20 relative overflow-hidden group">
+        <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20">
           <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-secondary">Баланс</span>
-              <button 
-                onClick={() => setHideBalance(!hideBalance)}
-                className="text-text-secondary hover:text-accent transition-colors"
-              >
-                {hideBalance ? <EyeOff size={12} /> : <Eye size={12} />}
-              </button>
-            </div>
-            <div className="relative">
-              <button 
-                onClick={() => setShowCurrencySelect(!showCurrencySelect)}
-                className="flex items-center gap-1 text-[10px] bg-purple-600/10 text-accent-soft px-1.5 py-0.5 rounded border border-purple-900/30 hover:border-purple-600/50 transition-all"
-              >
-                {currency} <ChevronDown size={10} />
-              </button>
-              
-              <AnimatePresence>
-                {showCurrencySelect && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    className="absolute right-0 mt-1 bg-bg-card border border-purple-900/30 rounded-lg shadow-xl z-50 py-1 min-w-[80px]"
-                  >
-                    {CURRENCIES.map(c => (
-                      <button
-                        key={c.code}
-                        onClick={() => {
-                          setCurrency(c.code);
-                          setShowCurrencySelect(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-purple-600/20 transition-colors ${
-                          currency === c.code ? 'text-accent-soft' : 'text-text-secondary'
-                        }`}
-                      >
-                        {c.flag} {c.code}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <span className="text-xs text-text-secondary">Баланс</span>
+            <Wallet size={14} className="text-accent" />
           </div>
-          
-          <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-text-primary tracking-tight">
-              {hideBalance ? '••••••••' : (
-                <>
-                  {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} 
-                  <span className="text-base font-medium text-text-secondary ml-1">{symbol}</span>
-                </>
-              )}
-            </p>
-          </div>
-
-          {/* Mini Graph + Percentage */}
-          {!hideBalance && (
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex items-center text-[10px] font-medium text-success">
-                <TrendingUp size={10} className="mr-0.5" />
-                +2.4%
-              </div>
-              <div className="h-6 w-16 opacity-50">
-                <svg viewBox="0 0 100 40" className="w-full h-full overflow-visible">
-                  <path
-                    d="M0 35 L10 30 L25 32 L40 20 L60 25 L80 10 L100 5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    className="text-success"
-                  />
-                </svg>
-              </div>
-            </div>
+          <p className="text-2xl font-bold text-text-primary">
+            {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span>
+          </p>
+          {user?.email && (
+            <p className="text-xs text-text-secondary mt-1 truncate">{user.email}</p>
           )}
-
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-purple-900/10">
-            {user?.email && (
-              <p className="text-xs text-text-secondary truncate max-w-[140px]">
-                {hideEmail ? '••••••••••••••••' : user.email}
-              </p>
-            )}
-            <button 
-              onClick={() => setHideEmail(!hideEmail)}
-              className="text-text-secondary hover:text-accent transition-colors"
-            >
-              {hideEmail ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
-          </div>
         </div>
 
         {/* Пополнить / Вывести / Перевести */}
@@ -274,8 +183,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-text-secondary'
               }`}
             >
-              <span className="text-base">{cat.icon}</span> 
-              <span className="ml-1">{cat.name}</span>
+              {cat.icon} {cat.name}
               {cat.subcategories && (
                 <ChevronDown size={14} className={`ml-auto transition-transform ${
                   expandedCategory === cat.id ? 'rotate-180' : ''
@@ -394,6 +302,15 @@ const BalanceActionModal: React.FC<{
 
     setLoading(true);
     try {
+      const errMap: Record<string, string> = {
+        not_authenticated: 'Войдите в систему',
+        invalid_amount: 'Неверная сумма',
+        insufficient_balance: 'Недостаточно средств',
+        recipient_not_found: 'Получатель не найден',
+        cannot_transfer_to_self: 'Нельзя переводить самому себе',
+      };
+
+      // Все операции уходят в pending → ждут одобрения модерации
       if ((action === 'withdraw' || action === 'transfer') && num > currentBalance) {
         setMessage('⚠️ Недостаточно средств');
         setLoading(false);

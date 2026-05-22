@@ -17,25 +17,14 @@ export const currentUser: User = {
 
 export const categories: Category[] = [
   { id: 'steam', name: 'Steam', icon: '🎮', count: 1847, subcategories: ['CS2', 'Dota 2', 'PUBG', 'Rust'] },
-  { id: 'telegram', name: 'Telegram', icon: '✈️', count: 543 },
+  { id: 'cs2', name: 'CS2', icon: '🔫', count: 634 },
+  { id: 'epic', name: 'Epic Games', icon: '⚡', count: 423, subcategories: ['Fortnite', 'GTA'] },
   { id: 'fortnite', name: 'Fortnite', icon: '🏗️', count: 289 },
-  { id: 'riot', name: 'Riot Games', icon: '🥊', count: 156 },
-  { id: 'ea', name: 'EA Sports', icon: '⚽', count: 312 },
-  { id: 'ubisoft', name: 'Ubisoft', icon: '🌀', count: 89 },
-  { id: 'minecraft', name: 'Minecraft', icon: '🧊', count: 245 },
-  { id: 'supercell', name: 'Supercell', icon: '⚡', count: 178 },
-  { id: 'roblox', name: 'Roblox', icon: '🧱', count: 432 },
-  { id: 'wot', name: 'World of Tanks', icon: '🛡️', count: 678 },
-  { id: 'warthunder', name: 'War Thunder', icon: '✈️', count: 234 },
-  { id: 'gift', name: 'Gift / Services', icon: '🎁', count: 123 },
-  { id: 'rockstar', name: 'Rockstar', icon: '⭐️', count: 567 },
+  { id: 'gta', name: 'GTA', icon: '🚗', count: 156 },
   { id: 'discord', name: 'Discord', icon: '💬', count: 312 },
-  { id: 'tiktok', name: 'TikTok', icon: '🎵', count: 89 },
-  { id: 'ai', name: 'AI Services', icon: '🤖', count: 45 },
-  { id: 'battlenet', name: 'Battle.net', icon: '🌀', count: 167 },
   { id: 'vpn', name: 'VPN', icon: '🔒', count: 89 },
-  { id: 'mi', name: 'Xiaomi / Mi', icon: '📱', count: 34 },
-  { id: 'hearthstone', name: 'Hearthstone', icon: '🎴', count: 78 },
+  { id: 'software', name: 'Софт', icon: '💻', count: 245 },
+  { id: 'other', name: 'Другое', icon: '📦', count: 178 },
 ];
 
 const sellers = [
@@ -96,7 +85,7 @@ export const accounts: Account[] = [
     ]
   },
   {
-    id: 'a2', title: 'Epic Games | Fortnite OG | Rare Skins Pack', category: 'fortnite',
+    id: 'a2', title: 'Epic Games | Fortnite OG | Rare Skins Pack', category: 'epic', subcategory: 'Fortnite',
     price: 3200, currency: 'RUB',
     seller: sellers[3],
     tags: [
@@ -148,6 +137,80 @@ export const accounts: Account[] = [
       { date: '15.11', price: 2150 }, { date: '01.12', price: 2100 }, { date: '15.12', price: 2100 },
     ],
     rating: 4.7, reviewsCount: 234, isFavorite: false, soldCount: 167, views: 9876,
+  },
+  {
+    id: 'a5', title: 'GTA Online | 500M$ | Шарк Карта | Все DLC', category: 'gta',
+    price: 750, oldPrice: 950, currency: 'RUB',
+    seller: sellers[0],
+    tags: [
+      { label: '500M$', icon: '💰' }, { label: 'Все DLC', icon: '🎯' },
+      { label: 'BR', icon: '🇧🇷' }, { label: 'Гарантия', icon: '🛡️' }
+    ],
+    riskLevel: 'medium', hasOriginalEmail: false, hasTempEmail: true,
+    lastLogin: '2 дня назад', country: 'Бразилия', gamesCount: 12,
+    guarantee: true, guaranteeHours: 24, escrow: false, isBanned: false, createdAt: '2024-12-05',
+    description: 'GTA Online аккаунт с 500 миллионами долларов и всеми DLC. Разблокировано всё.',
+    priceHistory: [
+      { date: '01.10', price: 950 }, { date: '15.10', price: 900 }, { date: '01.11', price: 850 },
+      { date: '15.11', price: 800 }, { date: '01.12', price: 750 }, { date: '15.12', price: 750 },
+    ],
+    rating: 4.4, reviewsCount: 89, isFavorite: true, soldCount: 312, views: 18934,
+  },
+  {
+    id: 'a6', title: 'Adobe CC 2025 | Все приложения | Активировано', category: 'software',
+    price: 1350, currency: 'RUB',
+    seller: sellers[1],
+    tags: [
+      { label: 'Все приложения', icon: '🎨' }, { label: '1 год', icon: '📅' },
+      { label: 'Активировано', icon: '✅' }
+    ],
+    riskLevel: 'low', hasOriginalEmail: true, hasTempEmail: false,
+    lastLogin: '5 дней назад', country: 'Глобально', guarantee: true, guaranteeHours: 24,
+    escrow: true, isBanned: false, createdAt: '2024-12-10',
+    description: 'Adobe Creative Cloud 2025 подписка. Все приложения активированы. Photoshop, Illustrator, Premiere Pro и др.',
+    priceHistory: [
+      { date: '01.10', price: 1600 }, { date: '15.10', price: 1550 }, { date: '01.11', price: 1450 },
+      { date: '15.11', price: 1400 }, { date: '01.12', price: 1350 }, { date: '15.12', price: 1350 },
+    ],
+    rating: 4.8, reviewsCount: 445, isFavorite: false, soldCount: 567, views: 22341,
+  },
+  {
+    id: 'a7', title: 'Steam | Dota 2 Divine 5 | 6000 часов | MMR 6500', category: 'steam',
+    price: 4500, oldPrice: 5000, currency: 'RUB',
+    seller: sellers[3],
+    tags: [
+      { label: 'Divine 5', icon: '🏆' }, { label: '6000 ч', icon: '⏱️' },
+      { label: 'MMR 6500', icon: '📊' }, { label: 'RU', icon: '🇷🇺' }
+    ],
+    riskLevel: 'low', hasOriginalEmail: true, hasTempEmail: true,
+    lastLogin: '1 день назад', country: 'Россия', gamesCount: 23,
+    hoursPlayed: 6000, level: 187, guarantee: true, guaranteeHours: 24,
+    escrow: true, isBanned: false, createdAt: '2024-10-01',
+    description: 'Высокорейтинговый аккаунт Dota 2 с Divine 5 рангом. 6000 часов игры. MMR 6500.',
+    priceHistory: [
+      { date: '01.10', price: 5000 }, { date: '15.10', price: 4900 }, { date: '01.11', price: 4800 },
+      { date: '15.11', price: 4700 }, { date: '01.12', price: 4600 }, { date: '15.12', price: 4500 },
+    ],
+    rating: 4.9, reviewsCount: 187, isFavorite: false, soldCount: 34, views: 8765,
+  },
+  {
+    id: 'a8', title: 'CS2 | Global Elite | 3000 часов | Чистый VAC', category: 'cs2',
+    price: 2800, currency: 'RUB',
+    seller: sellers[4],
+    tags: [
+      { label: 'Global Elite', icon: '🎖️' }, { label: '3000 ч', icon: '⏱️' },
+      { label: 'Нет VAC', icon: '✅' }, { label: 'UA', icon: '🇺🇦' }
+    ],
+    riskLevel: 'medium', hasOriginalEmail: false, hasTempEmail: true,
+    lastLogin: '10 дней назад', country: 'Украина', gamesCount: 8,
+    hoursPlayed: 3000, guarantee: true, guaranteeHours: 24,
+    escrow: false, isBanned: false, createdAt: '2024-11-20',
+    description: 'CS2 аккаунт с рангом Global Elite. 3000 часов. Без VAC блокировок.',
+    priceHistory: [
+      { date: '01.10', price: 3200 }, { date: '15.10', price: 3100 }, { date: '01.11', price: 3000 },
+      { date: '15.11', price: 2900 }, { date: '01.12', price: 2800 }, { date: '15.12', price: 2800 },
+    ],
+    rating: 4.3, reviewsCount: 67, isFavorite: false, soldCount: 23, views: 4567,
   },
 ];
 
