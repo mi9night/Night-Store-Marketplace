@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X
+  MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X, Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { UserLink } from '../components/UserLink';
+import ReportButton from '../components/ReportButton';
 
 interface ForumPageProps {
   filter?: string | null;
+  onOpenTopic?: (id: string) => void;
 }
 
 interface Topic {
@@ -14,6 +17,7 @@ interface Topic {
   title: string;
   content?: string;
   category: string;
+  author_id?: string;
   author_name?: string;
   author_avatar?: string;
   replies?: number;
@@ -34,7 +38,7 @@ const categoryColors: Record<string, string> = {
   'Дискуссии': 'text-cyan-400 bg-cyan-900/20 border-cyan-800/30',
 };
 
-const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
+const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Все');
@@ -45,6 +49,8 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
   const [newCategory, setNewCategory] = useState('Дискуссии');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const newImgInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filter && categoriesList.includes(filter)) setActiveCategory(filter);
@@ -106,6 +112,18 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
         return;
       }
 
+      // Загружаем фото если есть
+      const imgUrls: string[] = [];
+      for (const f of newImages) {
+        const ext = f.name.split('.').pop() || 'png';
+        const path = `${u.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('forum').upload(path, f);
+        if (!upErr) {
+          const { data } = supabase.storage.from('forum').getPublicUrl(path);
+          imgUrls.push(data.publicUrl);
+        }
+      }
+
       const { error } = await supabase.from('forum_topics').insert({
         title: newTitle,
         content: newContent,
@@ -118,12 +136,14 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
         likes: 0,
         is_pinned: false,
         is_hot: false,
+        images: imgUrls,
       });
 
       if (error) throw error;
 
       setNewTitle('');
       setNewContent('');
+      setNewImages([]);
       setShowCreate(false);
       loadTopics();
     } catch (e: any) {
@@ -236,7 +256,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
               </div>
               <div className="space-y-2">
                 {pinned.map((topic, i) => (
-                  <TopicRow key={topic.id} topic={topic} index={i} pinned />
+                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} />
                 ))}
               </div>
             </div>
@@ -251,7 +271,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
             )}
             <div className="space-y-2">
               {regular.map((topic, i) => (
-                <TopicRow key={topic.id} topic={topic} index={i} />
+                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} />
               ))}
             </div>
           </div>
@@ -311,6 +331,35 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
                 className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white resize-none mb-3"
               />
 
+              {/* Фото */}
+              <div className="mb-3">
+                <label className="text-sm text-text-secondary mb-1.5 block">Фото (до 4)</label>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {newImages.map((f, i) => (
+                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-purple-900/30">
+                      <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => setNewImages(newImages.filter((_, idx) => idx !== i))}
+                        className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5">
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  {newImages.length < 4 && (
+                    <button onClick={() => newImgInput.current?.click()}
+                      className="w-16 h-16 rounded-lg border-2 border-dashed border-purple-700/40 hover:border-purple-500 flex items-center justify-center text-purple-400">
+                      <ImageIcon size={20} />
+                    </button>
+                  )}
+                  <input ref={newImgInput} type="file" multiple accept="image/*" className="hidden"
+                    onChange={e => {
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files).slice(0, 4 - newImages.length);
+                        setNewImages([...newImages, ...files]);
+                      }
+                    }} />
+                </div>
+              </div>
+
               {createError && (
                 <div className="text-sm mb-3 p-2 rounded-lg bg-error/10 text-error">
                   ⚠️ {createError}
@@ -332,7 +381,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter }) => {
   );
 };
 
-const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; }> = ({ topic, index, pinned }) => {
+const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; }> = ({ topic, index, pinned, onOpen }) => {
   const categoryColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
   const dateStr = new Date(topic.created_at).toLocaleDateString('ru-RU');
 
@@ -341,6 +390,7 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; }> = (
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
+      onClick={() => onOpen?.(topic.id)}
       className={`bg-bg-card border rounded-xl p-4 hover:border-purple-700/40 transition-all cursor-pointer ${
         pinned ? 'border-accent/30' : 'border-purple-900/20'
       }`}
@@ -358,14 +408,17 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; }> = (
           <h3 className="text-sm font-semibold text-text-primary hover:text-accent-soft transition-colors line-clamp-1">
             {topic.title}
           </h3>
-          <div className="flex items-center gap-3 text-xs text-text-secondary mt-1.5">
-            <span>{topic.author_name || 'Аноним'}</span>
+          <div className="flex items-center gap-3 text-xs text-text-secondary mt-1.5 flex-wrap">
+            <UserLink userId={topic.author_id} username={topic.author_name || 'Аноним'} className="text-text-secondary" />
             <span>•</span>
             <div className="flex items-center gap-1"><Clock size={11} />{dateStr}</div>
             <span>•</span>
             <div className="flex items-center gap-1"><MessageSquare size={11} />{topic.replies || 0}</div>
             <div className="flex items-center gap-1"><Eye size={11} />{topic.views || 0}</div>
             <div className="flex items-center gap-1"><ThumbsUp size={11} />{topic.likes || 0}</div>
+            <span onClick={(e) => e.stopPropagation()}>
+              <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} small />
+            </span>
           </div>
         </div>
       </div>

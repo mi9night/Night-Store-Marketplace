@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
-import { RoleBadge } from './ModerationPanel';
+import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
+import { UserLink } from './UserLink';
 import { useCurrency } from '../lib/CurrencyContext';
 import { supabase } from '../lib/supabase';
 
@@ -161,7 +162,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
               )}
             </div>
             <div className="flex items-center gap-1 min-w-0 flex-1 flex-wrap">
-              <span className="text-xs font-medium text-white truncate">{account.seller.username}</span>
+              <UserLink userId={(account.seller as any).id} username={account.seller.username} className="text-xs font-medium text-white truncate" />
               {account.seller.isVerified && <CheckCircle2 size={9} className="text-blue-400 flex-shrink-0" />}
               <RoleBadge role={(account.seller as any).role} />
               <LevelBadge level={(account.seller as any).userLevel} compact />

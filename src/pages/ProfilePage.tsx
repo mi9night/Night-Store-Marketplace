@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
-import { RoleBadge } from '../components/ModerationPanel';
+import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 
 interface UserData {
@@ -40,7 +40,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'products' | 'reviews' | 'themes' | 'bans'>('products');
+  const [activeTab, setActiveTab] = useState<'wall' | 'products' | 'reviews' | 'themes' | 'bans'>('wall');
+  const [wallComments, setWallComments] = useState<any[]>([]);
+  const [wallText, setWallText] = useState('');
+  const [sendingWall, setSendingWall] = useState(false);
+  const [wallVotes, setWallVotes] = useState<Record<string, number>>({});
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -88,17 +92,41 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         }
 
         // Параллельно — товары, отзывы, темы, баны
-        const [accRes, revRes, topRes, banRes] = await Promise.all([
+        const [accRes, revRes, topRes, banRes, wallRes] = await Promise.all([
           supabase.from('accounts').select('*').eq('seller_id', u.user.id).order('created_at', { ascending: false }),
           supabase.from('reviews').select('*').eq('target_user_id', u.user.id).order('created_at', { ascending: false }),
           supabase.from('forum_topics').select('*').eq('author_id', u.user.id).order('created_at', { ascending: false }),
           supabase.from('bans').select('*').eq('user_id', u.user.id).order('created_at', { ascending: false }),
+          supabase.from('profile_comments').select('*').eq('profile_id', u.user.id).order('created_at', { ascending: false }),
         ]);
 
         setAccounts(accRes.data || []);
         setReviews(revRes.data || []);
         setTopics(topRes.data || []);
         setBans(banRes.data || []);
+
+        // Подгружаем авторов комментариев и голоса
+        const wc = wallRes.data || [];
+        if (wc.length > 0) {
+          const authorIds = [...new Set(wc.map((c: any) => c.author_id).filter(Boolean))];
+          const { data: authors } = await supabase.from('users').select('id, username, avatar_url').in('id', authorIds);
+          const aMap: Record<string, any> = {};
+          authors?.forEach((a: any) => { aMap[a.id] = a; });
+          setWallComments(wc.map((c: any) => ({ ...c, author: aMap[c.author_id] })));
+
+          // Мои голоса
+          const ids = wc.map((c: any) => c.id);
+          const { data: votes } = await supabase.from('forum_likes')
+            .select('target_id, vote')
+            .eq('user_id', u.user.id)
+            .eq('target_type', 'profile_comment')
+            .in('target_id', ids);
+          const vMap: Record<string, number> = {};
+          votes?.forEach((v: any) => { vMap[v.target_id] = v.vote; });
+          setWallVotes(vMap);
+        } else {
+          setWallComments([]);
+        }
       } catch (e) {
         console.warn('Profile load error:', e);
       } finally {
@@ -107,6 +135,28 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     };
     load();
   }, []);
+
+  // Realtime для wall
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel('profile_wall_rt')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'profile_comments', filter: `profile_id=eq.${user.id}` },
+        async () => {
+          const { data } = await supabase.auth.getUser();
+          if (!data.user) return;
+          const { data: wc } = await supabase.from('profile_comments').select('*').eq('profile_id', user.id).order('created_at', { ascending: false });
+          if (wc) {
+            const authorIds = [...new Set(wc.map((c: any) => c.author_id).filter(Boolean))];
+            const { data: authors } = await supabase.from('users').select('id, username, avatar_url').in('id', authorIds);
+            const aMap: Record<string, any> = {};
+            authors?.forEach((a: any) => { aMap[a.id] = a; });
+            setWallComments(wc.map((c: any) => ({ ...c, author: aMap[c.author_id] })));
+          }
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
 
   // Realtime синк профиля (баланс, аватарка обновляются мгновенно)
   useEffect(() => {
@@ -121,6 +171,28 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
+
+  const sendWall = async () => {
+    if (!wallText.trim() || !user) return;
+    setSendingWall(true);
+    try {
+      await supabase.from('profile_comments').insert({
+        profile_id: user.id, author_id: user.id, content: wallText.trim(),
+      });
+      setWallText('');
+    } finally { setSendingWall(false); }
+  };
+
+  const voteWall = async (commentId: string, v: 1 | -1) => {
+    setWallVotes(p => {
+      const c = { ...p };
+      if (c[commentId] === v) delete c[commentId]; else c[commentId] = v;
+      return c;
+    });
+    await supabase.rpc('toggle_forum_vote', {
+      p_target_type: 'profile_comment', p_target_id: commentId, p_vote: v,
+    });
+  };
 
   /* ============ Загрузка аватарки/баннера ============ */
   const handleUpload = async (type: 'avatar' | 'banner', file: File) => {
@@ -339,6 +411,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       >
         <div className="flex border-b border-purple-900/20 overflow-x-auto">
           {[
+            { id: 'wall',     label: 'Стена', icon: MessageSquare, count: wallComments.length },
             { id: 'products', label: 'Товары', icon: Package, count: accounts.length },
             { id: 'reviews',  label: 'Отзывы', icon: Star,    count: reviews.length },
             { id: 'themes',   label: 'Темы',   icon: MessageSquare, count: topics.length },
@@ -361,6 +434,59 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         </div>
 
         <div className="p-5">
+
+          {/* === Стена / комментарии === */}
+          {activeTab === 'wall' && (
+            <div className="space-y-3">
+              {/* Форма */}
+              <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                <textarea value={wallText} onChange={e => setWallText(e.target.value)}
+                  placeholder="Оставьте сообщение на стене..."
+                  rows={2}
+                  className="w-full px-3 py-2 mb-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none" />
+                <button onClick={sendWall} disabled={sendingWall || !wallText.trim()}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold disabled:opacity-50 ml-auto block">
+                  {sendingWall ? 'Отправка...' : 'Опубликовать'}
+                </button>
+              </div>
+
+              {wallComments.length === 0 ? (
+                <div className="text-center py-8 text-text-secondary text-sm">Стена пуста</div>
+              ) : wallComments.map((wc: any) => {
+                const v = wallVotes[wc.id];
+                return (
+                  <div key={wc.id} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+                        {wc.author?.avatar_url ? (
+                          <img src={wc.author.avatar_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <span className="text-xs font-bold text-white">{(wc.author?.username?.[0] || 'U').toUpperCase()}</span>
+                        )}
+                      </div>
+                      <span className="text-sm font-semibold text-white">{wc.author?.username || 'Аноним'}</span>
+                      <span className="text-xs text-text-secondary ml-auto">{new Date(wc.created_at).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <p className="text-sm text-white whitespace-pre-wrap mb-2">{wc.content}</p>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => voteWall(wc.id, 1)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
+                          v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
+                        }`}>
+                        👍 {wc.likes || 0}
+                      </button>
+                      <button onClick={() => voteWall(wc.id, -1)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
+                          v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
+                        }`}>
+                        👎 {wc.dislikes || 0}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* === Товары === */}
           {activeTab === 'products' && (

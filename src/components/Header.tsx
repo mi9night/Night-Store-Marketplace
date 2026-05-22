@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare,
+  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, LifeBuoy,
   User, Settings, LogOut, Star, Package,
   Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle
 } from 'lucide-react';
@@ -9,8 +9,7 @@ import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
-import MessagesModal from './MessagesModal';
-import { RoleBadge } from './ModerationPanel';
+import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
 import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
 
@@ -53,8 +52,9 @@ const Header: React.FC<HeaderProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [notifications, setNotifications] = useState<Notif[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [showMsgDropdown, setShowMsgDropdown] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
-  const [showMessages, setShowMessages] = useState(false);
 
   const { currency, setCurrency, convert, symbol } = useCurrency();
 
@@ -71,6 +71,7 @@ const Header: React.FC<HeaderProps> = ({
   const profileRef = useRef<HTMLDivElement>(null);
   const cartRef = useRef<HTMLDivElement>(null);
   const balanceRef = useRef<HTMLDivElement>(null);
+  const msgRef = useRef<HTMLDivElement>(null);
 
   /* ============ USER + Профиль + Уведомления ============ */
   useEffect(() => {
@@ -89,6 +90,7 @@ const Header: React.FC<HeaderProps> = ({
 
         loadNotifications(data.user.id);
         loadUnreadMessages(data.user.id);
+        loadRecentChats(data.user.id);
       }
     };
     init();
@@ -109,6 +111,42 @@ const Header: React.FC<HeaderProps> = ({
         .eq('receiver_id', userId).eq('is_read', false);
       setUnreadMessages(count || 0);
     } catch { setUnreadMessages(0); }
+  };
+
+  const loadRecentChats = async (userId: string) => {
+    try {
+      const { data: msgs } = await supabase.from('messages').select('*')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false }).limit(50);
+      if (!msgs) return;
+      const map = new Map<string, any>();
+      for (const m of msgs) {
+        const partnerId = m.sender_id === userId ? m.receiver_id : m.sender_id;
+        if (!map.has(partnerId)) {
+          map.set(partnerId, {
+            partner_id: partnerId, last_message: m.text, last_at: m.created_at,
+            unread: 0, is_mine: m.sender_id === userId,
+          });
+        }
+        const c = map.get(partnerId);
+        if (m.receiver_id === userId && !m.is_read) c.unread += 1;
+      }
+      const list = Array.from(map.values()).slice(0, 5);
+      const pIds = list.map(c => c.partner_id);
+      if (pIds.length > 0) {
+        const { data: users } = await supabase.from('users')
+          .select('id, username, email, avatar_url').in('id', pIds);
+        users?.forEach(u => {
+          const c = map.get(u.id);
+          if (c) {
+            c.partner_name = u.username || u.email?.split('@')[0] || 'User';
+            c.partner_avatar_url = u.avatar_url;
+            c.partner_avatar = (c.partner_name?.[0] || 'U').toUpperCase();
+          }
+        });
+      }
+      setRecentChats(list);
+    } catch { setRecentChats([]); }
   };
 
   const loadNotifications = async (userId: string) => {
@@ -132,7 +170,7 @@ const Header: React.FC<HeaderProps> = ({
     const msgChannel = supabase.channel('messages_unread')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
-        () => loadUnreadMessages(user.id)
+        () => { loadUnreadMessages(user.id); loadRecentChats(user.id); }
       ).subscribe();
 
     const profileChannel = supabase.channel('my_profile_sync')
@@ -163,6 +201,7 @@ const Header: React.FC<HeaderProps> = ({
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
       if (cartRef.current && !cartRef.current.contains(e.target as Node)) setShowCartDropdown(false);
       if (balanceRef.current && !balanceRef.current.contains(e.target as Node)) setShowBalance(false);
+      if (msgRef.current && !msgRef.current.contains(e.target as Node)) setShowMsgDropdown(false);
     };
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
@@ -482,16 +521,75 @@ const Header: React.FC<HeaderProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Messages */}
-          <motion.button onClick={() => setShowMessages(true)}
-            className="hidden sm:flex relative p-2 text-text-secondary hover:text-text-primary"
-            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <MessageSquare size={20} />
-            {unreadMessages > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-success text-white text-xs rounded-full flex items-center justify-center font-bold">
-                {unreadMessages}
-              </span>
-            )}
+          {/* Messages dropdown */}
+          <div className="relative hidden sm:block" ref={msgRef}>
+            <motion.button onClick={() => setShowMsgDropdown(!showMsgDropdown)}
+              className="relative p-2 text-text-secondary hover:text-text-primary"
+              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <MessageSquare size={20} />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadMessages}
+                </span>
+              )}
+            </motion.button>
+            <AnimatePresence>
+              {showMsgDropdown && (
+                <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-2 w-80 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="p-4 border-b border-purple-900/20 flex items-center justify-between">
+                    <h3 className="font-semibold text-text-primary">Сообщения</h3>
+                    {unreadMessages > 0 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-soft">{unreadMessages} новых</span>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {recentChats.length === 0 ? (
+                      <div className="p-6 text-center text-text-secondary text-sm">Сообщений нет</div>
+                    ) : (
+                      recentChats.map(c => (
+                        <button key={c.partner_id}
+                          onClick={() => { setCurrentPage('messages' as Page); setShowMsgDropdown(false); }}
+                          className={`w-full p-3 flex items-center gap-3 hover:bg-purple-900/10 border-b border-purple-900/10 text-left ${
+                            c.unread > 0 ? 'border-l-2 border-l-accent bg-purple-900/5' : ''
+                          }`}>
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {c.partner_avatar_url
+                              ? <img src={c.partner_avatar_url} className="w-full h-full object-cover" alt="" />
+                              : <span className="text-sm font-bold text-white">{c.partner_avatar || 'U'}</span>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{c.partner_name || 'User'}</p>
+                            <p className="text-xs text-text-secondary truncate">
+                              {c.is_mine ? 'Вы: ' : ''}{c.last_message}
+                            </p>
+                          </div>
+                          {c.unread > 0 && (
+                            <span className="w-5 h-5 bg-accent text-white text-xs rounded-full flex items-center justify-center font-bold">{c.unread}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage('messages' as Page); setShowMsgDropdown(false); }}
+                    className="w-full p-3 text-sm text-purple-300 hover:bg-purple-900/10 font-semibold border-t border-purple-900/20"
+                  >
+                    Все сообщения →
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Support — отдельная кнопка */}
+          <motion.button onClick={() => setCurrentPage('support' as Page)}
+            className={`relative p-2 transition-colors ${
+              currentPage === 'support' ? 'text-purple-300' : 'text-text-secondary hover:text-text-primary'
+            }`}
+            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+            title="Поддержка">
+            <LifeBuoy size={20} />
           </motion.button>
 
           {/* Notifications */}
@@ -613,7 +711,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <MessagesModal isOpen={showMessages} onClose={() => setShowMessages(false)} />
     </header>
   );
 };

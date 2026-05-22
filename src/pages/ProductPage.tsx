@@ -9,8 +9,9 @@ import {
 import { Account } from '../types';
 import { Page } from '../types/pages';
 import { supabase } from '../lib/supabase';
-import { RoleBadge } from '../components/ModerationPanel';
+import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
+import { UserLink } from '../components/UserLink';
 import { useCurrency } from '../lib/CurrencyContext';
 
 interface ProductPageProps {
@@ -399,7 +400,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-white truncate">{seller?.username || account.seller?.username}</span>
+                  <UserLink userId={seller?.id} username={seller?.username || account.seller?.username} className="font-semibold text-white truncate" />
                   {seller?.verified && <CheckCircle2 size={14} className="text-blue-400" />}
                   <RoleBadge role={seller?.role} />
                 </div>
@@ -407,7 +408,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                   <LevelBadge level={seller?.level || 1} />
                 </div>
                 {seller?.custom_id && (
-                  <p className="text-[10px] text-text-secondary mt-1 font-mono">#{seller.custom_id}</p>
+                  <p className="text-[10px] text-purple-300 mt-1 font-mono">#{seller.custom_id || seller.id?.slice(0, 8)}</p>
                 )}
               </div>
             </div>

@@ -5,7 +5,9 @@ import {
   ShoppingCart, Shield, CheckSquare, Sparkles, LogIn
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { RoleBadge } from '../components/ModerationPanel';
+import { RoleBadge } from '../components/RoleBadge';
+import { LevelBadge } from '../components/LevelBadge';
+import { UserLink } from '../components/UserLink';
 
 interface Seller {
   id: string;
@@ -141,9 +143,7 @@ const TopSellersPage: React.FC = () => {
                           {actualRank === 1 ? '🥇' : actualRank === 2 ? '🥈' : '🥉'}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-white text-center truncate max-w-[140px]">
-                        {getName(seller)}
-                      </span>
+                      <UserLink userId={seller.id} username={getName(seller)} className="text-sm font-semibold text-white text-center truncate max-w-[140px]" />
                       <span className="text-xs text-green-400 font-medium">
                         {seller.sales || 0} продаж
                       </span>
@@ -194,9 +194,7 @@ const TopSellersPage: React.FC = () => {
                         <span className="font-semibold text-white truncate">{getName(seller)}</span>
                         {seller.verified && <CheckCircle2 size={14} className="text-blue-400 flex-shrink-0" />}
                         <RoleBadge role={seller.role} />
-                        <span className={`text-xs ${levelColors[levelKey]}`}>
-                          [{levelLabels[levelKey]}]
-                        </span>
+                        <LevelBadge level={seller.level || 1} />
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         <div className="flex items-center gap-1">

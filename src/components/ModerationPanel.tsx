@@ -8,12 +8,13 @@ import {
   Crown, Settings as SettingsIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { RoleBadge as RB } from './RoleBadge';
 
 type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats';
 
 interface Props {
   // Колбек, чтобы из модерации можно было перейти на тему / товар
-  onNavigate?: (page: 'forum' | 'product' | 'profile', payload?: any) => void;
+  onNavigate?: (page: 'forum' | 'product' | 'profile' | 'topic', payload?: any) => void;
 }
 
 const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
@@ -166,7 +167,9 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
 
   const goToSource = () => {
     if (!activeTicket || !onNavigate) return;
-    if (activeTicket.target_type === 'topic' || activeTicket.target_type === 'forum') {
+    if (activeTicket.target_type === 'topic') {
+      onNavigate('topic', { id: activeTicket.target_id });
+    } else if (activeTicket.target_type === 'forum') {
       onNavigate('forum');
     } else if (activeTicket.target_type === 'account') {
       onNavigate('product', { id: activeTicket.target_id });
@@ -363,7 +366,9 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState<any>(null);
   const [bans, setBans] = useState<any[]>([]);
-  const [modal, setModal] = useState<null | 'punish' | 'stat'>(null);
+  const [modal, setModal] = useState<null | 'punish' | 'stat' | 'role'>(null);
+  const [showAccounts, setShowAccounts] = useState(false);
+  const [userAccounts, setUserAccounts] = useState<any[]>([]);
 
   // Punish form
   const [pType, setPType] = useState<'ban' | 'mute' | 'warn'>('mute');
@@ -391,6 +396,52 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     setActive(u);
     const { data } = await supabase.from('bans').select('*').eq('user_id', u.id).order('created_at', { ascending: false });
     setBans(data || []);
+    const { data: accs } = await supabase.from('accounts').select('*').eq('seller_id', u.id).order('created_at', { ascending: false });
+    setUserAccounts(accs || []);
+  };
+
+  // Быстрая смена стата
+  const quickStat = async (field: string, value: any) => {
+    if (!active) return;
+    const v = typeof value === 'boolean' ? String(value) : String(value);
+    const { data, error } = await supabase.rpc('moderate_set_stat', {
+      p_user_id: active.id, p_field: field, p_value: v,
+    });
+    if (error || !data?.ok) {
+      alert((data?.error || error?.message) || 'Ошибка');
+      return;
+    }
+    const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
+    if (refreshed) setActive(refreshed);
+  };
+
+  // Кастомная роль
+  const [crLabel, setCrLabel] = useState('');
+  const [crIcon, setCrIcon] = useState('⭐');
+  const [crColor, setCrColor] = useState('purple');
+
+  const applyRole = async (preset: string) => {
+    if (!active) return;
+    if (preset === 'custom') {
+      if (!crLabel.trim()) { alert('Введите название роли'); return; }
+      // Сначала ставим role='custom', потом записываем поля кастомной
+      await supabase.from('users').update({
+        role: 'custom',
+        custom_role_label: crLabel,
+        custom_role_icon: crIcon,
+        custom_role_color: crColor,
+      }).eq('id', active.id);
+    } else {
+      await supabase.from('users').update({
+        role: preset,
+        custom_role_label: null,
+        custom_role_icon: null,
+        custom_role_color: null,
+      }).eq('id', active.id);
+    }
+    const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
+    if (refreshed) setActive(refreshed);
+    setModal(null);
   };
 
   const punish = async () => {
@@ -445,34 +496,60 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-white">{active.username || active.email}</h3>
                 {active.verified && <CheckCircle2 size={16} className="text-blue-400" />}
-                <RoleBadge role={active.role} />
+                <RB user={active} />
               </div>
               <p className="text-sm text-text-secondary">{active.email}</p>
-              <p className="text-xs text-text-secondary">ID: {active.id}</p>
+              <p className="text-xs text-text-secondary font-mono">#{active.custom_id || active.id?.slice(0, 8)}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          {/* Статы с быстрыми +/- кнопками */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {[
-              { label: 'Баланс', value: `${(active.balance || 0).toLocaleString('ru-RU')} ₽` },
-              { label: 'Продажи', value: active.sales || 0 },
-              { label: 'XP', value: active.xp || 0 },
-              { label: 'Уровень', value: active.level || 1 },
+              { label: '💰 Баланс', field: 'balance', value: active.balance || 0, step: 100, suffix: ' ₽' },
+              { label: '⚡ XP',      field: 'xp',      value: active.xp || 0,      step: 50,  suffix: '' },
+              { label: '📈 Уровень', field: 'level',   value: active.level || 1,   step: 1,   suffix: '' },
+              { label: '🛍 Продажи', field: 'sales',   value: active.sales || 0,   step: 1,   suffix: '' },
             ].map(s => (
-              <div key={s.label} className="bg-bg-secondary rounded-lg p-2 text-center">
-                <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
-                <p className="text-sm font-bold text-white">{s.value}</p>
+              <div key={s.field} className="bg-bg-secondary rounded-lg p-3 flex items-center gap-2">
+                <div className="flex-1">
+                  <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
+                  <p className="text-sm font-bold text-white">{s.value}{s.suffix}</p>
+                </div>
+                <button onClick={() => quickStat(s.field, s.value - s.step)}
+                  className="w-7 h-7 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-sm font-bold">−</button>
+                <button onClick={() => quickStat(s.field, s.value + s.step)}
+                  className="w-7 h-7 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-sm font-bold">+</button>
+                {s.field === 'sales' && (
+                  <button onClick={() => setShowAccounts(true)}
+                    title="Открыть продажи"
+                    className="w-7 h-7 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm">📦</button>
+                )}
               </div>
             ))}
           </div>
 
-          {/* Кнопки действий */}
+          {/* Верификация и Роль */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+            <button onClick={() => quickStat('verified', !active.verified)}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold ${
+                active.verified ? 'bg-blue-600 text-white' : 'bg-blue-900/20 text-blue-400'
+              }`}>
+              <CheckCircle2 size={14} /> {active.verified ? 'Снять верификацию' : 'Верифицировать'}
+            </button>
+            <button onClick={() => setModal('role')}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm font-semibold">
+              <Crown size={14} /> Сменить роль
+            </button>
+          </div>
+
+          {/* Наказания и расш. статы */}
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setModal('punish')} className="flex items-center gap-1.5 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-sm">
               <Ban size={14} /> Наказание
             </button>
             <button onClick={() => setModal('stat')} className="flex items-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-lg text-sm">
-              <SettingsIcon size={14} /> Изменить статы
+              <SettingsIcon size={14} /> Произвольное поле
             </button>
           </div>
         </div>
@@ -557,6 +634,77 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
           </Modal>
         )}
 
+        {modal === 'role' && (
+          <Modal onClose={() => setModal(null)} title="Сменить роль пользователя">
+            <div className="space-y-2 mb-4">
+              {[
+                { id: 'user',      label: 'Обычный пользователь',     icon: '👤', color: 'bg-gray-700/20 text-gray-300' },
+                { id: 'support',   label: 'Support (поддержка)',      icon: '🛟', color: 'bg-cyan-900/30 text-cyan-400' },
+                { id: 'moderator', label: 'Moderator (модератор)',    icon: '⚖️', color: 'bg-blue-900/30 text-blue-400' },
+                { id: 'admin',     label: 'Admin (администратор)',    icon: '🛡',  color: 'bg-orange-900/30 text-orange-400' },
+                ...(myRole === 'owner' ? [{ id: 'owner', label: 'Owner (владелец)', icon: '👑', color: 'bg-red-900/30 text-red-400' }] : []),
+              ].map(r => (
+                <button key={r.id} onClick={() => applyRole(r.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold ${r.color}`}>
+                  <span className="text-base">{r.icon}</span>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="border-t border-purple-900/20 pt-3 mt-3">
+              <p className="text-xs text-text-secondary mb-2 font-semibold">⭐ Кастомная роль</p>
+              <input value={crLabel} onChange={e => setCrLabel(e.target.value)}
+                placeholder="Название (напр. SPONSOR)" maxLength={15}
+                className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+              <div className="flex gap-2 mb-2 flex-wrap">
+                <span className="text-[10px] text-text-secondary uppercase w-full">Иконка</span>
+                {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮'].map(i => (
+                  <button key={i} onClick={() => setCrIcon(i)}
+                    className={`w-8 h-8 rounded-lg text-base ${crIcon === i ? 'bg-purple-600' : 'bg-bg-secondary border border-purple-900/30'}`}>
+                    {i}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 mb-2 flex-wrap">
+                <span className="text-[10px] text-text-secondary uppercase w-full">Цвет</span>
+                {['red','orange','yellow','green','blue','cyan','purple','pink'].map(col => (
+                  <button key={col} onClick={() => setCrColor(col)}
+                    className={`w-7 h-7 rounded-lg border-2 bg-${col}-500 ${crColor === col ? 'border-white' : 'border-transparent'}`}
+                    style={{ backgroundColor: { red:'#ef4444', orange:'#f97316', yellow:'#eab308', green:'#22c55e', blue:'#3b82f6', cyan:'#06b6d4', purple:'#a855f7', pink:'#ec4899' }[col] }} />
+                ))}
+              </div>
+              <button onClick={() => applyRole('custom')}
+                className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold">
+                Применить кастомную
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Окно с продажами */}
+        {showAccounts && (
+          <Modal onClose={() => setShowAccounts(false)} title={`Товары ${active.username || 'пользователя'} (${userAccounts.length})`}>
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {userAccounts.length === 0 ? (
+                <p className="text-text-secondary text-sm text-center py-4">Нет товаров</p>
+              ) : userAccounts.map(a => (
+                <div key={a.id} className="bg-bg-secondary border border-purple-900/20 rounded-lg p-3">
+                  <div className="flex items-start gap-2 mb-1">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-purple-900/30 rounded text-purple-300">{a.category}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${a.status === 'sold' ? 'bg-gray-900/40 text-gray-400' : 'bg-green-900/30 text-green-400'}`}>
+                      {a.status || 'active'}
+                    </span>
+                    <span className="text-[10px] text-text-secondary ml-auto">{new Date(a.created_at).toLocaleDateString('ru-RU')}</span>
+                  </div>
+                  <p className="text-sm text-white font-semibold truncate">{a.title}</p>
+                  <p className="text-sm text-purple-300">{a.price?.toLocaleString('ru-RU')} ₽</p>
+                </div>
+              ))}
+            </div>
+          </Modal>
+        )}
+
         {modal === 'stat' && (
           <Modal onClose={() => setModal(null)} title="Изменить статистику">
             <label className="text-xs text-text-secondary mb-1 block">Поле</label>
@@ -568,8 +716,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <option value="sales">Продажи</option>
               <option value="positive_reviews">Положительные отзывы</option>
               <option value="verified">Верификация (true/false)</option>
-              {myRole === 'owner' && <option value="role">Роль (user/moderator/admin/owner)</option>}
-            </select>
+              </select>
 
             <label className="text-xs text-text-secondary mb-1 block">Новое значение</label>
             <input value={statValue} onChange={e => setStatValue(e.target.value)}
@@ -608,7 +755,8 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-white truncate">{u.username || u.email}</p>
-                  <RoleBadge role={u.role} />
+                  <RB user={u} />
+                  {u.custom_id && <span className="text-[10px] text-purple-300 font-mono">#{u.custom_id}</span>}
                 </div>
                 <p className="text-xs text-text-secondary truncate">{u.email}</p>
               </div>
@@ -633,12 +781,23 @@ const OperationsSection: React.FC = () => {
   const [note, setNote] = useState('');
   const [opening, setOpening] = useState<string | null>(null);
 
+  const [usersMap, setUsersMap] = useState<Record<string, any>>({});
+
   const load = async () => {
     setLoading(true);
     let q = supabase.from('operations').select('*').order('created_at', { ascending: false }).limit(100);
     if (filter !== 'all') q = q.eq('status', filter);
     const { data } = await q;
     setOps(data || []);
+
+    // подтянем юзеров
+    const ids = [...new Set((data || []).map(o => o.user_id).filter(Boolean))];
+    if (ids.length > 0) {
+      const { data: users } = await supabase.from('users').select('id, username, email, custom_id').in('id', ids);
+      const map: Record<string, any> = {};
+      users?.forEach(u => { map[u.id] = u; });
+      setUsersMap(map);
+    }
     setLoading(false);
   };
 
@@ -688,7 +847,7 @@ const OperationsSection: React.FC = () => {
                     {o.type} · {Number(o.amount).toLocaleString('ru-RU')} ₽
                   </p>
                   <p className="text-xs text-text-secondary">
-                    User: {o.user_id?.slice(0, 8)} · {new Date(o.created_at).toLocaleString('ru-RU')}
+                    User: {usersMap[o.user_id]?.custom_id ? '#' + usersMap[o.user_id].custom_id : (usersMap[o.user_id]?.username || o.user_id?.slice(0, 8))} · {new Date(o.created_at).toLocaleString('ru-RU')}
                     {o.recipient && ` · → ${o.recipient}`}
                   </p>
                 </div>
@@ -850,6 +1009,8 @@ const StatsSection: React.FC = () => {
   });
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logFilter, setLogFilter] = useState('all');
+  const [modsMap, setModsMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -874,12 +1035,30 @@ const StatsSection: React.FC = () => {
           total_revenue: total,
         });
         setLogs(modLogs.data || []);
+        const modIds = [...new Set((modLogs.data || []).map((l: any) => l.moderator_id).filter(Boolean))];
+        if (modIds.length > 0) {
+          const { data: mods } = await supabase.from('users').select('id, username').in('id', modIds);
+          const map: Record<string, any> = {};
+          mods?.forEach((m: any) => { map[m.id] = m; });
+          setModsMap(map);
+        }
       } finally {
         setLoading(false);
       }
     };
     load();
   }, []);
+
+  const filterMatches: Record<string, string[]> = {
+    balance: ['set_balance', 'op_approve', 'op_reject', 'op_rollback'],
+    punish:  ['ban', 'mute', 'warn', 'unpunish'],
+    product: ['delete_account', 'request_edit'],
+    roles:   ['set_role', 'set_verified'],
+  };
+  const filteredLogs = logFilter === 'all' ? logs : logs.filter(l => {
+    const matches = filterMatches[logFilter] || [];
+    return matches.some(m => (l.action || '').includes(m));
+  });
 
   if (loading) return <div className="text-center py-8 text-text-secondary">Загрузка...</div>;
 
@@ -902,12 +1081,32 @@ const StatsSection: React.FC = () => {
       </div>
 
       <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-4">
-        <h4 className="text-sm font-semibold text-white mb-3">📋 Журнал действий модераторов</h4>
-        {logs.length === 0 ? (
-          <p className="text-text-secondary text-sm text-center py-4">Действий пока нет</p>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-white">📋 Журнал действий модераторов</h4>
+        </div>
+
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {[
+            { id: 'all',         label: 'Все', icon: '📜' },
+            { id: 'balance',     label: 'Балансы', icon: '💰', match: ['set_balance', 'op_'] },
+            { id: 'punish',      label: 'Наказания', icon: '🚫', match: ['ban', 'mute', 'warn', 'unpunish'] },
+            { id: 'product',     label: 'Товары', icon: '📦', match: ['delete_account', 'request_edit'] },
+            { id: 'roles',       label: 'Роли', icon: '👑', match: ['set_role', 'set_verified'] },
+          ].map(f => (
+            <button key={f.id} onClick={() => setLogFilter(f.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                logFilter === f.id ? 'bg-purple-600 text-white' : 'bg-bg-secondary text-text-secondary border border-purple-900/20'
+              }`}>
+              {f.icon} {f.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredLogs.length === 0 ? (
+          <p className="text-text-secondary text-sm text-center py-4">Действий нет</p>
         ) : (
-          <div className="space-y-2">
-            {logs.map(l => (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {filteredLogs.map(l => (
               <div key={l.id} className="bg-bg-secondary border border-purple-900/20 rounded-lg p-2 text-xs">
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="font-semibold text-purple-300">{l.action}</span>
@@ -915,7 +1114,7 @@ const StatsSection: React.FC = () => {
                 </div>
                 <p className="text-white">{l.details}</p>
                 <p className="text-[10px] text-text-secondary">
-                  Mod: {l.moderator_id?.slice(0, 8)} · Target: {l.target_type || '—'}/{l.target_id?.slice(0, 8) || '—'}
+                  Mod: {modsMap[l.moderator_id]?.username || l.moderator_id?.slice(0, 8)} · Target: {l.target_type || '—'}/{l.target_id?.slice(0, 8) || '—'}
                 </p>
               </div>
             ))}
@@ -928,7 +1127,7 @@ const StatsSection: React.FC = () => {
 
 
 /* =================== HELPERS =================== */
-export const RoleBadge: React.FC<{ role?: string }> = ({ role }) => {
+const RoleBadge: React.FC<{ role?: string }> = ({ role }) => {
   if (!role || role === 'user') return null;
   const map: Record<string, { label: string; icon: string; cls: string }> = {
     owner:     { label: 'OWNER', icon: '👑', cls: 'bg-red-900/30 text-red-400 border-red-800/40' },

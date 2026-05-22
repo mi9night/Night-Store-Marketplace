@@ -6,7 +6,9 @@ import {
   Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { RoleBadge } from '../components/ModerationPanel';
+import { RoleBadge } from '../components/RoleBadge';
+import { UserLink } from '../components/UserLink';
+import ReportButton from '../components/ReportButton';
 import type { Page } from '../types/pages';
 
 interface Props {
@@ -210,7 +212,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-bold text-white">{topic.author_avatar || 'U'}</span>
           </div>
-          <span className="font-medium text-white">{topic.author_name || 'Аноним'}</span>
+          <UserLink userId={topic.author_id} username={topic.author_name || 'Аноним'} className="font-medium text-white" />
           <span>•</span>
           <div className="flex items-center gap-1"><Clock size={11} />{new Date(topic.created_at).toLocaleString('ru-RU')}</div>
         </div>
@@ -245,10 +247,10 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             }`}>
             <ThumbsDown size={14} /> {topic.dislikes || 0}
           </button>
-          <div className="flex items-center gap-1 text-xs text-text-secondary ml-auto">
-            <Eye size={12} /> {topic.views || 0}
-            <span className="mx-1">·</span>
-            <MessageSquare size={12} /> {comments.length}
+          <div className="flex items-center gap-2 text-xs text-text-secondary ml-auto">
+            <span className="flex items-center gap-1"><Eye size={12} /> {topic.views || 0}</span>
+            <span className="flex items-center gap-1"><MessageSquare size={12} /> {comments.length}</span>
+            <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} />
           </div>
         </div>
       </motion.div>
@@ -362,7 +364,7 @@ const CommentItem: React.FC<{
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
           <span className="text-xs font-bold text-white">{c.author_avatar || 'U'}</span>
         </div>
-        <span className="text-sm font-semibold text-white">{c.author_name}</span>
+        <UserLink userId={c.author_id} username={c.author_name} className="text-sm font-semibold text-white" />
         <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
       </div>
       <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>
@@ -397,11 +399,14 @@ const CommentItem: React.FC<{
             <Reply size={11} /> Ответить
           </button>
         )}
-        {canDelete && (
-          <button onClick={() => onDelete(c.id)} className="ml-auto text-text-secondary hover:text-red-400 p-1">
-            <Trash2 size={13} />
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-1">
+          <ReportButton targetType="comment" targetId={c.id} targetName={'Комментарий: ' + c.content.slice(0, 40)} small />
+          {canDelete && (
+            <button onClick={() => onDelete(c.id)} className="text-text-secondary hover:text-red-400 p-1">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Ответы */}

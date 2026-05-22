@@ -6,6 +6,8 @@ import { dbToAccount } from './lib/db';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RealTimeNotification from './components/RealTimeNotification';
+import UserProfileModal from './components/UserProfileModal';
+import LiveFeed from './components/LiveFeed';
 
 import AuthPage from './pages/AuthPage';
 import MarketPage from './pages/MarketPage';
@@ -20,6 +22,8 @@ import FavoritesPage from './pages/FavoritesPage';
 import SettingsPage from './pages/SettingsPage';
 import TopSellersPage from './pages/TopSellersPage';
 import TopicPage from './pages/TopicPage';
+import MessagesPage from './pages/MessagesPage';
+import SupportPage from './pages/SupportPage';
 import OperationsPage from './pages/OperationsPage';
 import LabelsPage from './pages/LabelsPage';
 import AutobuyPage from './pages/AutobuyPage';
@@ -216,6 +220,8 @@ const App: React.FC = () => {
 
                   {/* ✅ Восстановленные страницы */}
                   {currentPage === 'operations' && <OperationsPage />}
+                  {currentPage === ('messages' as any) && <MessagesPage />}
+                  {currentPage === ('support' as any) && <SupportPage />}
                   {currentPage === 'labels' && <LabelsPage />}
                   {currentPage === 'autobuy' && <AutobuyPage />}
                   {currentPage === 'rates' && <RatesPage />}
@@ -228,9 +234,11 @@ const App: React.FC = () => {
           </main>
 
           <RealTimeNotification />
+          <LiveFeed />
         </>
       )}
 
+      <UserProfileModal />
     </div>
   );
 };
