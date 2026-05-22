@@ -44,6 +44,9 @@ const App: React.FC = () => {
   const [cartItems, setCartItems] = useState<Account[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  
+  // Глобальное состояние поиска
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
 
@@ -134,6 +137,8 @@ const App: React.FC = () => {
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMobileMenuOpen={isMobileMenuOpen}
             onOpenAccount={handleOpenAccount}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
           />
 
           <Sidebar
@@ -161,6 +166,8 @@ const App: React.FC = () => {
                       onSelectAccount={handleSelectAccount}
                       setCurrentPage={handleSetPage}
                       onAddToCart={handleAddToCart}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
                     />
                   )}
 
@@ -218,7 +225,6 @@ const App: React.FC = () => {
                     <TopicPage topicId={selectedTopicId} setCurrentPage={handleSetPage} />
                   )}
 
-                  {/* ✅ Восстановленные страницы */}
                   {currentPage === 'operations' && <OperationsPage />}
                   {currentPage === ('messages' as any) && <MessagesPage />}
                   {currentPage === ('support' as any) && <SupportPage />}
