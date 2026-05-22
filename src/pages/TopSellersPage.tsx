@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy, Star, CheckCircle2, Award, Zap, ThumbsUp,
-  ShoppingCart, Shield, CheckSquare, Sparkles, LogIn
+  ShoppingCart, Shield, CheckSquare, Sparkles, Gift, Send
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
@@ -246,8 +246,8 @@ const TopSellersPage: React.FC = () => {
             { icon: ShoppingCart, label: 'Успешная продажа',     xp: '+100 XP', color: 'text-purple-300' },
             { icon: Shield,      label: 'Завершение гарантии',  xp: '+25 XP',  color: 'text-blue-400' },
             { icon: CheckSquare, label: 'Верификация профиля', xp: '+200 XP', color: 'text-yellow-400' },
-            { icon: Award,       label: 'Участие в промо',     xp: '+150 XP', color: 'text-purple-400' },
-            { icon: LogIn,       label: 'Ежедневный вход',     xp: '+5 XP',   color: 'text-cyan-400' },
+            { icon: Gift,        label: 'Розыгрыш',            xp: '+150 XP', color: 'text-pink-400' },
+            { icon: Send,        label: 'Сообщения и комменты', xp: '+1-10 XP', color: 'text-cyan-400' },
           ].map((item, i) => (
             <motion.div
               key={i}

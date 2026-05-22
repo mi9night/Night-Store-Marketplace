@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
+import LabelManager from '../components/LabelManager';
 
 interface UserData {
   id: string;

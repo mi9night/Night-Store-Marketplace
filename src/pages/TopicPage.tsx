@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
+import LabelManager from '../components/LabelManager';
 import type { Page } from '../types/pages';
 
 interface Props {
@@ -207,6 +208,9 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold text-white mb-3">{topic.title}</h1>
+        <div className="mb-3">
+          <LabelManager targetType="topic" targetId={topic.id} />
+        </div>
 
         <div className="flex items-center gap-3 mb-4 text-xs text-text-secondary">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">

@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 import { UserLink } from '../components/UserLink';
+import LabelManager from '../components/LabelManager';
 import { useCurrency } from '../lib/CurrencyContext';
 
 interface ProductPageProps {
@@ -31,6 +32,16 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [buyResult, setBuyResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [isFav, setIsFav] = useState(false);
   const [me, setMe] = useState<any>(null);
+
+  // Заказ покупателя (если этот товар был куплен мной)
+  const [myOrder, setMyOrder] = useState<any>(null);
+  const [myReview, setMyReview] = useState<any>(null);
+  const [showReview, setShowReview] = useState(false);
+  const [revRating, setRevRating] = useState(5);
+  const [revPositive, setRevPositive] = useState(true);
+  const [revText, setRevText] = useState('');
+  const [revSending, setRevSending] = useState(false);
+  const [revMsg, setRevMsg] = useState<string | null>(null);
 
   // Реальный продавец из БД
   const [seller, setSeller] = useState<any>(null);
@@ -58,6 +69,18 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
         const { data: f } = await supabase.from('favorites')
           .select('account_id').eq('user_id', u.user.id).eq('account_id', account.id).maybeSingle();
         if (f) setIsFav(true);
+
+        // Мой заказ?
+        const { data: ord } = await supabase.from('orders')
+          .select('*').eq('buyer_id', u.user.id).eq('account_id', account.id)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (ord) {
+          setMyOrder(ord);
+          // Отзыв уже есть?
+          const { data: rev } = await supabase.from('reviews')
+            .select('*').eq('user_id', u.user.id).eq('account_id', account.id).maybeSingle();
+          if (rev) setMyReview(rev);
+        }
       }
 
       // Продавец
@@ -109,6 +132,33 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     } finally {
       setBuying(false);
     }
+  };
+
+  const submitReview = async () => {
+    if (!myOrder) return;
+    setRevMsg(null); setRevSending(true);
+    try {
+      const { data, error } = await supabase.rpc('leave_review', {
+        p_order_id: myOrder.id,
+        p_rating: revRating,
+        p_positive: revPositive,
+        p_text: revText,
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        setRevMsg('✅ Отзыв отправлен!');
+        setMyReview({ rating: revRating, positive: revPositive, text: revText });
+        setTimeout(() => setShowReview(false), 1500);
+      } else {
+        const errMap: Record<string, string> = {
+          already_reviewed: 'Вы уже оставляли отзыв на эту покупку',
+          not_your_order: 'Это не ваш заказ',
+        };
+        setRevMsg('⚠️ ' + (errMap[data?.error] || data?.error));
+      }
+    } catch (e: any) {
+      setRevMsg('⚠️ ' + e.message);
+    } finally { setRevSending(false); }
   };
 
   const handleFav = async () => {
@@ -204,6 +254,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
             {account.description && (
               <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{account.description}</p>
             )}
+
+            {/* Метки */}
+            <div className="mt-3 pt-3 border-t border-purple-900/20">
+              <LabelManager targetType="account" targetId={account.id} />
+            </div>
           </motion.div>
 
           {/* ⭐ ИНФОРМАЦИЯ ОБ АККАУНТЕ (красивая) */}
@@ -231,6 +286,91 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
               ))}
             </div>
           </motion.div>
+
+          {/* === Блок отзыва (если я купил) === */}
+          {myOrder && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+              className="bg-gradient-to-br from-green-900/20 to-purple-900/10 border border-green-700/30 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Star size={18} className="text-yellow-400 fill-yellow-400" />
+                <h3 className="text-sm font-semibold text-white">Вы купили этот аккаунт</h3>
+              </div>
+
+              {myReview ? (
+                <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      myReview.positive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                    }`}>
+                      {myReview.positive ? '👍 Положительный' : '👎 Отрицательный'}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={11} className={i < myReview.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                      ))}
+                    </div>
+                  </div>
+                  {myReview.text && <p className="text-sm text-white">{myReview.text}</p>}
+                  <p className="text-xs text-text-secondary mt-2">✅ Ваш отзыв опубликован</p>
+                </div>
+              ) : (
+                !showReview ? (
+                  <button onClick={() => setShowReview(true)}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold">
+                    ⭐ Оставить отзыв о продавце
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Оценка</label>
+                      <div className="flex gap-2">
+                        <button onClick={() => setRevPositive(true)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold ${
+                            revPositive ? 'bg-green-600 text-white' : 'bg-bg-secondary text-text-secondary'
+                          }`}>
+                          👍 Положительный
+                        </button>
+                        <button onClick={() => setRevPositive(false)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold ${
+                            !revPositive ? 'bg-red-600 text-white' : 'bg-bg-secondary text-text-secondary'
+                          }`}>
+                          👎 Отрицательный
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Звёзды</label>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n} onClick={() => setRevRating(n)}>
+                            <Star size={20} className={n <= revRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea value={revText} onChange={e => setRevText(e.target.value)}
+                      placeholder="Опишите ваш опыт..." rows={3}
+                      className="w-full px-3 py-2 rounded-lg bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none" />
+
+                    {revMsg && (
+                      <div className={`text-xs p-2 rounded-lg ${revMsg.startsWith('✅') ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
+                        {revMsg}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowReview(false)}
+                        className="flex-1 py-2 bg-purple-900/20 text-white rounded-xl text-sm">Отмена</button>
+                      <button onClick={submitReview} disabled={revSending}
+                        className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                        {revSending ? 'Отправка...' : 'Отправить'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
+            </motion.div>
+          )}
 
           {/* === Табы: Отзывы / Статистика / История === */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
@@ -341,7 +481,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
             </div>
 
             <div className="space-y-3 mb-4">
-              <motion.button onClick={handleBuy} disabled={buying}
+              {myOrder ? (
+                <div className="text-center p-3 bg-green-900/20 border border-green-700/30 rounded-xl text-sm text-green-400">
+                  ✅ Куплено вами
+                </div>
+              ) : null}
+              <motion.button onClick={handleBuy} disabled={buying || !!myOrder}
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50">
                 <Zap size={18} />

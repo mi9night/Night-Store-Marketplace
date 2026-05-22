@@ -9,6 +9,7 @@ import type { Page } from '../types/pages';
 import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
 import { UserLink } from './UserLink';
+import LabelManager from './LabelManager';
 import { useCurrency } from '../lib/CurrencyContext';
 import { supabase } from '../lib/supabase';
 
@@ -142,6 +143,10 @@ const AccountCard: React.FC<AccountCardProps> = ({
         <h3 className="text-sm font-semibold text-white line-clamp-2 leading-snug group-hover:text-purple-300 transition-colors mb-2 min-h-[2.5rem]">
           {account?.title || 'Без названия'}
         </h3>
+
+        <div onClick={(e) => e.stopPropagation()} className="mb-2">
+          <LabelManager targetType="account" targetId={account.id} small />
+        </div>
 
         {/* Доп. инфа */}
         <div className="text-xs text-text-secondary mb-2 space-y-0.5">
