@@ -447,7 +447,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-white">{active.username || active.email}</h3>
                 {active.verified && <CheckCircle2 size={16} className="text-blue-400" />}
-                <RoleBadge role={active.role} />
+                <RoleBadge role={active.role} user={active} />
               </div>
               <p className="text-sm text-text-secondary">{active.email}</p>
               <p className="text-xs text-text-secondary">ID: {active.id}</p>
@@ -610,7 +610,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-white truncate">{u.username || u.email}</p>
-                  <RoleBadge role={u.role} />
+                  <RoleBadge role={u.role} user={u} />
                 </div>
                 <p className="text-xs text-text-secondary truncate">{u.email}</p>
               </div>
@@ -930,20 +930,30 @@ const StatsSection: React.FC = () => {
 
 
 /* =================== HELPERS =================== */
-export const RoleBadge: React.FC<{ role?: string }> = ({ role }) => {
-  if (!role || role === 'user') return null;
-  const map: Record<string, { label: string; icon: string; cls: string }> = {
+export const RoleBadge: React.FC<{ role?: string; user?: any }> = ({ role, user }) => {
+  const badges: React.ReactNode[] = [];
+  const presetMap: Record<string, { label: string; icon: string; cls: string }> = {
     owner:     { label: 'OWNER', icon: '👑', cls: 'bg-red-900/30 text-red-400 border-red-800/40' },
     admin:     { label: 'ADMIN', icon: '🛡', cls: 'bg-orange-900/30 text-orange-400 border-orange-800/40' },
     moderator: { label: 'MOD',   icon: '⚖️', cls: 'bg-blue-900/30 text-blue-400 border-blue-800/40' },
   };
-  const r = map[role];
-  if (!r) return null;
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${r.cls}`}>
-      {r.icon} {r.label}
-    </span>
-  );
+  const r = role || user?.role;
+  if (r && r !== 'user' && presetMap[r]) {
+    const p = presetMap[r];
+    badges.push(<span key="preset" className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${p.cls}`}>{p.icon} {p.label}</span>);
+  }
+  if (user?.custom_role_label) {
+    const colorClasses: Record<string, string> = {
+      red: 'bg-red-900/30 text-red-400 border-red-800/40', orange: 'bg-orange-900/30 text-orange-400 border-orange-800/40',
+      yellow: 'bg-yellow-900/30 text-yellow-400 border-yellow-800/40', green: 'bg-green-900/30 text-green-400 border-green-800/40',
+      blue: 'bg-blue-900/30 text-blue-400 border-blue-800/40', cyan: 'bg-cyan-900/30 text-cyan-400 border-cyan-800/40',
+      purple: 'bg-purple-900/30 text-purple-300 border-purple-700/40', pink: 'bg-pink-900/30 text-pink-400 border-pink-800/40',
+    };
+    const cls = colorClasses[user.custom_role_color || 'purple'] || colorClasses.purple;
+    badges.push(<span key="custom" className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls}`}>{user.custom_role_icon || '⭐'} {user.custom_role_label.toUpperCase()}</span>);
+  }
+  if (badges.length === 0) return null;
+  return <span className="inline-flex items-center gap-1">{badges}</span>;
 };
 
 const Modal: React.FC<{ onClose: () => void; title: string; children: React.ReactNode }> = ({ onClose, title, children }) => (

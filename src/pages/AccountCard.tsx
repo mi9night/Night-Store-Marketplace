@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
-import { RoleBadge } from './ModerationPanel';
+import { RoleBadge } from '../components/RoleBadge';
 
 interface AccountCardProps {
   account: Account;
@@ -181,7 +181,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
               <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
                 <span className="text-xs font-medium text-white truncate">{account.seller.username}</span>
                 {account.seller.isVerified && <CheckCircle2 size={10} className="text-blue-400 flex-shrink-0" />}
-                <RoleBadge role={(account.seller as any).role} />
+                <RoleBadge role={(account.seller as any).role} user={(account.seller as any)} />
                 <span className={`text-[10px] ${sellerLevel.color}`}>· {sellerLevel.label}</span>
               </div>
               <div className="flex items-center gap-0.5 flex-shrink-0">
