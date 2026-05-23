@@ -35,9 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [action, setAction] = useState<BalanceAction>(null);
 
-  const { convert, symbol, currency } = useCurrency();
-  const [showBalance, setShowBalance] = useState(true);
-  const [showEmail, setShowEmail] = useState(false);
+  const { convert, symbol, currency, hideBalance, setHideBalance, hideEmail, setHideEmail } = useCurrency();
 
   /* ============ загрузка пользователя и баланса ============ */
   useEffect(() => {
@@ -106,30 +104,30 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-text-secondary">Баланс</span>
-              <button onClick={() => setShowBalance(!showBalance)}
-                title={showBalance ? 'Скрыть' : 'Показать'}
+              <button onClick={() => setHideBalance(!hideBalance)}
+                title={hideBalance ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white">
-                {showBalance ? <Eye size={11} /> : <EyeOff size={11} />}
+                {hideBalance ? <EyeOff size={11} /> : <Eye size={11} />}
               </button>
             </div>
             <Wallet size={14} className="text-accent" />
           </div>
           <p className="text-2xl font-bold text-text-primary">
-            {showBalance
+            {!hideBalance
               ? <>{convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span></>
               : <span className="text-text-secondary">••••••</span>}
           </p>
           {user?.email && (
             <div className="flex items-center gap-1.5 mt-1">
               <p className="text-xs text-text-secondary truncate flex-1">
-                {showEmail
+                {!hideEmail
                   ? user.email
                   : '••••••••@' + (user.email.split('@')[1] || '•••')}
               </p>
-              <button onClick={() => setShowEmail(!showEmail)}
-                title={showEmail ? 'Скрыть' : 'Показать'}
+              <button onClick={() => setHideEmail(!hideEmail)}
+                title={hideEmail ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white flex-shrink-0">
-                {showEmail ? <Eye size={11} /> : <EyeOff size={11} />}
+                {hideEmail ? <EyeOff size={11} /> : <Eye size={11} />}
               </button>
             </div>
           )}

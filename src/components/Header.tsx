@@ -54,10 +54,9 @@ const Header: React.FC<HeaderProps> = ({
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   const [showMsgDropdown, setShowMsgDropdown] = useState(false);
-  const [balVisible, setBalVisible] = useState(true);
   const [myProfile, setMyProfile] = useState<any>(null);
 
-  const { currency, setCurrency, convert, symbol } = useCurrency();
+  const { currency, setCurrency, convert, symbol, hideBalance, setHideBalance } = useCurrency();
 
   // Balance menu state
   const [balAction, setBalAction] = useState<'deposit' | 'withdraw' | 'transfer' | null>(null);
@@ -376,7 +375,7 @@ const Header: React.FC<HeaderProps> = ({
               whileHover={{ scale: 1.03 }}>
               <Wallet size={14} className="text-accent" />
               <span className="text-sm font-semibold text-text-primary">
-                {balVisible
+                {!hideBalance
                   ? `${convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} ${symbol}`
                   : '••••'}
               </span>
@@ -399,12 +398,12 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] text-purple-300 uppercase tracking-wider">Доступно</span>
-                        <button onClick={() => setBalVisible(!balVisible)} className="text-purple-300 hover:text-white" title={balVisible ? 'Скрыть баланс' : 'Показать баланс'}>
-                          {balVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                        <button onClick={() => setHideBalance(!hideBalance)} className="text-purple-300 hover:text-white" title={hideBalance ? 'Показать баланс' : 'Скрыть баланс'}>
+                          {hideBalance ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </div>
                       <div className="text-2xl font-bold text-white mb-2">
-                        {balVisible
+                        {!hideBalance
                           ? `${balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${symbol}`
                           : '••••••'}
                       </div>
