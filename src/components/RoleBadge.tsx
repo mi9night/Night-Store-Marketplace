@@ -32,41 +32,26 @@ const colorClasses: Record<string, string> = {
   pink:   'bg-pink-900/30 text-pink-400 border-pink-800/40',
 };
 
-/** Один жетон роли */
-const Badge: React.FC<{ icon: string; label: string; cls: string }> = ({ icon, label, cls }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls}`}>
-    {icon} {label}
-  </span>
-);
-
 export const RoleBadge: React.FC<Props> = ({ role, user }) => {
-  const badges: React.ReactNode[] = [];
-
-  // 1. Пресетная роль (owner, admin, moderator, support, vip)
-  const r = role || user?.role;
-  if (r && r !== 'user') {
-    const p = presetMap[r];
-    if (p) {
-      badges.push(<Badge key="preset" icon={p.icon} label={p.label} cls={p.cls} />);
-    }
-  }
-
-  // 2. Кастомная роль (ДОБАВЛЯЕТСЯ, а не заменяет)
+  // Если есть кастомная роль — показываем её
   if (user?.custom_role_label) {
     const cls = colorClasses[user.custom_role_color || 'purple'] || colorClasses.purple;
-    badges.push(
-      <Badge
-        key="custom"
-        icon={user.custom_role_icon || '⭐'}
-        label={user.custom_role_label.toUpperCase()}
-        cls={cls}
-      />
+    return (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls}`}>
+        {user.custom_role_icon || '⭐'} {user.custom_role_label.toUpperCase()}
+      </span>
     );
   }
 
-  if (badges.length === 0) return null;
-
-  return <span className="inline-flex items-center gap-1">{badges}</span>;
+  const r = role || user?.role;
+  if (!r || r === 'user') return null;
+  const p = presetMap[r];
+  if (!p) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${p.cls}`}>
+      {p.icon} {p.label}
+    </span>
+  );
 };
 
 export default RoleBadge;

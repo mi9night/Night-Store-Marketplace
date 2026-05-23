@@ -273,17 +273,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 
   const activeBan = bans.find(b => b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
 
-  // Уровень продавца из продаж — синхронизирован со шкалой прогресса
-  const calcSalesLevel = (sales: number): number => {
-    if (sales >= 2500) return 6;
-    if (sales >= 1000) return 5;
-    if (sales >= 500) return 4;
-    if (sales >= 200) return 3;
-    if (sales >= 50) return 2;
-    return 1;
-  };
-  const salesLevel = calcSalesLevel(profile?.sales || 0);
-
   return (
     <div className="max-w-4xl mx-auto space-y-5">
 
@@ -373,7 +362,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
                 {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
                 <RoleBadge role={profile?.role} />
-                <LevelBadge level={salesLevel} />
+                <LevelBadge level={profile?.level || 1} />
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
                 <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
