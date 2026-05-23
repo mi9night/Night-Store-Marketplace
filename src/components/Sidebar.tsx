@@ -380,14 +380,15 @@ const BalanceActionModal: React.FC<{
 
           {action === 'transfer' && (
             <>
-              <label className="text-sm text-text-secondary mb-1.5 block">Получатель (email или ID)</label>
+              <label className="text-sm text-text-secondary mb-1.5 block">Получатель</label>
               <input
                 type="text"
                 value={recipient}
                 onChange={e => setRecipient(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3"
+                placeholder="email, никнейм или #ID"
+                className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-1"
               />
+              <p className="text-xs text-text-secondary mb-3">💡 Можно ввести email, никнейм или #ID получателя</p>
             </>
           )}
 

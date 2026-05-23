@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, LifeBuoy,
   User, Settings, LogOut, Star, Package,
-  Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle
+  Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -54,6 +54,7 @@ const Header: React.FC<HeaderProps> = ({
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   const [showMsgDropdown, setShowMsgDropdown] = useState(false);
+  const [balVisible, setBalVisible] = useState(true);
   const [myProfile, setMyProfile] = useState<any>(null);
 
   const { currency, setCurrency, convert, symbol } = useCurrency();
@@ -375,7 +376,9 @@ const Header: React.FC<HeaderProps> = ({
               whileHover={{ scale: 1.03 }}>
               <Wallet size={14} className="text-accent" />
               <span className="text-sm font-semibold text-text-primary">
-                {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}
+                {balVisible
+                  ? `${convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} ${symbol}`
+                  : '••••'}
               </span>
             </motion.button>
 
@@ -394,9 +397,16 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="p-4 space-y-3">
                     {/* Сумма + валюты */}
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
-                      <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-1">Доступно</div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-purple-300 uppercase tracking-wider">Доступно</span>
+                        <button onClick={() => setBalVisible(!balVisible)} className="text-purple-300 hover:text-white" title={balVisible ? 'Скрыть баланс' : 'Показать баланс'}>
+                          {balVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                        </button>
+                      </div>
                       <div className="text-2xl font-bold text-white mb-2">
-                        {balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} {symbol}
+                        {balVisible
+                          ? `${balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${symbol}`
+                          : '••••••'}
                       </div>
                       {currency !== 'RUB' && (
                         <div className="text-[10px] text-text-secondary mb-2">
@@ -446,9 +456,12 @@ const Header: React.FC<HeaderProps> = ({
                           placeholder="Сумма ₽"
                           className="w-full px-3 py-2 mb-2 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
                         {balAction === 'transfer' && (
-                          <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
-                            placeholder="Email, ник или ID"
-                            className="w-full px-3 py-2 mb-2 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
+                          <>
+                            <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
+                              placeholder="Email, ник или ID"
+                              className="w-full px-3 py-2 mb-1 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
+                            <p className="text-[10px] text-text-secondary mb-2">💡 Можно ввести email, никнейм или #ID получателя</p>
+                          </>
                         )}
                         {balResult && (
                           <div className={`text-xs mb-2 p-2 rounded-lg flex items-start gap-2 ${

@@ -27,6 +27,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [showEmailLocal, setShowEmailLocal] = useState(false);
 
   const avatarInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
@@ -372,22 +373,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                 </p>
               </div>
 
-              {/* Email */}
-              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <label className="text-sm text-text-secondary mb-2 block">Email</label>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white">
-                    {user?.email}
-                  </div>
-                  <button
-                    onClick={() => openAction('email')}
-                    className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
-                  >
-                    Изменить
-                  </button>
-                </div>
-              </div>
-
               {/* О себе */}
               <div>
                 <label className="text-sm text-text-secondary mb-1.5 block">О себе</label>
@@ -411,11 +396,34 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
             <>
               <h3 className="text-base font-semibold text-white">Безопасность</h3>
 
+              {/* Email (перенесён сюда) */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <label className="text-sm text-text-secondary mb-2 block">Email</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
+                    {showEmailLocal ? user?.email : '••••••••@' + (user?.email?.split('@')[1] || '••••')}
+                  </div>
+                  <button
+                    onClick={() => setShowEmailLocal(!showEmailLocal)}
+                    title={showEmailLocal ? 'Скрыть' : 'Показать'}
+                    className="p-3 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-xl">
+                    {showEmailLocal ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                  <button
+                    onClick={() => openAction('email')}
+                    className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
+                  >
+                    Изменить
+                  </button>
+                </div>
+              </div>
+
+              {/* Пароль */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-white">Пароль</p>
-                    <p className="text-xs text-text-secondary mt-1">Последнее изменение давно</p>
+                    <p className="text-xs text-text-secondary mt-1">Регулярно меняйте для безопасности</p>
                   </div>
                   <button
                     onClick={() => openAction('password')}
@@ -426,6 +434,44 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
+              {/* Приватность */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-white">🔒 Приватность</p>
+
+                <label className="flex items-center justify-between p-3 bg-bg-card rounded-xl cursor-pointer">
+                  <div>
+                    <p className="text-sm text-white">Скрыть email от других</p>
+                    <p className="text-xs text-text-secondary">В профиле и поиске</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const v = !profile?.hide_email;
+                      await supabase.from('users').update({ hide_email: v }).eq('id', user.id);
+                      setProfile({ ...profile, hide_email: v });
+                    }}
+                    className={`w-11 h-6 rounded-full transition-all relative ${profile?.hide_email ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${profile?.hide_email ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between p-3 bg-bg-card rounded-xl cursor-pointer">
+                  <div>
+                    <p className="text-sm text-white">Скрыть баланс от других</p>
+                    <p className="text-xs text-text-secondary">Чужие профили не увидят сумму</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const v = !profile?.hide_balance;
+                      await supabase.from('users').update({ hide_balance: v }).eq('id', user.id);
+                      setProfile({ ...profile, hide_balance: v });
+                    }}
+                    className={`w-11 h-6 rounded-full transition-all relative ${profile?.hide_balance ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${profile?.hide_balance ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </label>
+              </div>
+
+              {/* 2FA */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>

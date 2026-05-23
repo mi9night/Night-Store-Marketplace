@@ -503,28 +503,38 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
             </div>
           </div>
 
-          {/* Статы с быстрыми +/- кнопками */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+          {/* Статы с точными значениями */}
+          <div className="space-y-2 mb-4">
             {[
-              { label: '💰 Баланс', field: 'balance', value: active.balance || 0, step: 100, suffix: ' ₽' },
-              { label: '⚡ XP',      field: 'xp',      value: active.xp || 0,      step: 50,  suffix: '' },
-              { label: '📈 Уровень', field: 'level',   value: active.level || 1,   step: 1,   suffix: '' },
-              { label: '🛍 Продажи', field: 'sales',   value: active.sales || 0,   step: 1,   suffix: '' },
+              { label: '💰 Баланс',  field: 'balance', value: active.balance || 0,  steps: [10, 100, 1000, 10000], suffix: ' ₽' },
+              { label: '⚡ XP',       field: 'xp',      value: active.xp || 0,       steps: [10, 50, 100, 500],   suffix: ''     },
+              { label: '📈 Уровень',  field: 'level',   value: active.level || 1,    steps: [1],                  suffix: ''     },
+              { label: '🛍 Продажи',  field: 'sales',   value: active.sales || 0,    steps: [1, 10],              suffix: ''     },
             ].map(s => (
-              <div key={s.field} className="bg-bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <div className="flex-1">
-                  <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
+              <div key={s.field} className="bg-bg-secondary rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-text-secondary">{s.label}</p>
                   <p className="text-sm font-bold text-white">{s.value}{s.suffix}</p>
                 </div>
-                <button onClick={() => quickStat(s.field, s.value - s.step)}
-                  className="w-7 h-7 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-sm font-bold">−</button>
-                <button onClick={() => quickStat(s.field, s.value + s.step)}
-                  className="w-7 h-7 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-sm font-bold">+</button>
-                {s.field === 'sales' && (
-                  <button onClick={() => setShowAccounts(true)}
-                    title="Открыть продажи"
-                    className="w-7 h-7 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm">📦</button>
-                )}
+                <div className="flex items-center gap-1 flex-wrap">
+                  {s.steps.map(step => (
+                    <React.Fragment key={step}>
+                      <button onClick={() => quickStat(s.field, s.value - step)}
+                        className="px-2 py-1 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-md text-[10px] font-bold">−{step >= 1000 ? step/1000 + 'k' : step}</button>
+                      <button onClick={() => quickStat(s.field, s.value + step)}
+                        className="px-2 py-1 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-md text-[10px] font-bold">+{step >= 1000 ? step/1000 + 'k' : step}</button>
+                    </React.Fragment>
+                  ))}
+                  <button onClick={() => {
+                    const v = prompt(`Точное значение ${s.label}:`, String(s.value));
+                    if (v !== null && !isNaN(Number(v))) quickStat(s.field, Number(v));
+                  }}
+                    className="px-2 py-1 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-md text-[10px] font-bold">✏️ точно</button>
+                  {s.field === 'sales' && (
+                    <button onClick={() => setShowAccounts(true)} title="Товары"
+                      className="ml-auto px-2 py-1 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-md text-[10px]">📦 товары</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -272,7 +272,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             <CommentItem
               key={c.id}
               comment={c}
-              replies={repliesOf(c.id)}
+              allComments={comments}
               myVotes={myVotes}
               me={me}
               myRole={myProfile?.role}
@@ -345,7 +345,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
 /* ============ Компонент одного комментария ============ */
 const CommentItem: React.FC<{
   comment: Comment;
-  replies: Comment[];
+  allComments: Comment[];
   myVotes: Record<string, number>;
   me: any;
   myRole?: string;
@@ -354,7 +354,8 @@ const CommentItem: React.FC<{
   onDelete: (id: string) => void;
   index: number;
   depth?: number;
-}> = ({ comment: c, replies, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
+}> = ({ comment: c, allComments, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
+  const replies = allComments.filter(x => x.parent_id === c.id);
   const v = myVotes[`comment:${c.id}`];
   const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myRole || ''));
 
@@ -397,7 +398,7 @@ const CommentItem: React.FC<{
           }`}>
           <ThumbsDown size={11} /> {c.dislikes || 0}
         </button>
-        {depth < 2 && me && (
+        {me && (
           <button onClick={() => onReply(c)}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-purple-900/20 text-text-secondary hover:text-purple-300">
             <Reply size={11} /> Ответить
@@ -420,7 +421,7 @@ const CommentItem: React.FC<{
             <CommentItem
               key={r.id}
               comment={r}
-              replies={[]}
+              allComments={allComments}
               myVotes={myVotes}
               me={me}
               myRole={myRole}
@@ -428,7 +429,7 @@ const CommentItem: React.FC<{
               onReply={onReply}
               onDelete={onDelete}
               index={i}
-              depth={depth + 1}
+              depth={Math.min(depth + 1, 5)}
             />
           ))}
         </div>
