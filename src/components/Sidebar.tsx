@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, ArrowDownLeft, ArrowLeftRight,
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
-  Settings, Shield, TrendingUp, DollarSign, Code,
+  Settings, Shield, TrendingUp, DollarSign, Code, Eye, EyeOff,
   ChevronDown, Plus, MessageSquare, X
 } from 'lucide-react';
 import { categories } from '../data/mockData';
@@ -36,6 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [action, setAction] = useState<BalanceAction>(null);
 
   const { convert, symbol, currency } = useCurrency();
+  const [showBalance, setShowBalance] = useState(true);
+  const [showEmail, setShowEmail] = useState(false);
 
   /* ============ загрузка пользователя и баланса ============ */
   useEffect(() => {
@@ -102,14 +104,34 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-b border-purple-900/20">
         <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-text-secondary">Баланс</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-text-secondary">Баланс</span>
+              <button onClick={() => setShowBalance(!showBalance)}
+                title={showBalance ? 'Скрыть' : 'Показать'}
+                className="text-text-secondary hover:text-white">
+                {showBalance ? <Eye size={11} /> : <EyeOff size={11} />}
+              </button>
+            </div>
             <Wallet size={14} className="text-accent" />
           </div>
           <p className="text-2xl font-bold text-text-primary">
-            {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span>
+            {showBalance
+              ? <>{convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span></>
+              : <span className="text-text-secondary">••••••</span>}
           </p>
           {user?.email && (
-            <p className="text-xs text-text-secondary mt-1 truncate">{user.email}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <p className="text-xs text-text-secondary truncate flex-1">
+                {showEmail
+                  ? user.email
+                  : '••••••••@' + (user.email.split('@')[1] || '•••')}
+              </p>
+              <button onClick={() => setShowEmail(!showEmail)}
+                title={showEmail ? 'Скрыть' : 'Показать'}
+                className="text-text-secondary hover:text-white flex-shrink-0">
+                {showEmail ? <Eye size={11} /> : <EyeOff size={11} />}
+              </button>
+            </div>
           )}
         </div>
 
