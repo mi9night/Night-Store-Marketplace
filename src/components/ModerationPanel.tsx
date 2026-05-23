@@ -376,8 +376,17 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   const [pHours, setPHours] = useState<string>('24');
 
   // Stat form
+  const defaultStatSteps: Record<string, string> = {
+    balance: '100',
+    xp: '10',
+    rating: '0.1',
+    level: '1',
+    sales: '1',
+    positive_reviews: '1',
+  };
   const [statField, setStatField] = useState('balance');
   const [statValue, setStatValue] = useState('');
+  const [statSteps, setStatSteps] = useState<Record<string, string>>(defaultStatSteps);
 
   const search = async () => {
     setLoading(true);
@@ -394,10 +403,33 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
 
   const openUser = async (u: any) => {
     setActive(u);
+    setStatSteps({ ...defaultStatSteps });
     const { data } = await supabase.from('bans').select('*').eq('user_id', u.id).order('created_at', { ascending: false });
     setBans(data || []);
     const { data: accs } = await supabase.from('accounts').select('*').eq('seller_id', u.id).order('created_at', { ascending: false });
     setUserAccounts(accs || []);
+  };
+
+  const normalizeStatValue = (field: string, value: number) => {
+    if (field === 'rating') {
+      return Math.min(5, Math.max(0, Number(value.toFixed(1))));
+    }
+    if (field === 'level') {
+      return Math.max(1, Math.round(value));
+    }
+    return Math.max(0, Math.round(value));
+  };
+
+  const applyStatDelta = async (field: string, direction: 1 | -1) => {
+    if (!active) return;
+    const step = parseFloat(statSteps[field] || '0');
+    if (!Number.isFinite(step) || step <= 0) {
+      alert('Введите корректный шаг изменения');
+      return;
+    }
+    const current = Number(active[field] || 0);
+    const nextValue = normalizeStatValue(field, current + direction * step);
+    await quickStat(field, nextValue);
   };
 
   // Быстрая смена стата
@@ -503,28 +535,44 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
             </div>
           </div>
 
-          {/* Статы с быстрыми +/- кнопками */}
+          {/* Статы с точным шагом изменения */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {[
-              { label: '💰 Баланс', field: 'balance', value: active.balance || 0, step: 100, suffix: ' ₽' },
-              { label: '⚡ XP',      field: 'xp',      value: active.xp || 0,      step: 50,  suffix: '' },
-              { label: '📈 Уровень', field: 'level',   value: active.level || 1,   step: 1,   suffix: '' },
-              { label: '🛍 Продажи', field: 'sales',   value: active.sales || 0,   step: 1,   suffix: '' },
+              { label: '💰 Баланс', field: 'balance', value: Number(active.balance || 0), display: Number(active.balance || 0).toLocaleString('ru-RU'), suffix: ' ₽', inputStep: '1' },
+              { label: '⚡ XP', field: 'xp', value: Number(active.xp || 0), display: Number(active.xp || 0).toLocaleString('ru-RU'), suffix: '', inputStep: '1' },
+              { label: '⭐ Рейтинг', field: 'rating', value: Number(active.rating || 0), display: (Number(active.rating) || 0).toFixed(1), suffix: ' / 5', inputStep: '0.1' },
+              { label: '📈 Уровень', field: 'level', value: Number(active.level || 1), display: String(Number(active.level || 1)), suffix: '', inputStep: '1' },
+              { label: '🛍 Продажи', field: 'sales', value: Number(active.sales || 0), display: Number(active.sales || 0).toLocaleString('ru-RU'), suffix: '', inputStep: '1' },
+              { label: '👍 Положит. отзывы', field: 'positive_reviews', value: Number(active.positive_reviews || 0), display: Number(active.positive_reviews || 0).toLocaleString('ru-RU'), suffix: '', inputStep: '1' },
             ].map(s => (
-              <div key={s.field} className="bg-bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <div className="flex-1">
-                  <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
-                  <p className="text-sm font-bold text-white">{s.value}{s.suffix}</p>
+              <div key={s.field} className="bg-bg-secondary rounded-lg p-3 border border-purple-900/20">
+                <div className="flex items-start gap-2 mb-2">
+                  <div className="flex-1">
+                    <p className="text-[10px] text-text-secondary uppercase">{s.label}</p>
+                    <p className="text-sm font-bold text-white">{s.display}{s.suffix}</p>
+                  </div>
+                  {s.field === 'sales' && (
+                    <button onClick={() => setShowAccounts(true)}
+                      title="Открыть продажи"
+                      className="w-8 h-8 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm flex items-center justify-center">📦</button>
+                  )}
                 </div>
-                <button onClick={() => quickStat(s.field, s.value - s.step)}
-                  className="w-7 h-7 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-sm font-bold">−</button>
-                <button onClick={() => quickStat(s.field, s.value + s.step)}
-                  className="w-7 h-7 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-sm font-bold">+</button>
-                {s.field === 'sales' && (
-                  <button onClick={() => setShowAccounts(true)}
-                    title="Открыть продажи"
-                    className="w-7 h-7 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg text-sm">📦</button>
-                )}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step={s.inputStep}
+                    value={statSteps[s.field] ?? ''}
+                    onChange={e => setStatSteps(prev => ({ ...prev, [s.field]: e.target.value }))}
+                    placeholder="Шаг"
+                    className="flex-1 min-w-0 px-2.5 py-2 rounded-lg bg-bg-card border border-purple-900/30 text-white text-xs"
+                  />
+                  <button onClick={() => applyStatDelta(s.field, -1)}
+                    className="w-8 h-8 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-sm font-bold">−</button>
+                  <button onClick={() => applyStatDelta(s.field, 1)}
+                    className="w-8 h-8 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-sm font-bold">+</button>
+                </div>
+                <p className="text-[10px] text-text-secondary mt-2">Точный шаг изменения для {s.label.toLowerCase()}</p>
               </div>
             ))}
           </div>
@@ -713,6 +761,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <option value="balance">Баланс</option>
               <option value="xp">XP</option>
               <option value="level">Уровень</option>
+              <option value="rating">Рейтинг</option>
               <option value="sales">Продажи</option>
               <option value="positive_reviews">Положительные отзывы</option>
               <option value="verified">Верификация (true/false)</option>
@@ -720,7 +769,9 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
 
             <label className="text-xs text-text-secondary mb-1 block">Новое значение</label>
             <input value={statValue} onChange={e => setStatValue(e.target.value)}
-              className="w-full px-3 py-2 mb-3 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+              placeholder={statField === 'rating' ? 'Например 4.7' : 'Введите значение'}
+              className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+            <p className="text-[11px] text-text-secondary mb-3">Для рейтинга можно использовать дробные значения, например 4.7.</p>
 
             <button onClick={setStat} className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold">
               Применить

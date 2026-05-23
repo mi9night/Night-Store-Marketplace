@@ -185,7 +185,9 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
 
   // Группируем комменты по parent_id
   const topLevel = comments.filter(c => !c.parent_id);
-  const repliesOf = (id: string) => comments.filter(c => c.parent_id === id);
+  const getReplies = (id: string) => comments
+    .filter(c => c.parent_id === id)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -272,7 +274,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             <CommentItem
               key={c.id}
               comment={c}
-              replies={repliesOf(c.id)}
+              getReplies={getReplies}
               myVotes={myVotes}
               me={me}
               myRole={myProfile?.role}
@@ -345,7 +347,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
 /* ============ Компонент одного комментария ============ */
 const CommentItem: React.FC<{
   comment: Comment;
-  replies: Comment[];
+  getReplies: (id: string) => Comment[];
   myVotes: Record<string, number>;
   me: any;
   myRole?: string;
@@ -354,9 +356,10 @@ const CommentItem: React.FC<{
   onDelete: (id: string) => void;
   index: number;
   depth?: number;
-}> = ({ comment: c, replies, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
+}> = ({ comment: c, getReplies, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
   const v = myVotes[`comment:${c.id}`];
   const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myRole || ''));
+  const replies = getReplies(c.id);
 
   return (
     <motion.div
@@ -397,7 +400,7 @@ const CommentItem: React.FC<{
           }`}>
           <ThumbsDown size={11} /> {c.dislikes || 0}
         </button>
-        {depth < 2 && me && (
+        {depth < 4 && me && (
           <button onClick={() => onReply(c)}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-purple-900/20 text-text-secondary hover:text-purple-300">
             <Reply size={11} /> Ответить
@@ -420,7 +423,7 @@ const CommentItem: React.FC<{
             <CommentItem
               key={r.id}
               comment={r}
-              replies={[]}
+              getReplies={getReplies}
               myVotes={myVotes}
               me={me}
               myRole={myRole}

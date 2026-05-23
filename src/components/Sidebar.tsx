@@ -4,11 +4,12 @@ import {
   Wallet, ArrowDownLeft, ArrowLeftRight,
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code,
-  ChevronDown, Plus, MessageSquare, X
+  ChevronDown, Plus, MessageSquare, X, Eye, EyeOff
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
+import { maskEmail, readSensitiveHidden, subscribeSensitiveHidden, writeSensitiveHidden } from '../utils/sensitiveVisibility';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [user, setUser] = useState<any>(null);
   const [balance, setBalance] = useState<number>(0);
   const [action, setAction] = useState<BalanceAction>(null);
+  const [hideSensitiveInfo, setHideSensitiveInfo] = useState(() => readSensitiveHidden(true));
 
   const { convert, symbol, currency } = useCurrency();
 
@@ -54,6 +56,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
     };
     init();
+
+    return subscribeSensitiveHidden(setHideSensitiveInfo);
   }, []);
 
   // Realtime синк баланса с шапкой
@@ -70,6 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       ).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
+
+  const toggleSensitiveInfo = () => writeSensitiveHidden(!hideSensitiveInfo);
 
   const navItems = [
     { icon: Package, label: 'Мои аккаунты', page: 'sell' as Page },
@@ -103,13 +109,25 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="bg-bg-card rounded-xl p-4 border border-purple-900/20">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-text-secondary">Баланс</span>
-            <Wallet size={14} className="text-accent" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleSensitiveInfo}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-purple-900/20 border border-purple-800/30 text-text-secondary hover:text-white hover:border-purple-600/50"
+                title={hideSensitiveInfo ? 'Показать баланс и email' : 'Скрыть баланс и email'}
+              >
+                {hideSensitiveInfo ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+              <Wallet size={14} className="text-accent" />
+            </div>
           </div>
           <p className="text-2xl font-bold text-text-primary">
-            {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span>
+            {hideSensitiveInfo
+              ? <>•••••• <span className="text-base text-text-secondary">{symbol}</span></>
+              : <>{convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} <span className="text-base text-text-secondary">{symbol}</span></>}
           </p>
           {user?.email && (
-            <p className="text-xs text-text-secondary mt-1 truncate">{user.email}</p>
+            <p className="text-xs text-text-secondary mt-1 truncate">{hideSensitiveInfo ? maskEmail(user.email) : user.email}</p>
           )}
         </div>
 
@@ -380,14 +398,15 @@ const BalanceActionModal: React.FC<{
 
           {action === 'transfer' && (
             <>
-              <label className="text-sm text-text-secondary mb-1.5 block">Получатель (email или ID)</label>
+              <label className="text-sm text-text-secondary mb-1.5 block">Получатель (email, ник или ID)</label>
               <input
                 type="text"
                 value={recipient}
                 onChange={e => setRecipient(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3"
+                placeholder="nickname / user@example.com / ID"
+                className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-1"
               />
+              <p className="text-xs text-text-secondary mb-3">Можно переводить по нику, email или ID.</p>
             </>
           )}
 

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ModerationPanel from '../components/ModerationPanel';
+import { maskEmail, readSensitiveHidden, subscribeSensitiveHidden, writeSensitiveHidden } from '../utils/sensitiveVisibility';
 
 type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
 
@@ -25,6 +26,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const [newValue2, setNewValue2] = useState(''); // для пароля — подтверждение
   const [currentPassword, setCurrentPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [hideSensitiveInfo, setHideSensitiveInfo] = useState(() => readSensitiveHidden(true));
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -71,6 +73,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
     };
     load();
   }, []);
+
+  useEffect(() => subscribeSensitiveHidden(setHideSensitiveInfo), []);
+
+  const toggleSensitiveInfo = () => writeSensitiveHidden(!hideSensitiveInfo);
 
   /* ============ Проверка — можно ли менять ник ============ */
   const lastNameChange: Date | null = profile?.username_changed_at
@@ -372,21 +378,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                 </p>
               </div>
 
-              {/* Email */}
-              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <label className="text-sm text-text-secondary mb-2 block">Email</label>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white">
-                    {user?.email}
-                  </div>
-                  <button
-                    onClick={() => openAction('email')}
-                    className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
-                  >
-                    Изменить
-                  </button>
-                </div>
-              </div>
 
               {/* О себе */}
               <div>
@@ -409,13 +400,43 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
           {/* === БЕЗОПАСНОСТЬ === */}
           {activeSection === 'security' && (
             <>
-              <h3 className="text-base font-semibold text-white">Безопасность</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-white">Безопасность</h3>
+                <button
+                  type="button"
+                  onClick={toggleSensitiveInfo}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-secondary border border-purple-900/30 text-text-secondary hover:text-white hover:border-purple-700/40 text-sm"
+                  title={hideSensitiveInfo ? 'Показать данные' : 'Скрыть данные'}
+                >
+                  {hideSensitiveInfo ? <Eye size={16} /> : <EyeOff size={16} />}
+                  <span className="hidden sm:inline">{hideSensitiveInfo ? 'Показать данные' : 'Скрыть данные'}</span>
+                </button>
+              </div>
 
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">Email</p>
+                    <p className="text-xs text-text-secondary mt-1 break-all">
+                      {hideSensitiveInfo ? maskEmail(user?.email) : (user?.email || 'Не указан')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openAction('email')}
+                    className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold whitespace-nowrap"
+                  >
+                    Изменить email
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-white">Пароль</p>
-                    <p className="text-xs text-text-secondary mt-1">Последнее изменение давно</p>
+                    <p className="text-xs text-text-secondary mt-1">
+                      {hideSensitiveInfo ? '••••••••••••' : 'Пароль защищён и доступен только для смены'}
+                    </p>
                   </div>
                   <button
                     onClick={() => openAction('password')}
