@@ -19,7 +19,6 @@ export const categories: Category[] = [
   // Игры
   { id: 'steam',      name: 'Steam',          icon: '🎮', count: 0, subcategories: ['CS2', 'Dota 2', 'PUBG', 'Rust', 'Prime'] },
   { id: 'telegram',   name: 'Telegram',       icon: '✈️', count: 0, subcategories: ['Каналы', 'Аккаунты', 'Stars', 'Premium'] },
-  { id: 'forge',      name: 'Forge',          icon: '🔨', count: 0 },
   { id: 'brawl',      name: 'Brawl Stars',    icon: '👊', count: 0 },
   { id: 'ea',         name: 'EA Games',       icon: '🎯', count: 0, subcategories: ['FIFA', 'Apex Legends'] },
   { id: 'ubisoft',    name: 'Ubisoft',        icon: '🌀', count: 0, subcategories: ['Rainbow Six', 'Assassins Creed'] },
@@ -37,7 +36,6 @@ export const categories: Category[] = [
   { id: 'neural',     name: 'Нейросети',      icon: '⚛️', count: 0 },
   { id: 'vpn',        name: 'VPN',            icon: '🔐', count: 0 },
   { id: 'mu',         name: 'MU',             icon: 'μ',  count: 0 },
-  { id: 'hypixel',    name: 'Hypixel',        icon: '🧱', count: 0 },
 ];
 
 const sellers = [

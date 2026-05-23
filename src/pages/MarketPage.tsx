@@ -203,11 +203,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                 <span className={`text-[10px] font-semibold truncate w-full text-center px-1 ${
                   selectedCategory === cat.id ? 'text-white' : 'text-text-secondary'
                 }`}>{cat.name}</span>
-                {cnt > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {cnt > 99 ? '99+' : cnt}
-                  </span>
-                )}
+
               </motion.button>
             );
           })}
