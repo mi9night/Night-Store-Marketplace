@@ -419,7 +419,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 { id: 5, label: 'Платина',   icon: '💎', min: 1000, max: 2500, color: 'from-cyan-500 to-cyan-300',    glow: 'shadow-[0_0_20px_rgba(34,211,238,0.65)]' },
                 { id: 6, label: 'Бриллиант', icon: '👑', min: 2500, max: 10000, color: 'from-purple-500 to-pink-400',  glow: 'shadow-[0_0_25px_rgba(168,85,247,0.75)]' },
               ];
-              const cur = tiers.findLast ? tiers.findLast(t => sales >= t.min) : [...tiers].reverse().find(t => sales >= t.min);
+              const cur = [...tiers].reverse().find(t => sales >= t.min);
               const idx = cur ? tiers.indexOf(cur) : 0;
               const tier = cur || tiers[0];
               const next = tiers[idx + 1];

@@ -47,10 +47,13 @@ const App: React.FC = () => {
 
   const userNav = useUserNav();
   useEffect(() => {
-    userNav.setOpenFullProfile((id: string) => {
-      setViewedProfileId(id);
-      setCurrentPage('profile');
-    });
+    if (userNav?.setOpenFullProfile) {
+      userNav.setOpenFullProfile((id: string) => {
+        setViewedProfileId(id);
+        setCurrentPage('profile');
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
