@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { dbToAccount } from './lib/db';
+import { useUserNav } from './lib/UserNavContext';
 
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -43,7 +44,16 @@ const App: React.FC = () => {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [cartItems, setCartItems] = useState<Account[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const userNav = useUserNav();
+  useEffect(() => {
+    userNav.setOpenFullProfile((id: string) => {
+      setViewedProfileId(id);
+      setCurrentPage('profile');
+    });
+  }, []);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
 
   useEffect(() => {
 
@@ -172,7 +182,7 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'profile' && <ProfilePage setCurrentPage={handleSetPage} onOpenTopic={handleOpenTopic} onOpenAccount={handleOpenAccount} />}
+                  {currentPage === 'profile' && <ProfilePage setCurrentPage={handleSetPage} onOpenTopic={handleOpenTopic} onOpenAccount={handleOpenAccount} viewedProfileId={viewedProfileId} onResetView={() => setViewedProfileId(null)} />}
 
                   {currentPage === 'cart' && (
                     <CartPage

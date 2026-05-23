@@ -35,9 +35,12 @@ interface ProfilePageProps {
   setCurrentPage?: (page: any) => void;
   onOpenTopic?: (id: string) => void;
   onOpenAccount?: (id: string) => void;
+  viewedProfileId?: string | null;
+  onResetView?: () => void;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, onOpenAccount }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, onOpenAccount, viewedProfileId, onResetView }) => {
+  const isOwnProfile = !viewedProfileId;
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,10 +76,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         }
         setUser(u.user);
 
+        const targetId = viewedProfileId || u.user.id;
         const { data: p } = await supabase
           .from('users')
           .select('*')
-          .eq('id', u.user.id)
+          .eq('id', targetId)
           .maybeSingle();
 
         if (p) {
@@ -94,11 +98,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 
         // Параллельно — товары, отзывы, темы, баны
         const [accRes, revRes, topRes, banRes, wallRes] = await Promise.all([
-          supabase.from('accounts').select('*').eq('seller_id', u.user.id).order('created_at', { ascending: false }),
-          supabase.from('reviews').select('*').eq('target_user_id', u.user.id).order('created_at', { ascending: false }),
-          supabase.from('forum_topics').select('*').eq('author_id', u.user.id).order('created_at', { ascending: false }),
-          supabase.from('bans').select('*').eq('user_id', u.user.id).order('created_at', { ascending: false }),
-          supabase.from('profile_comments').select('*').eq('profile_id', u.user.id).order('created_at', { ascending: false }),
+          supabase.from('accounts').select('*').eq('seller_id', targetId).order('created_at', { ascending: false }),
+          supabase.from('reviews').select('*').eq('target_user_id', targetId).order('created_at', { ascending: false }),
+          supabase.from('forum_topics').select('*').eq('author_id', targetId).order('created_at', { ascending: false }),
+          supabase.from('bans').select('*').eq('user_id', targetId).order('created_at', { ascending: false }),
+          supabase.from('profile_comments').select('*').eq('profile_id', targetId).order('created_at', { ascending: false }),
         ]);
 
         setAccounts(accRes.data || []);
@@ -135,7 +139,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       }
     };
     load();
-  }, []);
+  }, [viewedProfileId]);
 
   // Realtime для wall
   useEffect(() => {
@@ -272,6 +276,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
 
+      {!isOwnProfile && (
+        <button onClick={() => onResetView?.()}
+          className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300">
+          ← Назад к своему профилю
+        </button>
+      )}
+
       {/* === Header профиля === */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -284,22 +295,26 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
         >
           <div className="absolute top-3 right-3 flex gap-2">
-            <motion.button
-              onClick={() => bannerInput.current?.click()}
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur rounded-lg text-xs text-white hover:bg-black/70 transition-colors border border-purple-900/40"
-            >
-              <Camera size={12} />
-              Сменить баннер
-            </motion.button>
-            <motion.button
-              onClick={() => setCurrentPage ? setCurrentPage('settings') : setShowEdit(true)}
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur rounded-lg text-xs text-white hover:bg-black/70 transition-colors border border-purple-900/40"
-            >
-              <Edit3 size={12} />
-              Редактировать
-            </motion.button>
+            {isOwnProfile && (
+              <>
+                <motion.button
+                  onClick={() => bannerInput.current?.click()}
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur rounded-lg text-xs text-white hover:bg-black/70 transition-colors border border-purple-900/40"
+                >
+                  <Camera size={12} />
+                  Сменить баннер
+                </motion.button>
+                <motion.button
+                  onClick={() => setCurrentPage ? setCurrentPage('settings') : setShowEdit(true)}
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur rounded-lg text-xs text-white hover:bg-black/70 transition-colors border border-purple-900/40"
+                >
+                  <Edit3 size={12} />
+                  Редактировать
+                </motion.button>
+              </>
+            )}
           </div>
           <input
             ref={bannerInput}
@@ -321,12 +336,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                   <span className="text-3xl font-bold text-white">{avatarLetter}</span>
                 )}
               </div>
-              <button
-                onClick={() => avatarInput.current?.click()}
-                className="absolute bottom-0 right-0 w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-500 transition-colors"
-              >
-                <Camera size={12} className="text-white" />
-              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => avatarInput.current?.click()}
+                  className="absolute bottom-0 right-0 w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-500 transition-colors"
+                >
+                  <Camera size={12} className="text-white" />
+                </button>
+              )}
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#171425]" />
               <input
                 ref={avatarInput}
@@ -361,13 +378,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               )}
             </div>
 
-            {/* Баланс справа на одной строке с ником */}
-            <div className="text-left sm:text-right flex-shrink-0">
-              <p className="text-xs text-text-secondary">Баланс</p>
-              <p className="text-xl sm:text-2xl font-bold text-purple-300">
-                {(profile?.balance || 0).toLocaleString('ru-RU')} ₽
-              </p>
-            </div>
+            {/* Баланс — только для своего профиля или если не скрыт */}
+            {(isOwnProfile || !profile?.hide_balance) && (
+              <div className="text-left sm:text-right flex-shrink-0">
+                <p className="text-xs text-text-secondary">Баланс</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-300">
+                  {(profile?.balance || 0).toLocaleString('ru-RU')} ₽
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -385,6 +404,100 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 <p className="text-xs text-text-secondary">{stat.label}</p>
               </motion.div>
             ))}
+          </div>
+
+          {/* === Шкалы прогресса === */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            {/* Шкала продаж (уровень продавца) */}
+            {(() => {
+              const sales = profile?.sales || 0;
+              const tiers = [
+                { id: 1, label: 'Новичок',   icon: '⭐', min: 0,    max: 50,   color: 'from-gray-500 to-gray-400',   glow: '' },
+                { id: 2, label: 'Бронза',    icon: '🥉', min: 50,   max: 200,  color: 'from-amber-700 to-amber-500',  glow: 'shadow-[0_0_15px_rgba(217,119,6,0.4)]' },
+                { id: 3, label: 'Серебро',   icon: '🏅', min: 200,  max: 500,  color: 'from-gray-400 to-gray-200',   glow: 'shadow-[0_0_15px_rgba(209,213,219,0.5)]' },
+                { id: 4, label: 'Золото',    icon: '🌟', min: 500,  max: 1000, color: 'from-yellow-500 to-yellow-300', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.6)]' },
+                { id: 5, label: 'Платина',   icon: '💎', min: 1000, max: 2500, color: 'from-cyan-500 to-cyan-300',    glow: 'shadow-[0_0_20px_rgba(34,211,238,0.65)]' },
+                { id: 6, label: 'Бриллиант', icon: '👑', min: 2500, max: 10000, color: 'from-purple-500 to-pink-400',  glow: 'shadow-[0_0_25px_rgba(168,85,247,0.75)]' },
+              ];
+              const cur = tiers.findLast ? tiers.findLast(t => sales >= t.min) : [...tiers].reverse().find(t => sales >= t.min);
+              const idx = cur ? tiers.indexOf(cur) : 0;
+              const tier = cur || tiers[0];
+              const next = tiers[idx + 1];
+              const pct = next ? Math.min(100, ((sales - tier.min) / (next.min - tier.min)) * 100) : 100;
+              return (
+                <div className="bg-[#0B0A12] rounded-xl p-4 border border-purple-900/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{tier.icon}</span>
+                      <span className="text-sm font-semibold text-white">Уровень: {tier.label}</span>
+                    </div>
+                    {next && (
+                      <span className="text-xs text-text-secondary">
+                        До {next.label}: {next.min - sales}
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-2.5 bg-purple-900/30 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1.2, delay: 0.3 }}
+                      className={`h-full bg-gradient-to-r ${tier.color} ${tier.glow}`}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1.5">
+                    <span className="text-[10px] text-text-secondary">{tier.label} ({sales} продаж)</span>
+                    {next && <span className="text-[10px] text-text-secondary">{next.label} ({next.min}+)</span>}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Шкала XP (lvl) */}
+            {(() => {
+              const xp = profile?.xp || 0;
+              // Простая формула: каждый уровень требует level*100 XP
+              const lvl = Math.floor(Math.sqrt(xp / 50)) + 1;
+              const xpForCurrentLvl = (lvl - 1) * (lvl - 1) * 50;
+              const xpForNextLvl = lvl * lvl * 50;
+              const pct = Math.min(100, ((xp - xpForCurrentLvl) / (xpForNextLvl - xpForCurrentLvl)) * 100);
+              const glow = lvl >= 50 ? 'shadow-[0_0_25px_rgba(236,72,153,0.7)]'
+                         : lvl >= 30 ? 'shadow-[0_0_20px_rgba(168,85,247,0.6)]'
+                         : lvl >= 15 ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)]'
+                         : lvl >= 5  ? 'shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                         : '';
+              const lvlIcon = lvl >= 50 ? '🌌' : lvl >= 30 ? '👑' : lvl >= 15 ? '💎' : lvl >= 5 ? '🌟' : '✨';
+              const lvlColor = lvl >= 50 ? 'from-pink-500 via-purple-500 to-indigo-500'
+                             : lvl >= 30 ? 'from-purple-500 to-pink-400'
+                             : lvl >= 15 ? 'from-indigo-500 to-purple-400'
+                             : lvl >= 5  ? 'from-green-500 to-emerald-400'
+                             : 'from-purple-700 to-purple-500';
+              return (
+                <div className="bg-[#0B0A12] rounded-xl p-4 border border-purple-900/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xl ${lvl >= 30 ? 'animate-pulse' : ''}`}>{lvlIcon}</span>
+                      <span className="text-sm font-semibold text-white">LVL {lvl}</span>
+                    </div>
+                    <span className="text-xs text-text-secondary">
+                      {xp} / {xpForNextLvl} XP
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-purple-900/30 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1.2, delay: 0.4 }}
+                      className={`h-full bg-gradient-to-r ${lvlColor} ${glow}`}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1.5">
+                    <span className="text-[10px] text-text-secondary">LVL {lvl}</span>
+                    <span className="text-[10px] text-text-secondary">До LVL {lvl + 1}: {xpForNextLvl - xp} XP</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Активный бан — предупреждение */}

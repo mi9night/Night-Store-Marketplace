@@ -16,15 +16,28 @@ export const currentUser: User = {
 };
 
 export const categories: Category[] = [
-  { id: 'steam', name: 'Steam', icon: '🎮', count: 1847, subcategories: ['CS2', 'Dota 2', 'PUBG', 'Rust'] },
-  { id: 'cs2', name: 'CS2', icon: '🔫', count: 634 },
-  { id: 'epic', name: 'Epic Games', icon: '⚡', count: 423, subcategories: ['Fortnite', 'GTA'] },
-  { id: 'fortnite', name: 'Fortnite', icon: '🏗️', count: 289 },
-  { id: 'gta', name: 'GTA', icon: '🚗', count: 156 },
-  { id: 'discord', name: 'Discord', icon: '💬', count: 312 },
-  { id: 'vpn', name: 'VPN', icon: '🔒', count: 89 },
-  { id: 'software', name: 'Софт', icon: '💻', count: 245 },
-  { id: 'other', name: 'Другое', icon: '📦', count: 178 },
+  // Игры
+  { id: 'steam',      name: 'Steam',          icon: '🎮', count: 0, subcategories: ['CS2', 'Dota 2', 'PUBG', 'Rust', 'Prime'] },
+  { id: 'telegram',   name: 'Telegram',       icon: '✈️', count: 0, subcategories: ['Каналы', 'Аккаунты', 'Stars', 'Premium'] },
+  { id: 'forge',      name: 'Forge',          icon: '🔨', count: 0 },
+  { id: 'brawl',      name: 'Brawl Stars',    icon: '👊', count: 0 },
+  { id: 'ea',         name: 'EA Games',       icon: '🎯', count: 0, subcategories: ['FIFA', 'Apex Legends'] },
+  { id: 'ubisoft',    name: 'Ubisoft',        icon: '🌀', count: 0, subcategories: ['Rainbow Six', 'Assassins Creed'] },
+  { id: 'minecraft',  name: 'Minecraft',      icon: '🟩', count: 0 },
+  { id: 'supercell',  name: 'Supercell',      icon: '⚔️', count: 0, subcategories: ['Clash Royale', 'Clash of Clans'] },
+  { id: 'roblox',     name: 'Roblox',         icon: '🟥', count: 0 },
+  { id: 'wot',        name: 'World of Tanks', icon: '🛡', count: 0 },
+  { id: 'wr',         name: 'Wargaming',      icon: '⚡', count: 0 },
+  // Соцсети + сервисы
+  { id: 'rockstar',   name: 'Rockstar',       icon: '🌟', count: 0, subcategories: ['GTA V', 'RDR2'] },
+  { id: 'discord',    name: 'Discord',        icon: '💬', count: 0 },
+  { id: 'tiktok',     name: 'TikTok',         icon: '🎵', count: 0 },
+  { id: 'instagram',  name: 'Instagram',      icon: '📷', count: 0 },
+  { id: 'ai',         name: 'AI сервисы',     icon: '🧠', count: 0, subcategories: ['ChatGPT', 'Claude', 'Midjourney'] },
+  { id: 'neural',     name: 'Нейросети',      icon: '⚛️', count: 0 },
+  { id: 'vpn',        name: 'VPN',            icon: '🔐', count: 0 },
+  { id: 'mu',         name: 'MU',             icon: 'μ',  count: 0 },
+  { id: 'hypixel',    name: 'Hypixel',        icon: '🧱', count: 0 },
 ];
 
 const sellers = [

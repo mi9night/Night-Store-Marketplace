@@ -20,6 +20,7 @@ interface Topic {
   author_id?: string;
   author_name?: string;
   author_avatar?: string;
+  author_avatar_url?: string;
   replies?: number;
   views?: number;
   likes?: number;
@@ -68,6 +69,22 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Подтянем актуальные аватарки
+      const ids = [...new Set((data || []).map((t: any) => t.author_id).filter(Boolean))];
+      if (ids.length > 0) {
+        const { data: users } = await supabase.from('users')
+          .select('id, username, avatar_url').in('id', ids);
+        const map: Record<string, any> = {};
+        users?.forEach((u: any) => { map[u.id] = u; });
+        (data || []).forEach((t: any) => {
+          if (map[t.author_id]) {
+            t.author_avatar_url = map[t.author_id].avatar_url;
+            t.author_name = map[t.author_id].username || t.author_name;
+          }
+        });
+      }
+
       setTopics(data || []);
     } catch (e) {
       console.warn('Не удалось загрузить темы:', e);
@@ -396,8 +413,12 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
       }`}
     >
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-xs font-bold text-white">{topic.author_avatar || 'U'}</span>
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {topic.author_avatar_url ? (
+            <img src={topic.author_avatar_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-xs font-bold text-white">{topic.author_avatar || 'U'}</span>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">

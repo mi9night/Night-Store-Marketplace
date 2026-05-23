@@ -33,6 +33,7 @@ interface Comment {
   author_id: string;
   author_name?: string;
   author_avatar?: string;
+  author_avatar_url?: string;
   content: string;
   images?: string[];
   likes: number;
@@ -67,6 +68,30 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     setTopic(t);
     const { data: c } = await supabase.from('forum_comments')
       .select('*').eq('topic_id', topicId).order('created_at', { ascending: true });
+
+    // Подтянем свежие данные авторов (avatar_url)
+    const authorIds = [...new Set([
+      ...(t ? [t.author_id] : []),
+      ...((c || []).map(x => x.author_id).filter(Boolean))
+    ])];
+    if (authorIds.length > 0) {
+      const { data: authors } = await supabase.from('users')
+        .select('id, username, avatar_url').in('id', authorIds);
+      const aMap: Record<string, any> = {};
+      authors?.forEach((u: any) => { aMap[u.id] = u; });
+
+      if (t && aMap[t.author_id]) {
+        t.author_name = aMap[t.author_id].username || t.author_name;
+        (t as any).author_avatar_url = aMap[t.author_id].avatar_url;
+      }
+      (c || []).forEach((cm: any) => {
+        if (aMap[cm.author_id]) {
+          cm.author_name = aMap[cm.author_id].username || cm.author_name;
+          cm.author_avatar_url = aMap[cm.author_id].avatar_url;
+        }
+      });
+    }
+
     setComments(c || []);
 
     if (u.user) {
@@ -213,8 +238,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         </div>
 
         <div className="flex items-center gap-3 mb-4 text-xs text-text-secondary">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-white">{topic.author_avatar || 'U'}</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {(topic as any).author_avatar_url ? (
+              <img src={(topic as any).author_avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs font-bold text-white">{topic.author_avatar || 'U'}</span>
+            )}
           </div>
           <UserLink userId={topic.author_id} username={topic.author_name || 'Аноним'} className="font-medium text-white" />
           <span>•</span>
@@ -366,8 +395,12 @@ const CommentItem: React.FC<{
       className={`bg-[#171425] border border-purple-900/20 rounded-xl p-4 ${depth > 0 ? 'ml-6 sm:ml-10 border-l-2 border-l-purple-700/40' : ''}`}
     >
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-xs font-bold text-white">{c.author_avatar || 'U'}</span>
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {c.author_avatar_url ? (
+            <img src={c.author_avatar_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-xs font-bold text-white">{c.author_avatar || 'U'}</span>
+          )}
         </div>
         <UserLink userId={c.author_id} username={c.author_name} className="text-sm font-semibold text-white" />
         <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>

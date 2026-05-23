@@ -25,6 +25,8 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
 
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
+  const [extraFilters, setExtraFilters] = useState<Record<string, any>>({});
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [showFiltersModal, setShowFiltersModal] = useState(false);
@@ -78,6 +80,12 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
           });
         });
         setAccounts(mapped);
+        // считаем count по категориям
+        const counts: Record<string, number> = {};
+        for (const a of mapped) {
+          counts[a.category] = (counts[a.category] || 0) + 1;
+        }
+        setCatCounts(counts);
       } catch (e) {
         setAccounts([]);
       } finally {
@@ -130,6 +138,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
     setShowEscrowOnly(false);
     setSelectedRisk('all');
     setSearch('');
+    setExtraFilters({});
   };
 
   const activeFiltersCount = [
@@ -138,6 +147,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
     showGuaranteeOnly,
     showEscrowOnly,
     selectedRisk !== 'all',
+    ...Object.values(extraFilters).filter(v => v),
   ].filter(Boolean).length;
 
   return (
@@ -157,10 +167,10 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
 
       {/* === Категории-квадратики === */}
       <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-3">
-        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-11 gap-2">
           {/* «Все» */}
           <motion.button
-            onClick={() => setSelectedCategory('all')}
+            onClick={() => { setSelectedCategory('all'); setExtraFilters({}); }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             className={`aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border transition-all ${
@@ -175,26 +185,56 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
             }`}>Все</span>
           </motion.button>
 
-          {categories.map(cat => (
-            <motion.button
-              key={cat.id}
-              onClick={() => setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id)}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              className={`aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border transition-all ${
-                selectedCategory === cat.id
-                  ? 'bg-purple-600/30 border-purple-500 shadow-[0_0_20px_rgba(138,43,226,0.4)]'
-                  : 'bg-bg-secondary border-purple-900/20 hover:border-purple-700/50'
-              }`}
-            >
-              <span className="text-2xl">{cat.icon}</span>
-              <span className={`text-[10px] font-semibold truncate w-full text-center px-1 ${
-                selectedCategory === cat.id ? 'text-white' : 'text-text-secondary'
-              }`}>{cat.name}</span>
-            </motion.button>
-          ))}
+          {categories.map(cat => {
+            const cnt = catCounts[cat.id] || 0;
+            return (
+              <motion.button
+                key={cat.id}
+                onClick={() => { setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id); setExtraFilters({}); }}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className={`relative aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border transition-all ${
+                  selectedCategory === cat.id
+                    ? 'bg-purple-600/30 border-purple-500 shadow-[0_0_20px_rgba(138,43,226,0.4)]'
+                    : 'bg-bg-secondary border-purple-900/20 hover:border-purple-700/50'
+                }`}
+              >
+                <span className="text-2xl">{cat.icon}</span>
+                <span className={`text-[10px] font-semibold truncate w-full text-center px-1 ${
+                  selectedCategory === cat.id ? 'text-white' : 'text-text-secondary'
+                }`}>{cat.name}</span>
+                {cnt > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {cnt > 99 ? '99+' : cnt}
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
         </div>
       </div>
+
+      {/* === Подкатегории выбранной категории === */}
+      {selectedCategory !== 'all' && (() => {
+        const cat = categories.find(c => c.id === selectedCategory);
+        if (!cat?.subcategories || cat.subcategories.length === 0) return null;
+        return (
+          <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-2 flex gap-1.5 flex-wrap items-center">
+            <span className="text-xs text-text-secondary px-2">Подкатегории:</span>
+            {cat.subcategories.map(sub => (
+              <button key={sub}
+                onClick={() => setSearch(search.includes(sub) ? '' : sub)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  search === sub
+                    ? 'bg-purple-600 border-purple-400 text-white'
+                    : 'bg-bg-secondary border-purple-900/30 text-text-secondary hover:border-purple-700/50'
+                }`}>
+                {sub}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* === Поиск + фильтры + сортировка === */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -310,7 +350,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               </div>
 
               <div className="space-y-5">
-                {/* Цена */}
+                {/* === Базовые фильтры (всегда видны) === */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block font-semibold">💰 Цена, ₽</label>
                   <div className="flex gap-2">
@@ -321,7 +361,6 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                   </div>
                 </div>
 
-                {/* Защита */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block font-semibold">🛡️ Защита</label>
                   <div className="space-y-2">
@@ -336,7 +375,6 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                   </div>
                 </div>
 
-                {/* Риск */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block font-semibold">🚦 Уровень риска</label>
                   <div className="grid grid-cols-4 gap-2">
@@ -360,6 +398,111 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                     ))}
                   </div>
                 </div>
+
+                {/* === Динамические фильтры под категорию === */}
+                {(() => {
+                  if (selectedCategory === 'all') return null;
+                  const cat = categories.find(c => c.id === selectedCategory);
+                  if (!cat) return null;
+
+                  // Под каждую категорию свои фильтры
+                  const dynamicFilters: Record<string, Array<{ key: string; label: string; type: 'text' | 'number' | 'check' }>> = {
+                    steam: [
+                      { key: 'min_games',  label: '🎮 Игр от',         type: 'number' },
+                      { key: 'min_hours',  label: '⏱ Часов в CS от',   type: 'number' },
+                      { key: 'has_prime',  label: '💎 Только Prime',    type: 'check' },
+                    ],
+                    telegram: [
+                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
+                      { key: 'channel',    label: '📢 Только каналы',   type: 'check' },
+                      { key: 'premium',    label: '⭐ Premium',          type: 'check' },
+                    ],
+                    discord: [
+                      { key: 'nitro',      label: '🚀 Nitro',           type: 'check' },
+                      { key: 'badge',      label: '🏆 С бейджами',      type: 'check' },
+                    ],
+                    minecraft: [
+                      { key: 'cape',       label: '🦸 С плащом',        type: 'check' },
+                      { key: 'java',       label: '☕ Только Java',     type: 'check' },
+                    ],
+                    roblox: [
+                      { key: 'min_robux',  label: '💎 Robux от',        type: 'number' },
+                      { key: 'premium',    label: '⭐ Premium',          type: 'check' },
+                    ],
+                    instagram: [
+                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
+                      { key: 'verified',   label: '✅ Верифик.',         type: 'check' },
+                    ],
+                    tiktok: [
+                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
+                      { key: 'verified',   label: '✅ Верифик.',         type: 'check' },
+                    ],
+                    ea: [
+                      { key: 'min_games',  label: '🎮 Игр от',          type: 'number' },
+                      { key: 'fifa_pts',   label: '⚽ FIFA points от',  type: 'number' },
+                    ],
+                    rockstar: [
+                      { key: 'min_money',  label: '💰 GTA $ от',         type: 'number' },
+                      { key: 'min_lvl',    label: '📈 Уровень от',      type: 'number' },
+                    ],
+                    brawl: [
+                      { key: 'min_trophies', label: '🏆 Кубков от',     type: 'number' },
+                      { key: 'min_brawlers', label: '👤 Бойцов от',     type: 'number' },
+                    ],
+                    supercell: [
+                      { key: 'min_th',     label: '🏰 Town Hall от',    type: 'number' },
+                    ],
+                    wot: [
+                      { key: 'min_tanks',  label: '🛡 Танков от',       type: 'number' },
+                      { key: 'min_battles', label: '⚔️ Боёв от',        type: 'number' },
+                    ],
+                    vpn: [
+                      { key: 'days_left',  label: '📅 Дней до конца от', type: 'number' },
+                    ],
+                    ai: [
+                      { key: 'plan',       label: '💎 План (free/plus/pro)', type: 'text' },
+                    ],
+                  };
+
+                  const filters = dynamicFilters[selectedCategory];
+                  if (!filters) return (
+                    <div className="bg-purple-900/10 border border-purple-700/20 rounded-xl p-3 text-xs text-text-secondary">
+                      💡 Для категории <b className="text-white">{cat.name}</b> используются базовые фильтры
+                    </div>
+                  );
+
+                  return (
+                    <div className="border-t border-purple-900/20 pt-4">
+                      <label className="text-sm text-text-secondary mb-2 block font-semibold">
+                        {cat.icon} Фильтры для {cat.name}
+                      </label>
+                      <div className="space-y-2">
+                        {filters.map(f => (
+                          <div key={f.key}>
+                            {f.type === 'check' ? (
+                              <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg-secondary rounded-xl">
+                                <input type="checkbox"
+                                  checked={!!extraFilters[f.key]}
+                                  onChange={e => setExtraFilters({ ...extraFilters, [f.key]: e.target.checked })}
+                                  className="accent-purple-500 w-4 h-4" />
+                                <span className="text-sm text-white">{f.label}</span>
+                              </label>
+                            ) : (
+                              <>
+                                <label className="text-xs text-text-secondary mb-1 block">{f.label}</label>
+                                <input
+                                  type={f.type}
+                                  value={extraFilters[f.key] || ''}
+                                  onChange={e => setExtraFilters({ ...extraFilters, [f.key]: e.target.value })}
+                                  className="w-full px-3 py-2 bg-bg-secondary border border-purple-900/30 rounded-lg text-sm text-white" />
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="flex gap-2 mt-6">
