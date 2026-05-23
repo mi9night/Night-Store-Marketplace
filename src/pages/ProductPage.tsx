@@ -57,11 +57,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [chatMsg, setChatMsg] = useState('');
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
-  const reviewBlockClass = myReview
-    ? (myReview.positive ? 'from-green-900/20 to-purple-900/10 border-green-700/30' : 'from-red-900/20 to-purple-900/10 border-red-700/30')
-    : (!revPositive && showReview
-      ? 'from-red-900/20 to-purple-900/10 border-red-700/30'
-      : 'from-green-900/20 to-purple-900/10 border-green-700/30');
 
   /* ============ Загрузка продавца + отзывов + избранного ============ */
   useEffect(() => {
@@ -295,7 +290,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
           {/* === Блок отзыва (если я купил) === */}
           {myOrder && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-              className={`bg-gradient-to-br ${reviewBlockClass} border rounded-2xl p-5 transition-colors duration-200`}>
+              className="bg-gradient-to-br from-green-900/20 to-purple-900/10 border border-green-700/30 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Star size={18} className="text-yellow-400 fill-yellow-400" />
                 <h3 className="text-sm font-semibold text-white">Вы купили этот аккаунт</h3>

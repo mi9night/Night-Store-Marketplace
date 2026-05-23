@@ -10,7 +10,6 @@ import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 import LabelManager from '../components/LabelManager';
-import ProfileProgressScales from '../components/ProfileProgressScales';
 
 interface UserData {
   id: string;
@@ -387,12 +386,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               </motion.div>
             ))}
           </div>
-
-          <ProfileProgressScales
-            sales={profile?.sales || 0}
-            level={profile?.level || 1}
-            xp={profile?.xp || 0}
-          />
 
           {/* Активный бан — предупреждение */}
           {activeBan && (

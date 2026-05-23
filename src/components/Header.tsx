@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, LifeBuoy,
   User, Settings, LogOut, Star, Package,
-  Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle, Eye, EyeOff
+  Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -12,7 +12,6 @@ import type { Page } from '../types/pages';
 import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
 import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
-import { maskEmail, readSensitiveHidden, subscribeSensitiveHidden, writeSensitiveHidden } from '../utils/sensitiveVisibility';
 
 interface HeaderProps {
   currentPage: Page;
@@ -65,7 +64,6 @@ const Header: React.FC<HeaderProps> = ({
   const [balRecipient, setBalRecipient] = useState('');
   const [balLoading, setBalLoading] = useState(false);
   const [balResult, setBalResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [hideSensitiveInfo, setHideSensitiveInfo] = useState(() => readSensitiveHidden(true));
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -97,18 +95,13 @@ const Header: React.FC<HeaderProps> = ({
     };
     init();
 
-    const unsubscribeSensitive = subscribeSensitiveHidden(setHideSensitiveInfo);
-
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) loadNotifications(session.user.id);
       }
     );
-    return () => {
-      unsubscribeSensitive();
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const loadUnreadMessages = async (userId: string) => {
@@ -230,10 +223,6 @@ const Header: React.FC<HeaderProps> = ({
 
   /* ============ Баланс операции ============ */
   const balanceInCurrency = convert(balance);
-  const toggleSensitiveInfo = () => writeSensitiveHidden(!hideSensitiveInfo);
-  const visibleBalanceText = hideSensitiveInfo
-    ? '••••••'
-    : `${convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} ${symbol}`;
 
   const submitBalance = async () => {
     setBalResult(null);
@@ -380,23 +369,15 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-2">
           {/* ===== BALANCE (выезжающий дропдаун) ===== */}
-          <div className="relative flex items-center gap-2" ref={balanceRef}>
+          <div className="relative" ref={balanceRef}>
             <motion.button onClick={() => setShowBalance(!showBalance)}
               className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:border-purple-600/50"
               whileHover={{ scale: 1.03 }}>
               <Wallet size={14} className="text-accent" />
               <span className="text-sm font-semibold text-text-primary">
-                {visibleBalanceText}
+                {convert(balance).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}
               </span>
             </motion.button>
-            <button
-              type="button"
-              onClick={toggleSensitiveInfo}
-              className="hidden md:flex items-center justify-center w-9 h-9 rounded-xl bg-purple-900/20 border border-purple-800/30 text-text-secondary hover:text-white hover:border-purple-600/50"
-              title={hideSensitiveInfo ? 'Показать баланс и email' : 'Скрыть баланс и email'}
-            >
-              {hideSensitiveInfo ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
 
             <AnimatePresence>
               {showBalance && (
@@ -407,15 +388,7 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="p-4 border-b border-purple-900/20 flex items-center gap-2">
                     <Wallet size={16} className="text-purple-400" />
-                    <h3 className="text-sm font-semibold text-white flex-1">Баланс</h3>
-                    <button
-                      type="button"
-                      onClick={toggleSensitiveInfo}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-900/20 border border-purple-800/30 text-text-secondary hover:text-white hover:border-purple-600/50"
-                      title={hideSensitiveInfo ? 'Показать баланс и email' : 'Скрыть баланс и email'}
-                    >
-                      {hideSensitiveInfo ? <Eye size={15} /> : <EyeOff size={15} />}
-                    </button>
+                    <h3 className="text-sm font-semibold text-white">Баланс</h3>
                   </div>
 
                   <div className="p-4 space-y-3">
@@ -423,16 +396,11 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
                       <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-1">Доступно</div>
                       <div className="text-2xl font-bold text-white mb-2">
-                        {hideSensitiveInfo ? `•••••• ${symbol}` : `${balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${symbol}`}
+                        {balanceInCurrency.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} {symbol}
                       </div>
                       {currency !== 'RUB' && (
                         <div className="text-[10px] text-text-secondary mb-2">
-                          {hideSensitiveInfo ? '≈ •••••• ₽ · валюта применится ко всему сайту' : `≈ ${balance.toLocaleString('ru-RU')} ₽ · валюта применится ко всему сайту`}
-                        </div>
-                      )}
-                      {user?.email && (
-                        <div className="text-xs text-text-secondary mb-3 break-all">
-                          {hideSensitiveInfo ? maskEmail(user.email) : user.email}
+                          ≈ {balance.toLocaleString('ru-RU')} ₽ · валюта применится ко всему сайту
                         </div>
                       )}
                       <div className="flex gap-1 flex-wrap">
@@ -478,13 +446,9 @@ const Header: React.FC<HeaderProps> = ({
                           placeholder="Сумма ₽"
                           className="w-full px-3 py-2 mb-2 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
                         {balAction === 'transfer' && (
-                          <>
-                            <label className="text-[11px] text-text-secondary mb-1 block">Получатель (email, ник или ID)</label>
-                            <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
-                              placeholder="nickname / user@example.com / ID"
-                              className="w-full px-3 py-2 mb-1 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
-                            <p className="text-[10px] text-text-secondary mb-2">Можно переводить по нику, email или ID.</p>
-                          </>
+                          <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
+                            placeholder="Email, ник или ID"
+                            className="w-full px-3 py-2 mb-2 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
                         )}
                         {balResult && (
                           <div className={`text-xs mb-2 p-2 rounded-lg flex items-start gap-2 ${
