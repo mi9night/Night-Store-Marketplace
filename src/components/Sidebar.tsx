@@ -104,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-text-secondary">Баланс</span>
-              <button onClick={() => setHideBalance(!hideBalance)}
+              <button onClick={() => { if (typeof setHideBalance === 'function') setHideBalance(!hideBalance); }}
                 title={hideBalance ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white">
                 {hideBalance ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -124,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   ? user.email
                   : '••••••••@' + (user.email.split('@')[1] || '•••')}
               </p>
-              <button onClick={() => setHideEmail(!hideEmail)}
+              <button onClick={() => { if (typeof setHideEmail === 'function') setHideEmail(!hideEmail); }}
                 title={hideEmail ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white flex-shrink-0">
                 {hideEmail ? <EyeOff size={11} /> : <Eye size={11} />}

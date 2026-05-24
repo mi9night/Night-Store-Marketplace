@@ -33,25 +33,34 @@ const colorClasses: Record<string, string> = {
 };
 
 export const RoleBadge: React.FC<Props> = ({ role, user }) => {
-  // Если есть кастомная роль — показываем её
+  const badges: React.ReactNode[] = [];
+
+  // 1) Сначала — основная роль (если есть и не "user")
+  const r = role || user?.role;
+  if (r && r !== 'user' && r !== 'custom') {
+    const p = presetMap[r];
+    if (p) {
+      badges.push(
+        <span key="role" className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${p.cls}`}>
+          {p.icon} {p.label}
+        </span>
+      );
+    }
+  }
+
+  // 2) Потом — кастомная роль (как ДОПОЛНИТЕЛЬНЫЙ бейдж)
   if (user?.custom_role_label) {
     const cls = colorClasses[user.custom_role_color || 'purple'] || colorClasses.purple;
-    return (
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls}`}>
+    badges.push(
+      <span key="custom" className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls}`}>
         {user.custom_role_icon || '⭐'} {user.custom_role_label.toUpperCase()}
       </span>
     );
   }
 
-  const r = role || user?.role;
-  if (!r || r === 'user') return null;
-  const p = presetMap[r];
-  if (!p) return null;
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${p.cls}`}>
-      {p.icon} {p.label}
-    </span>
-  );
+  if (badges.length === 0) return null;
+
+  return <>{badges}</>;
 };
 
 export default RoleBadge;

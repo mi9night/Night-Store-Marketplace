@@ -424,24 +424,33 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     if (!active) return;
     if (preset === 'custom') {
       if (!crLabel.trim()) { alert('Введите название роли'); return; }
-      // Сначала ставим role='custom', потом записываем поля кастомной
+      // Кастомная роль ДОПОЛНЯЕТ основную, не заменяет
       await supabase.from('users').update({
-        role: 'custom',
         custom_role_label: crLabel,
         custom_role_icon: crIcon,
         custom_role_color: crColor,
       }).eq('id', active.id);
     } else {
+      // Меняем только основную роль, кастомную не трогаем
       await supabase.from('users').update({
         role: preset,
-        custom_role_label: null,
-        custom_role_icon: null,
-        custom_role_color: null,
       }).eq('id', active.id);
     }
     const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
     if (refreshed) setActive(refreshed);
     setModal(null);
+  };
+
+  // Очистить только кастомную роль
+  const clearCustomRole = async () => {
+    if (!active) return;
+    await supabase.from('users').update({
+      custom_role_label: null,
+      custom_role_icon: null,
+      custom_role_color: null,
+    }).eq('id', active.id);
+    const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
+    if (refreshed) setActive(refreshed);
   };
 
   const punish = async () => {
@@ -688,6 +697,13 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
                 className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold">
                 Применить кастомную
               </button>
+
+              {active.custom_role_label && (
+                <button onClick={clearCustomRole}
+                  className="w-full py-2 mt-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-xs font-semibold">
+                  ❌ Удалить кастомную роль ({active.custom_role_label})
+                </button>
+              )}
             </div>
           </Modal>
         )}

@@ -398,7 +398,7 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] text-purple-300 uppercase tracking-wider">Доступно</span>
-                        <button onClick={() => setHideBalance(!hideBalance)} className="text-purple-300 hover:text-white" title={hideBalance ? 'Показать баланс' : 'Скрыть баланс'}>
+                        <button onClick={() => { if (typeof setHideBalance === 'function') setHideBalance(!hideBalance); }} className="text-purple-300 hover:text-white" title={hideBalance ? 'Показать баланс' : 'Скрыть баланс'}>
                           {hideBalance ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </div>
