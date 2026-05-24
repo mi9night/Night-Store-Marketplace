@@ -287,10 +287,20 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             }`}>
             <ThumbsDown size={14} /> {topic.dislikes || 0}
           </button>
-          <div className="flex items-center gap-2 text-xs text-text-secondary ml-auto">
+          <div className="flex items-center gap-2 text-xs text-text-secondary ml-auto flex-wrap">
             <span className="flex items-center gap-1"><Eye size={12} /> {topic.views || 0}</span>
             <span className="flex items-center gap-1"><MessageSquare size={12} /> {comments.length}</span>
             <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} />
+            {(me?.id === topic.author_id || ['moderator','admin','owner'].includes(myProfile?.role)) && (
+              <button onClick={async () => {
+                if (!confirm('Удалить тему вместе со всеми комментариями?')) return;
+                await supabase.from('forum_topics').delete().eq('id', topic.id);
+                setCurrentPage('forum');
+              }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400">
+                <Trash2 size={11} /> Удалить тему
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
@@ -445,7 +455,7 @@ const CommentItem: React.FC<{
           </button>
         )}
         <div className="ml-auto flex items-center gap-1">
-          <ReportButton targetType="comment" targetId={c.id} targetName={'Комментарий: ' + c.content.slice(0, 40)} small />
+          <ReportButton targetType="comment" targetId={c.id} targetName={'Комментарий: ' + c.content.slice(0, 40)} />
           {canDelete && (
             <button onClick={() => onDelete(c.id)} className="text-text-secondary hover:text-red-400 p-1">
               <Trash2 size={13} />

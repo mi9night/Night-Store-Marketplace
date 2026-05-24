@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X, Image as ImageIcon
-} from 'lucide-react';
+, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
@@ -41,6 +41,26 @@ const categoryColors: Record<string, string> = {
 };
 
 const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
+  const [me, setMe] = useState<any>(null);
+  const [myRole, setMyRole] = useState<string>('user');
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      setMe(u.user);
+      if (u.user) {
+        const { data } = await supabase.from('users').select('role').eq('id', u.user.id).maybeSingle();
+        setMyRole(data?.role || 'user');
+      }
+    })();
+  }, []);
+
+  const handleDeleteTopic = async (id: string) => {
+    if (!confirm('Удалить тему?')) return;
+    await supabase.from('forum_topics').delete().eq('id', id);
+    loadTopics();
+  };
+
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Все');
@@ -296,7 +316,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
               </div>
               <div className="space-y-2">
                 {pinned.map((topic, i) => (
-                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} />
+                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} />
                 ))}
               </div>
             </div>
@@ -311,7 +331,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
             )}
             <div className="space-y-2">
               {regular.map((topic, i) => (
-                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} />
+                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} />
               ))}
             </div>
           </div>
@@ -469,7 +489,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   );
 };
 
-const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; }> = ({ topic, index, pinned, onOpen }) => {
+const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete }) => {
   const categoryColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
   const dateStr = new Date(topic.created_at).toLocaleDateString('ru-RU');
 
@@ -508,8 +528,15 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
             <div className="flex items-center gap-1"><MessageSquare size={11} />{topic.replies || 0}</div>
             <div className="flex items-center gap-1"><Eye size={11} />{topic.views || 0}</div>
             <div className="flex items-center gap-1"><ThumbsUp size={11} />{topic.likes || 0}</div>
-            <span onClick={(e) => e.stopPropagation()}>
+            <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
               <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} small />
+              {canDelete && (
+                <button onClick={() => onDelete?.(topic.id)}
+                  className="text-text-secondary hover:text-red-400 p-1"
+                  title="Удалить тему">
+                  <Trash2 size={11} />
+                </button>
+              )}
             </span>
           </div>
         </div>

@@ -59,8 +59,10 @@ const LiveFeed: React.FC = () => {
     setVisible(true);
     setQueue(q => q.slice(1));
 
-    const hideTimer = setTimeout(() => setVisible(false), 2700);
-    const clearTimer = setTimeout(() => setEvent(null), 3000);
+    // Плашка видна ровно 3 секунды
+    const hideTimer = setTimeout(() => setVisible(false), 3000);
+    // После 3 сек + 300мс анимация ухода — сбрасываем event, чтобы запустить следующее
+    const clearTimer = setTimeout(() => setEvent(null), 3300);
     return () => { clearTimeout(hideTimer); clearTimeout(clearTimer); };
   }, [queue, event]);
 
@@ -76,7 +78,7 @@ const LiveFeed: React.FC = () => {
           initial={{ opacity: 0, x: 30, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 30, scale: 0.9 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.3 }}
           style={{
             borderColor: 'var(--color-accent, #8A2BE2)',
             boxShadow: '0 0 30px color-mix(in srgb, var(--color-accent, #8A2BE2) 40%, transparent)',
