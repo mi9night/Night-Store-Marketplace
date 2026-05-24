@@ -83,8 +83,8 @@ const Header: React.FC<HeaderProps> = ({
 
       if (data.user) {
         const { data: profile } = await supabase
-          .from('users')
-          .select('balance, role, verified, username, level, custom_id, avatar_url, custom_role_label, custom_role_icon, custom_role_color')
+          .from('users_full')
+          .select('balance, role, verified, username, level, custom_id, avatar_url, custom_roles')
           .eq('id', data.user.id)
           .maybeSingle();
         if (profile?.balance != null) setBalance(profile.balance);
@@ -179,8 +179,8 @@ const Header: React.FC<HeaderProps> = ({
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
         async () => {
-          const { data: p } = await supabase.from('users')
-            .select('balance, role, verified, username, level, custom_id, avatar_url, custom_role_label, custom_role_icon, custom_role_color')
+          const { data: p } = await supabase.from('users_full')
+            .select('balance, role, verified, username, level, custom_id, avatar_url, custom_roles')
             .eq('id', user.id).maybeSingle();
           if (p) {
             setMyProfile(p);

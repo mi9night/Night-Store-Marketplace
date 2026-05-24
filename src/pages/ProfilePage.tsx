@@ -174,7 +174,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
         async () => {
-          const { data: p } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+          const { data: p } = await supabase.from('users_full').select('*').eq('id', user.id).maybeSingle();
           if (p) setProfile(p);
         }
       ).subscribe();

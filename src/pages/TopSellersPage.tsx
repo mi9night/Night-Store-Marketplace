@@ -58,8 +58,8 @@ const TopSellersPage: React.FC = () => {
     const load = async () => {
       try {
         const { data } = await supabase
-          .from('users')
-          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp, custom_role_label, custom_role_icon, custom_role_color')
+          .from('users_full')
+          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp, custom_roles')
           .gt('sales', 0)
           .order('sales', { ascending: false })
           .limit(20);

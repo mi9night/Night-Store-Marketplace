@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
-import { usePrivacy, THEMES, ThemeKey } from '../lib/usePrivacy';
+import { usePrivacy, THEMES, ThemeKey, FULL_THEMES, FullThemeKey } from '../lib/usePrivacy';
 import { LevelBadge } from '../components/LevelBadge';
 import { RoleBadge } from '../components/RoleBadge';
 import ModerationPanel from '../components/ModerationPanel';
@@ -34,7 +34,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [showEmailLocal, setShowEmailLocal] = useState(false);
-  const { glowEnabled, setGlowEnabled, liveFeedEnabled, setLiveFeedEnabled, theme, setTheme } = usePrivacy();
+  const { glowEnabled, setGlowEnabled, liveFeedEnabled, setLiveFeedEnabled, theme, setTheme, fullTheme, setFullTheme } = usePrivacy();
 
   const avatarInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
@@ -526,6 +526,35 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
           {activeSection === 'appearance' && (
             <>
               <h3 className="text-base font-semibold text-white">Внешний вид</h3>
+
+              {/* === ПОЛНАЯ ТЕМА (фон, текст и т.д.) === */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <p className="text-sm font-medium text-white mb-3">🖼️ Полное оформление сайта</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(Object.keys(FULL_THEMES) as FullThemeKey[]).map(k => {
+                    const ft = FULL_THEMES[k];
+                    const isActive = fullTheme === k;
+                    return (
+                      <button key={k} onClick={() => setFullTheme(k)}
+                        className={`p-3 rounded-xl border-2 transition-all text-left flex items-center gap-3 ${
+                          isActive ? 'border-white scale-[1.02]' : 'border-purple-900/30 hover:border-purple-700/50'
+                        }`}
+                        style={{
+                          background: ft.vars['--bg-secondary'],
+                          color: ft.vars['--text-primary'],
+                        }}>
+                        <div className="flex gap-1">
+                          <div className="w-4 h-4 rounded" style={{ background: ft.vars['--bg-primary'] }} />
+                          <div className="w-4 h-4 rounded" style={{ background: ft.vars['--bg-card'] }} />
+                          <div className="w-4 h-4 rounded border" style={{ borderColor: ft.vars['--text-secondary'] }} />
+                        </div>
+                        <span className="text-xs font-semibold">{ft.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-text-secondary mt-2">💡 Меняет фон, цвет карточек и текста по всему сайту</p>
+              </div>
 
               {/* === Тема оформления === */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">

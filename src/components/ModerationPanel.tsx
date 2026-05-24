@@ -416,6 +416,15 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     setBans(data || []);
     const { data: accs } = await supabase.from('accounts').select('*').eq('seller_id', u.id).order('created_at', { ascending: false });
     setUserAccounts(accs || []);
+    await loadCustomRoles(u.id);
+  };
+
+  const [customRolesList, setCustomRolesList] = useState<any[]>([]);
+  const loadCustomRoles = async (userId: string) => {
+    const { data } = await supabase.from('user_custom_roles').select('*').eq('user_id', userId).order('created_at', { ascending: true });
+    setCustomRolesList(data || []);
+    // подмешиваем в active.custom_roles, чтобы RoleBadge отрисовал
+    setActive((prev: any) => prev ? { ...prev, custom_roles: data || [] } : prev);
   };
 
   // Быстрая смена стата
@@ -442,12 +451,18 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     if (!active) return;
     if (preset === 'custom') {
       if (!crLabel.trim()) { alert('Введите название роли'); return; }
-      // Кастомная роль ДОПОЛНЯЕТ основную, не заменяет
-      await supabase.from('users').update({
-        custom_role_label: crLabel,
-        custom_role_icon: crIcon,
-        custom_role_color: crColor,
-      }).eq('id', active.id);
+      // Добавляем НОВУЮ кастомную роль (можно много)
+      await supabase.from('user_custom_roles').insert({
+        user_id: active.id,
+        label: crLabel,
+        icon: crIcon,
+        color: crColor,
+        granted_by: (await supabase.auth.getUser()).data.user?.id,
+      });
+      setCrLabel('');
+      await loadCustomRoles(active.id);
+      setModal(null);
+      return;
     } else {
       // Меняем только основную роль, кастомную не трогаем
       await supabase.from('users').update({
@@ -459,13 +474,18 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     setModal(null);
   };
 
-  // Очистить только кастомную роль
+  // Удалить кастомную роль по id
+  const deleteCustomRole = async (id: string) => {
+    if (!active) return;
+    await supabase.from('user_custom_roles').delete().eq('id', id);
+    await loadCustomRoles(active.id);
+  };
+
+  // Очистить старую (deprecated, оставлено для совместимости)
   const clearCustomRole = async () => {
     if (!active) return;
     await supabase.from('users').update({
-      custom_role_label: null,
-      custom_role_icon: null,
-      custom_role_color: null,
+      custom_role_label: null, custom_role_icon: null, custom_role_color: null,
     }).eq('id', active.id);
     const { data: refreshed } = await supabase.from('users').select('*').eq('id', active.id).maybeSingle();
     if (refreshed) setActive(refreshed);
@@ -719,10 +739,24 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
                 Применить кастомную
               </button>
 
+              {customRolesList.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-purple-900/20">
+                  <p className="text-[10px] text-text-secondary mb-2 uppercase">Текущие кастомные роли ({customRolesList.length})</p>
+                  <div className="space-y-1">
+                    {customRolesList.map((cr: any) => (
+                      <div key={cr.id} className="flex items-center justify-between bg-bg-secondary rounded-lg p-2">
+                        <span className="text-xs text-white">{cr.icon} {cr.label}</span>
+                        <button onClick={() => deleteCustomRole(cr.id)}
+                          className="text-[10px] text-red-400 hover:underline">Удалить</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {active.custom_role_label && (
                 <button onClick={clearCustomRole}
                   className="w-full py-2 mt-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-xs font-semibold">
-                  ❌ Удалить кастомную роль ({active.custom_role_label})
+                  ❌ Удалить старую: {active.custom_role_label}
                 </button>
               )}
             </div>

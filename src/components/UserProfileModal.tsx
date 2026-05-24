@@ -39,7 +39,7 @@ const UserProfileModal: React.FC = () => {
       }
 
       const [p, aCnt, tCnt, revData] = await Promise.all([
-        supabase.from('users').select('*').eq('id', viewedUserId).maybeSingle(),
+        supabase.from('users_full').select('*').eq('id', viewedUserId).maybeSingle(),
         supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('seller_id', viewedUserId),
         supabase.from('forum_topics').select('id', { count: 'exact', head: true }).eq('author_id', viewedUserId),
         supabase.from('reviews').select('rating, positive').eq('target_user_id', viewedUserId),
