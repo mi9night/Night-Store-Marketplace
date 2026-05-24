@@ -53,18 +53,20 @@ const LiveFeed: React.FC = () => {
 
   // Показ очереди по одному — 3 секунды
   useEffect(() => {
-    if (event || queue.length === 0) return;
+    if (event !== null || queue.length === 0) return;
     const next = queue[0];
     setEvent(next);
     setVisible(true);
     setQueue(q => q.slice(1));
+  }, [queue, event]);
 
-    // Плашка видна ровно 3 секунды
+  // Когда event установился — запускаем таймер скрытия
+  useEffect(() => {
+    if (!event) return;
     const hideTimer = setTimeout(() => setVisible(false), 3000);
-    // После 3 сек + 300мс анимация ухода — сбрасываем event, чтобы запустить следующее
     const clearTimer = setTimeout(() => setEvent(null), 3300);
     return () => { clearTimeout(hideTimer); clearTimeout(clearTimer); };
-  }, [queue, event]);
+  }, [event]);
 
   if (!liveFeedEnabled || !event) return null;
 
@@ -114,7 +116,7 @@ const LiveFeed: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setVisible(false)}
+              onClick={() => { setVisible(false); setTimeout(() => setEvent(null), 300); }}
               className="text-text-secondary hover:text-white p-1 flex-shrink-0"
             >
               <X size={14} />

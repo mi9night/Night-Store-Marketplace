@@ -32,15 +32,35 @@ const GlobalSearch: React.FC<Props> = ({ setCurrentPage, onOpenAccount, onOpenTo
       setLoading(true);
       const q = `%${query.trim()}%`;
       const [acc, usr, top] = await Promise.all([
-        supabase.from('accounts').select('*').ilike('title', q).limit(5),
+        supabase.from('accounts').select('*').ilike('title', q).limit(20),
         supabase.from('users').select('id, username, email, avatar_url, custom_id, role, level')
-          .or(`username.ilike.${q},email.ilike.${q},custom_id.ilike.${q}`).limit(5),
-        supabase.from('forum_topics').select('id, title, category, author_name, views, likes').ilike('title', q).limit(5),
+          .or(`username.ilike.${q},email.ilike.${q},custom_id.ilike.${q}`).limit(20),
+        supabase.from('forum_topics').select('id, title, category, author_name, views, likes').ilike('title', q).limit(20),
       ]);
+
+      // Ранжируем — чем ближе к началу строки и чем короче, тем выше
+      const score = (haystack: string | undefined | null) => {
+        if (!haystack) return 9999;
+        const h = haystack.toLowerCase();
+        const needle = query.trim().toLowerCase();
+        if (h === needle) return 0;
+        if (h.startsWith(needle)) return 1;
+        const idx = h.indexOf(needle);
+        return idx === -1 ? 9999 : 10 + idx + Math.abs(h.length - needle.length) * 0.01;
+      };
+
+      const sortedAccounts = (acc.data || []).sort((a: any, b: any) => score(a.title) - score(b.title)).slice(0, 5);
+      const sortedUsers = (usr.data || []).sort((a: any, b: any) => {
+        const sa = Math.min(score(a.username), score(a.email), score(a.custom_id));
+        const sb = Math.min(score(b.username), score(b.email), score(b.custom_id));
+        return sa - sb;
+      }).slice(0, 5);
+      const sortedTopics = (top.data || []).sort((a: any, b: any) => score(a.title) - score(b.title)).slice(0, 5);
+
       setResults({
-        accounts: acc.data || [],
-        users:    usr.data || [],
-        topics:   top.data || [],
+        accounts: sortedAccounts,
+        users:    sortedUsers,
+        topics:   sortedTopics,
       });
       setLoading(false);
     }, 300);

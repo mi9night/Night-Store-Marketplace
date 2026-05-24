@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, LifeBuoy,
+  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, Headphones,
   User, Settings, LogOut, Star, Package,
   Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
@@ -575,7 +575,7 @@ const Header: React.FC<HeaderProps> = ({
             }`}
             whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
             title="Поддержка">
-            <LifeBuoy size={20} />
+            <Headphones size={20} />
           </motion.button>
 
           {/* Notifications */}

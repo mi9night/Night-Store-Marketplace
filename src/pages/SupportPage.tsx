@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LifeBuoy, Plus, X, Send, Clock, CheckCircle2, AlertCircle, MessageSquare
+  Headphones, Plus, X, Send, Clock, CheckCircle2, AlertCircle, MessageSquare
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -110,7 +110,7 @@ const SupportPage: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-5">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <LifeBuoy size={24} className="text-purple-400" />
+          <Headphones size={24} className="text-purple-400" />
           <h1 className="text-2xl font-bold text-white">Поддержка</h1>
           <span className="text-xs px-2 py-1 rounded-full bg-purple-900/30 text-purple-300">{tickets.length}</span>
         </div>
@@ -124,7 +124,7 @@ const SupportPage: React.FC = () => {
         <div className="text-center py-12 text-text-secondary">Загрузка...</div>
       ) : tickets.length === 0 ? (
         <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-12 text-center">
-          <LifeBuoy size={48} className="mx-auto text-purple-700/50 mb-4" />
+          <Headphones size={48} className="mx-auto text-purple-700/50 mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Тикетов нет</h3>
           <p className="text-sm text-text-secondary">Есть вопрос? Создай тикет — модераторы ответят</p>
         </div>
@@ -208,7 +208,7 @@ const SupportPage: React.FC = () => {
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={e => e.stopPropagation()}
               className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
               <div className="p-4 border-b border-purple-900/20 flex items-center gap-2">
-                <LifeBuoy size={18} className="text-purple-400" />
+                <Headphones size={18} className="text-purple-400" />
                 <h3 className="text-sm font-semibold text-white flex-1">{active.subject || 'Тикет'}</h3>
                 <button onClick={() => setActive(null)} className="text-text-secondary hover:text-white"><X size={18} /></button>
               </div>

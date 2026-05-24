@@ -195,6 +195,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 if (cat.subcategories) {
                   setExpandedCategory(expandedCategory === cat.id ? '' : cat.id);
                 }
+                localStorage.setItem('market_category', cat.id);
+                window.dispatchEvent(new Event('market-filter-changed'));
                 setCurrentPage('market');
                 onClose();
               }}
@@ -205,7 +207,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-text-secondary'
               }`}
             >
-              {cat.icon} {cat.name}
+              <span className="w-6 h-6 rounded-md bg-purple-900/30 flex items-center justify-center text-sm flex-shrink-0">{cat.icon}</span>
+              {cat.name}
               {cat.subcategories && (
                 <ChevronDown size={14} className={`ml-auto transition-transform ${
                   expandedCategory === cat.id ? 'rotate-180' : ''
@@ -225,6 +228,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={sub}
                       onClick={() => {
+                        localStorage.setItem('market_category', cat.id);
+                        localStorage.setItem('market_subcategory', sub);
+                        window.dispatchEvent(new Event('market-filter-changed'));
                         setCurrentPage('market');
                         onClose();
                       }}

@@ -186,7 +186,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
         async () => {
-          const { data: p } = await supabase.from('users_full').select('*').eq('id', user.id).maybeSingle();
+          const { data: p } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
           if (p) setProfile(p);
         }
       ).subscribe();
@@ -659,7 +659,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 <div className="text-center py-8 text-text-secondary text-sm">Стена пуста</div>
               ) : wallComments.filter((c: any) => !c.parent_id).map((wc: any) => {
                 const replies = wallComments.filter((r: any) => r.parent_id === wc.id);
-                return <WallItem key={wc.id} c={wc} replies={replies} myVotes={wallVotes} onVote={voteWall} onReply={setWallReplyTo} />;
+                const isMine = wc.author_id === user?.id;
+                const isOwner = !viewedProfileId;
+                const isMod = ['moderator','admin','owner'].includes(profile?.role || '');
+                const canDel = isMine || isOwner || isMod;
+                const handleDel = async (id: string) => {
+                  if (!confirm('Удалить комментарий?')) return;
+                  await supabase.from('profile_comments').delete().eq('id', id);
+                  setWallComments(prev => prev.filter((c: any) => c.id !== id && c.parent_id !== id));
+                };
+                return <WallItem key={wc.id} c={{...wc, is_mine: isMine}} replies={replies}
+                  myVotes={wallVotes} onVote={voteWall} onReply={setWallReplyTo}
+                  onDelete={handleDel} canDelete={canDel} />;
               })}
             </div>
           )}

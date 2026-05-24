@@ -24,8 +24,23 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
   const [loading, setLoading] = useState(true);
 
   const [sortBy, setSortBy] = useState<SortOption>('default');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => localStorage.getItem('market_category') || 'all');
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
+
+  // Слушаем смену категории из Sidebar
+  useEffect(() => {
+    const onChange = () => {
+      const cat = localStorage.getItem('market_category');
+      const sub = localStorage.getItem('market_subcategory');
+      if (cat) setSelectedCategory(cat);
+      if (sub) {
+        setSearch(sub);
+        localStorage.removeItem('market_subcategory');
+      }
+    };
+    window.addEventListener('market-filter-changed', onChange);
+    return () => window.removeEventListener('market-filter-changed', onChange);
+  }, []);
   const [extraFilters, setExtraFilters] = useState<Record<string, any>>({});
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -50,8 +65,8 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
         let sellersMap: Record<string, any> = {};
         if (sellerIds.length > 0) {
           const { data: sellers } = await supabase
-            .from('users_full')
-            .select('id, username, avatar_url, rating, sales, verified, role, level, custom_roles')
+            .from('users')
+            .select('id, username, avatar_url, rating, sales, verified, role, level, custom_role_label, custom_role_icon, custom_role_color')
             .in('id', sellerIds);
           sellers?.forEach((s: any) => { sellersMap[s.id] = s; });
         }
@@ -76,7 +91,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               responseTime: '~1ч',
               role: s.role,
               userLevel: s.level || 1,
-              custom_roles: s.custom_roles,
+              custom_role_label: s.custom_role_label, custom_role_icon: s.custom_role_icon, custom_role_color: s.custom_role_color,
             } as any : undefined
           });
         });
