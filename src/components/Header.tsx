@@ -702,10 +702,8 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-text-primary text-sm truncate flex items-center gap-1.5 flex-wrap">
+                        <p className="font-semibold text-text-primary text-sm truncate">
                           {myProfile?.username || user?.email?.split('@')[0] || 'User'}
-                          <RoleBadge user={myProfile} />
-                          <LevelBadge level={myProfile?.level || 1} compact />
                         </p>
                         {myProfile?.custom_id && (
                           <p className="text-[10px] text-purple-300 font-mono mt-0.5">#{myProfile.custom_id}</p>

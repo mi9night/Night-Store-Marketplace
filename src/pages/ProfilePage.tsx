@@ -4,12 +4,13 @@ import {
   Star, ShoppingCart, Award, Clock, Package,
   CheckCircle2, Edit3, Camera, X, Save, MessageSquare,
   Shield, Ban, AlertCircle, Calendar, User
-, ThumbsUp, ThumbsDown , Image } from 'lucide-react';
+, ThumbsUp, ThumbsDown , Image , Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 import LabelManager from '../components/LabelManager';
+import ReportButton from '../components/ReportButton';
 
 interface UserData {
   id: string;
@@ -919,8 +920,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 const WallItem: React.FC<{
   c: any; replies: any[]; myVotes: Record<string, number>;
   onVote: (id: string, v: 1 | -1) => void; onReply: (c: any) => void;
+  onDelete?: (id: string) => void;
+  canDelete?: boolean;
   depth?: number;
-}> = ({ c, replies, myVotes, onVote, onReply, depth = 0 }) => {
+}> = ({ c, replies, myVotes, onVote, onReply, onDelete, canDelete, depth = 0 }) => {
   const v = myVotes[c.id];
   return (
     <div className={`bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 ${depth > 0 ? 'ml-6 border-l-2 border-l-purple-700/40' : ''}`}>
@@ -966,12 +969,22 @@ const WallItem: React.FC<{
             ↳ Ответить
           </button>
         )}
+        <div className="ml-auto flex items-center gap-1">
+          <ReportButton targetType="profile_comment" targetId={c.id} targetName={'Коммент на стене: ' + (c.content || '').slice(0, 40)} small />
+          {(canDelete || (c.is_mine)) && onDelete && (
+            <button onClick={() => onDelete(c.id)} className="text-text-secondary hover:text-red-400 p-1" title="Удалить">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {replies.length > 0 && (
         <div className="mt-2 space-y-2">
           {replies.map(r => (
-            <WallItem key={r.id} c={r} replies={[]} myVotes={myVotes} onVote={onVote} onReply={onReply} depth={Math.min(depth + 1, 3)} />
+            <WallItem key={r.id} c={r} replies={[]} myVotes={myVotes} onVote={onVote} onReply={onReply}
+              onDelete={onDelete} canDelete={canDelete}
+              depth={Math.min(depth + 1, 3)} />
           ))}
         </div>
       )}

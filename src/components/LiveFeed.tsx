@@ -20,12 +20,12 @@ interface LiveEvent {
   created_at: string;
 }
 
-const typeConfig: Record<string, { label: string; color: string; Icon: any }> = {
-  sale:        { label: 'ПРОДАЖА',  color: 'border-yellow-500/40 shadow-[0_0_30px_rgba(250,204,21,0.3)]',  Icon: Trophy },
-  new_topic:   { label: 'ТЕМА',     color: 'border-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.3)]',     Icon: MessageSquare },
-  new_product: { label: 'ТОВАР',    color: 'border-green-500/40 shadow-[0_0_30px_rgba(34,197,94,0.3)]',     Icon: ShoppingBag },
-  giveaway:    { label: 'РОЗЫГРЫШ', color: 'border-pink-500/40 shadow-[0_0_30px_rgba(236,72,153,0.4)] animate-pulse', Icon: Gift },
-  custom:      { label: 'ОБЪЯВЛЕНИЕ', color: 'border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.4)]', Icon: Megaphone },
+const typeConfig: Record<string, { label: string; Icon: any; animate?: boolean }> = {
+  sale:        { label: 'ПРОДАЖА',    Icon: Trophy },
+  new_topic:   { label: 'ТЕМА',       Icon: MessageSquare },
+  new_product: { label: 'ТОВАР',      Icon: ShoppingBag },
+  giveaway:    { label: 'РОЗЫГРЫШ',   Icon: Gift, animate: true },
+  custom:      { label: 'ОБЪЯВЛЕНИЕ', Icon: Megaphone },
 };
 
 const LiveFeed: React.FC = () => {
@@ -77,7 +77,11 @@ const LiveFeed: React.FC = () => {
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 30, scale: 0.9 }}
           transition={{ duration: 0.25 }}
-          className={`fixed bottom-6 right-6 z-[60] bg-[#171425] border rounded-2xl p-3 max-w-xs ${cfg.color}`}
+          style={{
+            borderColor: 'var(--color-accent, #8A2BE2)',
+            boxShadow: '0 0 30px color-mix(in srgb, var(--color-accent, #8A2BE2) 40%, transparent)',
+          }}
+          className={`fixed bottom-6 right-6 z-[60] bg-[#171425] border rounded-2xl p-3 max-w-xs ${cfg.animate ? 'animate-pulse' : ''}`}
         >
           <div className="flex items-start gap-3">
             <button
@@ -96,8 +100,8 @@ const LiveFeed: React.FC = () => {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <cfg.Icon size={11} className="text-yellow-400" />
-                <span className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">
+                <cfg.Icon size={11} style={{ color: 'var(--color-accent, #8A2BE2)' }} />
+                <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--color-accent-soft, #B57CFF)' }}>
                   {cfg.label}
                 </span>
               </div>

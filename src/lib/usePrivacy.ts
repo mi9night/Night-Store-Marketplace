@@ -1,125 +1,53 @@
 // src/lib/usePrivacy.ts
 import { useEffect, useState } from 'react';
 
-export type ThemeKey = 'night' | 'midnight' | 'royal' | 'sakura' | 'ocean' | 'forest';
-export type FullThemeKey = 'default' | 'light' | 'amoled' | 'gray' | 'crimson' | 'navy' | 'mint';
+// Единый набор цветов для обеих систем
+const COLOR_PALETTE = {
+  night:    { label: '🌙 Night',     accent: '#8A2BE2', hover: '#A855F7', soft: '#B57CFF',
+              bg: '#0B0A12', bg2: '#12101C', bg3: '#171425', text: '#EAE6FF', text2: '#9CA3AF' },
+  midnight: { label: '🌌 Midnight',  accent: '#6366F1', hover: '#818CF8', soft: '#A5B4FC',
+              bg: '#0A0E20', bg2: '#0F1432', bg3: '#161D40', text: '#E0E7FF', text2: '#94A3B8' },
+  royal:    { label: '👑 Royal Gold', accent: '#D97706', hover: '#F59E0B', soft: '#FBBF24',
+              bg: '#1A1408', bg2: '#221A0E', bg3: '#2C2314', text: '#FFF8E6', text2: '#B8A878' },
+  sakura:   { label: '🌸 Sakura',    accent: '#EC4899', hover: '#F472B6', soft: '#F9A8D4',
+              bg: '#1A0A14', bg2: '#22101C', bg3: '#2C1525', text: '#FFE6F2', text2: '#B8949C' },
+  ocean:    { label: '🌊 Ocean',     accent: '#06B6D4', hover: '#22D3EE', soft: '#67E8F9',
+              bg: '#06141A', bg2: '#0A1E26', bg3: '#0F2A35', text: '#E0F7FF', text2: '#94B5C0' },
+  forest:   { label: '🌲 Forest',    accent: '#10B981', hover: '#34D399', soft: '#6EE7B7',
+              bg: '#08160F', bg2: '#0E2018', bg3: '#142C20', text: '#E6FFF5', text2: '#94C0A8' },
+  crimson:  { label: '🩸 Crimson',   accent: '#DC2626', hover: '#EF4444', soft: '#F87171',
+              bg: '#150505', bg2: '#1F0808', bg3: '#2A0E0E', text: '#FFE6E6', text2: '#B89898' },
+  amber:    { label: '🔥 Amber',     accent: '#F59E0B', hover: '#FBBF24', soft: '#FCD34D',
+              bg: '#1A0E00', bg2: '#22140A', bg3: '#2C1C10', text: '#FFF4E0', text2: '#B89878' },
+  emerald:  { label: '💚 Emerald',   accent: '#059669', hover: '#10B981', soft: '#34D399',
+              bg: '#06160F', bg2: '#0A1E16', bg3: '#0F2820', text: '#E6FFF5', text2: '#94B5A8' },
+  amoled:   { label: '⚫ AMOLED',    accent: '#A855F7', hover: '#C084FC', soft: '#D8B4FE',
+              bg: '#000000', bg2: '#080808', bg3: '#121212', text: '#FFFFFF', text2: '#9CA3AF' },
+  graphite: { label: '⚪ Graphite',  accent: '#A78BFA', hover: '#C4B5FD', soft: '#DDD6FE',
+              bg: '#1A1A1A', bg2: '#222222', bg3: '#2A2A2A', text: '#F5F5F5', text2: '#A0A0A0' },
+  navy:     { label: '🌊 Navy',      accent: '#3B82F6', hover: '#60A5FA', soft: '#93C5FD',
+              bg: '#0A1228', bg2: '#0F1838', bg3: '#152048', text: '#E0EAFF', text2: '#94A3B8' },
+  mint:     { label: '🍃 Mint',      accent: '#14B8A6', hover: '#2DD4BF', soft: '#5EEAD4',
+              bg: '#0A1A14', bg2: '#0E241D', bg3: '#142E26', text: '#E0FFF4', text2: '#94B8AB' },
+  light:    { label: '☀️ Light',     accent: '#8A2BE2', hover: '#7C3AED', soft: '#A78BFA',
+              bg: '#F8F8FB', bg2: '#FFFFFF', bg3: '#FFFFFF', text: '#1A1A2E', text2: '#6B7280' },
+} as const;
 
-export const THEMES: Record<ThemeKey, { label: string; accent: string; hover: string; soft: string }> = {
-  night:    { label: '🌙 Night (по умолч.)', accent: '#8A2BE2', hover: '#A855F7', soft: '#B57CFF' },
-  midnight: { label: '🌌 Midnight',          accent: '#6366F1', hover: '#818CF8', soft: '#A5B4FC' },
-  royal:    { label: '👑 Royal Gold',        accent: '#D97706', hover: '#F59E0B', soft: '#FBBF24' },
-  sakura:   { label: '🌸 Sakura',            accent: '#EC4899', hover: '#F472B6', soft: '#F9A8D4' },
-  ocean:    { label: '🌊 Ocean',             accent: '#06B6D4', hover: '#22D3EE', soft: '#67E8F9' },
-  forest:   { label: '🌲 Forest',            accent: '#10B981', hover: '#34D399', soft: '#6EE7B7' },
-};
+export type ThemeKey = keyof typeof COLOR_PALETTE;
+export type FullThemeKey = keyof typeof COLOR_PALETTE;
 
-export const FULL_THEMES: Record<FullThemeKey, { label: string; vars: Record<string, string> }> = {
-  default: {
-    label: '🌙 Тёмная (стандарт)',
-    vars: {
-      '--color-bg-primary':    '#0B0A12',
-      '--color-bg-secondary':  '#12101C',
-      '--color-bg-card':       '#171425',
-      '--color-text-primary':  '#EAE6FF',
-      '--color-text-secondary':'#9CA3AF',
-      '--bg-primary':          '#0B0A12',
-      '--bg-secondary':        '#12101C',
-      '--bg-card':             '#171425',
-      '--text-primary':        '#EAE6FF',
-      '--text-secondary':      '#9CA3AF',
-    },
-  },
-  amoled: {
-    label: '⚫ AMOLED Чёрная',
-    vars: {
-      '--color-bg-primary':    '#000000',
-      '--color-bg-secondary':  '#080808',
-      '--color-bg-card':       '#121212',
-      '--color-text-primary':  '#FFFFFF',
-      '--color-text-secondary':'#9CA3AF',
-      '--bg-primary':          '#000000',
-      '--bg-secondary':        '#080808',
-      '--bg-card':             '#121212',
-      '--text-primary':        '#FFFFFF',
-      '--text-secondary':      '#9CA3AF',
-    },
-  },
-  gray: {
-    label: '⚪ Графит',
-    vars: {
-      '--color-bg-primary':    '#1A1A1A',
-      '--color-bg-secondary':  '#222222',
-      '--color-bg-card':       '#2A2A2A',
-      '--color-text-primary':  '#F5F5F5',
-      '--color-text-secondary':'#A0A0A0',
-      '--bg-primary':          '#1A1A1A',
-      '--bg-secondary':        '#222222',
-      '--bg-card':             '#2A2A2A',
-      '--text-primary':        '#F5F5F5',
-      '--text-secondary':      '#A0A0A0',
-    },
-  },
-  crimson: {
-    label: '🩸 Кровавая',
-    vars: {
-      '--color-bg-primary':    '#150505',
-      '--color-bg-secondary':  '#1F0808',
-      '--color-bg-card':       '#2A0E0E',
-      '--color-text-primary':  '#FFE6E6',
-      '--color-text-secondary':'#B89898',
-      '--bg-primary':          '#150505',
-      '--bg-secondary':        '#1F0808',
-      '--bg-card':             '#2A0E0E',
-      '--text-primary':        '#FFE6E6',
-      '--text-secondary':      '#B89898',
-    },
-  },
-  navy: {
-    label: '🌊 Морская',
-    vars: {
-      '--color-bg-primary':    '#0A1228',
-      '--color-bg-secondary':  '#0F1838',
-      '--color-bg-card':       '#152048',
-      '--color-text-primary':  '#E0EAFF',
-      '--color-text-secondary':'#94A3B8',
-      '--bg-primary':          '#0A1228',
-      '--bg-secondary':        '#0F1838',
-      '--bg-card':             '#152048',
-      '--text-primary':        '#E0EAFF',
-      '--text-secondary':      '#94A3B8',
-    },
-  },
-  mint: {
-    label: '🍃 Мятная',
-    vars: {
-      '--color-bg-primary':    '#0A1A14',
-      '--color-bg-secondary':  '#0E241D',
-      '--color-bg-card':       '#142E26',
-      '--color-text-primary':  '#E0FFF4',
-      '--color-text-secondary':'#94B8AB',
-      '--bg-primary':          '#0A1A14',
-      '--bg-secondary':        '#0E241D',
-      '--bg-card':             '#142E26',
-      '--text-primary':        '#E0FFF4',
-      '--text-secondary':      '#94B8AB',
-    },
-  },
-  light: {
-    label: '☀️ Светлая',
-    vars: {
-      '--color-bg-primary':    '#F8F8FB',
-      '--color-bg-secondary':  '#FFFFFF',
-      '--color-bg-card':       '#FFFFFF',
-      '--color-text-primary':  '#1A1A2E',
-      '--color-text-secondary':'#6B7280',
-      '--bg-primary':          '#F8F8FB',
-      '--bg-secondary':        '#FFFFFF',
-      '--bg-card':             '#FFFFFF',
-      '--text-primary':        '#1A1A2E',
-      '--text-secondary':      '#6B7280',
-    },
-  },
-};
+// Для UI — оба показывают одни и те же 14 вариантов
+export const THEMES = Object.fromEntries(
+  Object.entries(COLOR_PALETTE).map(([k, v]) => [k, { label: v.label, accent: v.accent, hover: v.hover, soft: v.soft }])
+) as Record<ThemeKey, { label: string; accent: string; hover: string; soft: string }>;
+
+export const FULL_THEMES = Object.fromEntries(
+  Object.entries(COLOR_PALETTE).map(([k, v]) => [k, {
+    label: v.label,
+    accent: v.accent,
+    bg: v.bg, bg2: v.bg2, bg3: v.bg3, text: v.text, text2: v.text2,
+  }])
+) as Record<FullThemeKey, { label: string; accent: string; bg: string; bg2: string; bg3: string; text: string; text2: string }>;
 
 const emit = () => window.dispatchEvent(new Event('privacy-changed'));
 
@@ -139,15 +67,18 @@ export const applyFullTheme = (key: FullThemeKey) => {
   const t = FULL_THEMES[key];
   if (!t) return;
   const root = document.documentElement;
-  Object.entries(t.vars).forEach(([k, v]) => root.style.setProperty(k, v));
-  // body background для надёжности
-  if (key === 'light') {
-    document.body.style.backgroundColor = '#F8F8FB';
-    document.body.style.color = '#1A1A2E';
-  } else {
-    document.body.style.backgroundColor = t.vars['--bg-primary'];
-    document.body.style.color = t.vars['--text-primary'];
-  }
+  root.style.setProperty('--color-bg-primary',    t.bg);
+  root.style.setProperty('--color-bg-secondary',  t.bg2);
+  root.style.setProperty('--color-bg-card',       t.bg3);
+  root.style.setProperty('--color-text-primary',  t.text);
+  root.style.setProperty('--color-text-secondary',t.text2);
+  root.style.setProperty('--bg-primary',          t.bg);
+  root.style.setProperty('--bg-secondary',        t.bg2);
+  root.style.setProperty('--bg-card',             t.bg3);
+  root.style.setProperty('--text-primary',        t.text);
+  root.style.setProperty('--text-secondary',      t.text2);
+  document.body.style.backgroundColor = t.bg;
+  document.body.style.color = t.text;
 };
 
 export const usePrivacy = () => {
@@ -156,7 +87,7 @@ export const usePrivacy = () => {
   const [glowEnabled, setGE] = useState<boolean>(() => localStorage.getItem('glow_enabled') !== '0');
   const [liveFeedEnabled, setLFE] = useState<boolean>(() => localStorage.getItem('live_feed_enabled') !== '0');
   const [theme, setT] = useState<ThemeKey>(() => (localStorage.getItem('theme') as ThemeKey) || 'night');
-  const [fullTheme, setFT] = useState<FullThemeKey>(() => (localStorage.getItem('full_theme') as FullThemeKey) || 'default');
+  const [fullTheme, setFT] = useState<FullThemeKey>(() => (localStorage.getItem('full_theme') as FullThemeKey) || 'night');
 
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { applyFullTheme(fullTheme); }, [fullTheme]);
@@ -169,7 +100,7 @@ export const usePrivacy = () => {
       setLFE(localStorage.getItem('live_feed_enabled') !== '0');
       const t = (localStorage.getItem('theme') as ThemeKey) || 'night';
       setT(t);
-      const ft = (localStorage.getItem('full_theme') as FullThemeKey) || 'default';
+      const ft = (localStorage.getItem('full_theme') as FullThemeKey) || 'night';
       setFT(ft);
     };
     window.addEventListener('storage', onChange);

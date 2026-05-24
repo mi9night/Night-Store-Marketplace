@@ -5,7 +5,7 @@ import { Flag, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Props {
-  targetType: 'topic' | 'comment' | 'account' | 'user';
+  targetType: 'topic' | 'comment' | 'profile_comment' | 'account' | 'user';
   targetId: string;
   targetName?: string;        // что отображать в подсказке
   small?: boolean;

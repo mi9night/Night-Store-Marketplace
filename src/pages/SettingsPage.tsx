@@ -527,28 +527,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
             <>
               <h3 className="text-base font-semibold text-white">Внешний вид</h3>
 
-              {/* === ПОЛНАЯ ТЕМА (фон, текст и т.д.) === */}
+              {/* === ПОЛНАЯ ТЕМА (фон) === */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <p className="text-sm font-medium text-white mb-3">🖼️ Полное оформление сайта</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(Object.keys(FULL_THEMES) as FullThemeKey[]).map(k => {
                     const ft = FULL_THEMES[k];
                     const isActive = fullTheme === k;
                     return (
                       <button key={k} onClick={() => setFullTheme(k)}
-                        className={`p-3 rounded-xl border-2 transition-all text-left flex items-center gap-3 ${
-                          isActive ? 'border-white scale-[1.02]' : 'border-purple-900/30 hover:border-purple-700/50'
+                        className={`p-3 rounded-xl border-2 transition-all text-left ${
+                          isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
                         }`}
-                        style={{
-                          background: ft.vars['--bg-secondary'],
-                          color: ft.vars['--text-primary'],
-                        }}>
-                        <div className="flex gap-1">
-                          <div className="w-4 h-4 rounded" style={{ background: ft.vars['--bg-primary'] }} />
-                          <div className="w-4 h-4 rounded" style={{ background: ft.vars['--bg-card'] }} />
-                          <div className="w-4 h-4 rounded border" style={{ borderColor: ft.vars['--text-secondary'] }} />
+                        style={{ background: `linear-gradient(135deg, ${ft.bg2}, ${ft.bg3})` }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg border border-white/10" style={{ background: ft.bg }} />
+                          <span className="text-xs font-semibold" style={{ color: ft.text }}>{ft.label}</span>
                         </div>
-                        <span className="text-xs font-semibold">{ft.label}</span>
                       </button>
                     );
                   })}
