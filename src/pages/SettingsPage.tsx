@@ -539,9 +539,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         className={`p-3 rounded-xl border-2 transition-all text-left ${
                           isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
                         }`}
-                        style={{ background: `linear-gradient(135deg, ${t.vars['--accent']}30, ${t.vars['--accent-soft']}10)` }}>
+                        style={{ background: `linear-gradient(135deg, ${t.accent}30, ${t.soft}10)` }}>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg" style={{ background: t.vars['--accent'] }} />
+                          <div className="w-6 h-6 rounded-lg" style={{ background: t.accent }} />
                           <span className="text-xs font-semibold text-white">{t.label}</span>
                         </div>
                       </button>
