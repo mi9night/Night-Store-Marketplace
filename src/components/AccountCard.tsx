@@ -169,7 +169,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
             <div className="flex items-center gap-1 min-w-0 flex-1 flex-wrap">
               <UserLink userId={(account.seller as any).id} username={account.seller.username} className="text-xs font-medium text-white truncate" />
               {account.seller.isVerified && <CheckCircle2 size={9} className="text-blue-400 flex-shrink-0" />}
-              <RoleBadge role={(account.seller as any).role} />
+              <RoleBadge user={account.seller as any} />
               <LevelBadge level={(account.seller as any).userLevel} compact />
             </div>
             <div className="flex items-center gap-0.5 flex-shrink-0">

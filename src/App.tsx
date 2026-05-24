@@ -53,6 +53,16 @@ const App: React.FC = () => {
         setCurrentPage('profile');
       });
     }
+
+    const checkHash = () => {
+      if (window.location.hash === '#mod-user') {
+        setCurrentPage('settings');
+        window.location.hash = '';
+      }
+    };
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);

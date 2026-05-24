@@ -361,7 +361,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
                 {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
-                <RoleBadge role={profile?.role} />
+                <RoleBadge user={profile} />
                 <LevelBadge level={profile?.level || 1} />
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">

@@ -51,7 +51,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
         if (sellerIds.length > 0) {
           const { data: sellers } = await supabase
             .from('users')
-            .select('id, username, avatar_url, rating, sales, verified, role, level')
+            .select('id, username, avatar_url, rating, sales, verified, role, level, custom_role_label, custom_role_icon, custom_role_color')
             .in('id', sellerIds);
           sellers?.forEach((s: any) => { sellersMap[s.id] = s; });
         }
@@ -76,6 +76,9 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               responseTime: '~1ч',
               role: s.role,
               userLevel: s.level || 1,
+              custom_role_label: s.custom_role_label,
+              custom_role_icon: s.custom_role_icon,
+              custom_role_color: s.custom_role_color,
             } as any : undefined
           });
         });

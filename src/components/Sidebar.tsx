@@ -9,6 +9,7 @@ import {
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
+import { usePrivacy } from '../lib/usePrivacy';
 import type { Page } from '../types/pages';
 
 interface SidebarProps {
@@ -35,7 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [balance, setBalance] = useState<number>(0);
   const [action, setAction] = useState<BalanceAction>(null);
 
-  const { convert, symbol, currency, hideBalance, setHideBalance, hideEmail, setHideEmail } = useCurrency();
+  const { convert, symbol, currency } = useCurrency();
+  const { hideBalance, setHideBalance, hideEmail, setHideEmail } = usePrivacy();
 
   /* ============ загрузка пользователя и баланса ============ */
   useEffect(() => {
@@ -104,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-text-secondary">Баланс</span>
-              <button onClick={() => { if (typeof setHideBalance === 'function') setHideBalance(!hideBalance); }}
+              <button onClick={() => setHideBalance(!hideBalance)}
                 title={hideBalance ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white">
                 {hideBalance ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -124,7 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   ? user.email
                   : '••••••••@' + (user.email.split('@')[1] || '•••')}
               </p>
-              <button onClick={() => { if (typeof setHideEmail === 'function') setHideEmail(!hideEmail); }}
+              <button onClick={() => setHideEmail(!hideEmail)}
                 title={hideEmail ? 'Показать' : 'Скрыть'}
                 className="text-text-secondary hover:text-white flex-shrink-0">
                 {hideEmail ? <EyeOff size={11} /> : <Eye size={11} />}

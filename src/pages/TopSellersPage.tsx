@@ -59,7 +59,7 @@ const TopSellersPage: React.FC = () => {
       try {
         const { data } = await supabase
           .from('users')
-          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp')
+          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp, custom_role_label, custom_role_icon, custom_role_color')
           .gt('sales', 0)
           .order('sales', { ascending: false })
           .limit(20);
@@ -193,7 +193,7 @@ const TopSellersPage: React.FC = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-white truncate">{getName(seller)}</span>
                         {seller.verified && <CheckCircle2 size={14} className="text-blue-400 flex-shrink-0" />}
-                        <RoleBadge role={seller.role} />
+                        <RoleBadge user={seller} />
                         <LevelBadge level={seller.level || 1} />
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">

@@ -551,7 +551,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <UserLink userId={seller?.id} username={seller?.username || account.seller?.username} className="font-semibold text-white truncate" />
                   {seller?.verified && <CheckCircle2 size={14} className="text-blue-400" />}
-                  <RoleBadge role={seller?.role} />
+                  <RoleBadge user={seller} />
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <LevelBadge level={seller?.level || 1} />

@@ -12,6 +12,7 @@ import type { Page } from '../types/pages';
 import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
 import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
+import { usePrivacy } from '../lib/usePrivacy';
 
 interface HeaderProps {
   currentPage: Page;
@@ -56,7 +57,8 @@ const Header: React.FC<HeaderProps> = ({
   const [showMsgDropdown, setShowMsgDropdown] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
 
-  const { currency, setCurrency, convert, symbol, hideBalance, setHideBalance } = useCurrency();
+  const { currency, setCurrency, convert, symbol } = useCurrency();
+  const { hideBalance, setHideBalance } = usePrivacy();
 
   // Balance menu state
   const [balAction, setBalAction] = useState<'deposit' | 'withdraw' | 'transfer' | null>(null);
@@ -82,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({
       if (data.user) {
         const { data: profile } = await supabase
           .from('users')
-          .select('balance, role, verified, username, level, custom_id, avatar_url')
+          .select('balance, role, verified, username, level, custom_id, avatar_url, custom_role_label, custom_role_icon, custom_role_color')
           .eq('id', data.user.id)
           .maybeSingle();
         if (profile?.balance != null) setBalance(profile.balance);
@@ -178,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({
         { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
         async () => {
           const { data: p } = await supabase.from('users')
-            .select('balance, role, verified, username, level, custom_id, avatar_url')
+            .select('balance, role, verified, username, level, custom_id, avatar_url, custom_role_label, custom_role_icon, custom_role_color')
             .eq('id', user.id).maybeSingle();
           if (p) {
             setMyProfile(p);
@@ -398,7 +400,7 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] text-purple-300 uppercase tracking-wider">Доступно</span>
-                        <button onClick={() => { if (typeof setHideBalance === 'function') setHideBalance(!hideBalance); }} className="text-purple-300 hover:text-white" title={hideBalance ? 'Показать баланс' : 'Скрыть баланс'}>
+                        <button onClick={() => setHideBalance(!hideBalance)} className="text-purple-300 hover:text-white" title={hideBalance ? 'Показать баланс' : 'Скрыть баланс'}>
                           {hideBalance ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </div>
@@ -687,7 +689,7 @@ const Header: React.FC<HeaderProps> = ({
                       <div className="min-w-0">
                         <p className="font-semibold text-text-primary text-sm truncate flex items-center gap-1.5 flex-wrap">
                           {myProfile?.username || user?.email?.split('@')[0] || 'User'}
-                          <RoleBadge role={myProfile?.role} />
+                          <RoleBadge user={myProfile} />
                           <LevelBadge level={myProfile?.level || 1} compact />
                         </p>
                         {myProfile?.custom_id && (

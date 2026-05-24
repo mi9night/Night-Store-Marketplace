@@ -18,7 +18,9 @@ interface Props {
 }
 
 const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
-  const [section, setSection] = useState<Section>('tickets');
+  const [section, setSection] = useState<Section>(() => {
+    return localStorage.getItem('mod_open_user_id') ? 'users' : 'tickets';
+  });
   const [myRole, setMyRole] = useState<string>('user');
   const [loading, setLoading] = useState(true);
 
@@ -390,7 +392,21 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     setLoading(false);
   };
 
-  useEffect(() => { search(); }, []);
+  useEffect(() => {
+    const init = async () => {
+      const pendingId = localStorage.getItem('mod_open_user_id');
+      if (pendingId) {
+        localStorage.removeItem('mod_open_user_id');
+        const { data } = await supabase.from('users').select('*').eq('id', pendingId).maybeSingle();
+        if (data) {
+          openUser(data);
+          return;
+        }
+      }
+      search();
+    };
+    init();
+  }, []);
 
   const openUser = async (u: any) => {
     setActive(u);

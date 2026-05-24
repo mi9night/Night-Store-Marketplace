@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Star, ShoppingCart, Package, Award, MessageSquare,
-  CheckCircle2, Calendar, Send, ExternalLink
+  X, Star, ShoppingCart, Package, MessageSquare,
+  CheckCircle2, Calendar, Send, ExternalLink, Shield
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUserNav } from '../lib/UserNavContext';
@@ -18,9 +18,13 @@ const UserProfileModal: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [chatMsg, setChatMsg] = useState('');
   const [me, setMe] = useState<any>(null);
+  const [myRole, setMyRole] = useState<string>('user');
 
   useEffect(() => {
-    if (!viewedUserId) return;
+    if (!viewedUserId) {
+      setProfile(null); // сброс при закрытии
+      return;
+    }
     const load = async () => {
       setLoading(true);
       setShowChat(false);
@@ -28,6 +32,11 @@ const UserProfileModal: React.FC = () => {
 
       const { data: u } = await supabase.auth.getUser();
       setMe(u.user);
+
+      if (u.user) {
+        const { data: myData } = await supabase.from('users').select('role').eq('id', u.user.id).maybeSingle();
+        setMyRole(myData?.role || 'user');
+      }
 
       const [p, aCnt, tCnt, rCnt] = await Promise.all([
         supabase.from('users').select('*').eq('id', viewedUserId).maybeSingle(),
@@ -57,11 +66,20 @@ const UserProfileModal: React.FC = () => {
     alert('✅ Сообщение отправлено!');
   };
 
+  const openInModeration = () => {
+    if (!profile) return;
+    // Передаём в URL hash, чтобы SettingsPage открыл moderation + загрузил юзера
+    localStorage.setItem('mod_open_user_id', profile.id);
+    closeUser();
+    // Через goToFullProfile нельзя — нам нужно в settings, не profile
+    window.location.hash = '#mod-user';
+  };
+
   if (!viewedUserId) return null;
 
   const displayName = profile?.username || profile?.email?.split('@')[0] || 'User';
   const avatarLetter = displayName[0]?.toUpperCase() || 'U';
-  const showBalance = profile && !profile.hide_balance;
+  const isMod = ['moderator', 'admin', 'owner'].includes(myRole);
 
   return (
     <AnimatePresence>
@@ -80,9 +98,29 @@ const UserProfileModal: React.FC = () => {
             className="h-20 relative bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
             style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
           >
-            <button onClick={closeUser} className="absolute top-2 right-2 p-1.5 bg-black/50 backdrop-blur rounded-lg text-white hover:bg-black/70">
-              <X size={16} />
-            </button>
+            <div className="absolute top-2 right-2 flex gap-1.5">
+              {profile && (
+                <button
+                  onClick={() => goToFullProfile(profile.id)}
+                  title="Открыть полный профиль"
+                  className="p-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-white">
+                  <ExternalLink size={14} />
+                </button>
+              )}
+              {isMod && profile && (
+                <button
+                  onClick={openInModeration}
+                  title="Открыть в модерации"
+                  className="p-1.5 bg-orange-600 hover:bg-orange-500 rounded-lg text-white">
+                  <Shield size={14} />
+                </button>
+              )}
+              <button
+                onClick={closeUser}
+                className="p-1.5 bg-black/50 backdrop-blur rounded-lg text-white hover:bg-black/70">
+                <X size={14} />
+              </button>
+            </div>
           </div>
 
           <div className="px-4 pb-4">
@@ -126,7 +164,6 @@ const UserProfileModal: React.FC = () => {
                   <p className="text-xs text-text-secondary italic mb-3 line-clamp-2">"{profile.bio}"</p>
                 )}
 
-                {/* Компактные статы */}
                 <div className="grid grid-cols-4 gap-1.5 mb-3">
                   {[
                     { label: 'Продаж',   value: profile.sales || 0,                 icon: Package },
@@ -142,33 +179,27 @@ const UserProfileModal: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Кнопки */}
-                <div className="flex gap-2 mb-2">
-                  <button onClick={() => goToFullProfile(profile.id)}
-                    className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold">
-                    <ExternalLink size={12} /> Открыть профиль
-                  </button>
-                  {me && me.id !== profile.id && (
+                {/* Кнопка написать */}
+                {me && me.id !== profile.id && (
+                  !showChat ? (
                     <button onClick={() => setShowChat(true)}
-                      className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-white rounded-xl text-xs font-semibold">
-                      <MessageSquare size={12} /> Написать
+                      className="w-full py-2 flex items-center justify-center gap-1.5 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-white rounded-xl text-xs font-semibold">
+                      <MessageSquare size={12} /> Написать сообщение
                     </button>
-                  )}
-                </div>
-
-                {showChat && (
-                  <div className="mt-2 bg-[#0B0A12] border border-purple-900/30 rounded-xl p-2">
-                    <textarea value={chatMsg} onChange={e => setChatMsg(e.target.value)}
-                      placeholder="Сообщение..." rows={2}
-                      className="w-full px-2 py-1.5 mb-1.5 rounded-md text-xs bg-[#171425] border border-purple-900/30 text-white resize-none" />
-                    <div className="flex gap-1.5">
-                      <button onClick={() => setShowChat(false)} className="flex-1 py-1.5 bg-purple-900/20 text-white rounded-md text-[11px]">Отмена</button>
-                      <button onClick={sendMessage} disabled={!chatMsg.trim()}
-                        className="flex-1 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-[11px] flex items-center justify-center gap-1 disabled:opacity-50">
-                        <Send size={10} /> Отправить
-                      </button>
+                  ) : (
+                    <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-2">
+                      <textarea value={chatMsg} onChange={e => setChatMsg(e.target.value)}
+                        placeholder="Сообщение..." rows={2}
+                        className="w-full px-2 py-1.5 mb-1.5 rounded-md text-xs bg-[#171425] border border-purple-900/30 text-white resize-none" />
+                      <div className="flex gap-1.5">
+                        <button onClick={() => setShowChat(false)} className="flex-1 py-1.5 bg-purple-900/20 text-white rounded-md text-[11px]">Отмена</button>
+                        <button onClick={sendMessage} disabled={!chatMsg.trim()}
+                          className="flex-1 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-[11px] flex items-center justify-center gap-1 disabled:opacity-50">
+                          <Send size={10} /> Отправить
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
               </>
             )}
