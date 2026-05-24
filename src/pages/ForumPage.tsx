@@ -29,7 +29,7 @@ interface Topic {
   is_hot?: boolean;
 }
 
-const categoriesList = ['Все', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
+const categoriesList = ['Все', '🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
 const categoryColors: Record<string, string> = {
   'Гайды': 'text-blue-400 bg-blue-900/20 border-blue-800/30',
   'Правила': 'text-red-400 bg-red-900/20 border-red-800/30',
@@ -37,6 +37,7 @@ const categoryColors: Record<string, string> = {
   'Обзоры': 'text-yellow-400 bg-yellow-900/20 border-yellow-800/30',
   'Отзывы': 'text-purple-400 bg-purple-900/20 border-purple-800/30',
   'Дискуссии': 'text-cyan-400 bg-cyan-900/20 border-cyan-800/30',
+  '🎁 Розыгрыши': 'text-pink-400 bg-pink-900/20 border-pink-800/30 shadow-[0_0_10px_rgba(236,72,153,0.4)]',
 };
 
 const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
@@ -52,6 +53,8 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [newImages, setNewImages] = useState<File[]>([]);
   const newImgInput = useRef<HTMLInputElement>(null);
+  const [gwPrize, setGwPrize] = useState('');
+  const [gwDays, setGwDays] = useState('3');
 
   useEffect(() => {
     if (filter && categoriesList.includes(filter)) setActiveCategory(filter);
@@ -141,7 +144,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
         }
       }
 
-      const { error } = await supabase.from('forum_topics').insert({
+      const { data: insertedTopic, error } = await supabase.from('forum_topics').insert({
         title: newTitle,
         content: newContent,
         category: newCategory,
@@ -154,13 +157,30 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
         is_pinned: false,
         is_hot: false,
         images: imgUrls,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Если категория Розыгрыши — создаём giveaway
+      if (newCategory?.includes('Розыгрыш') && insertedTopic && gwPrize.trim()) {
+        const endsAt = new Date();
+        endsAt.setDate(endsAt.getDate() + parseInt(gwDays || '3'));
+        await supabase.from('giveaways').insert({
+          author_id: u.user.id,
+          topic_id: insertedTopic.id,
+          title: newTitle,
+          prize: gwPrize.trim(),
+          description: newContent,
+          ends_at: endsAt.toISOString(),
+          status: 'active',
+        });
+      }
 
       setNewTitle('');
       setNewContent('');
       setNewImages([]);
+      setGwPrize('');
+      setGwDays('3');
       setShowCreate(false);
       loadTopics();
     } catch (e: any) {
@@ -347,6 +367,23 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
                 rows={5}
                 className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white resize-none mb-3"
               />
+
+              {newCategory?.includes('Розыгрыш') && (
+                <div className="mb-3 p-3 bg-pink-900/20 border border-pink-700/30 rounded-xl space-y-2">
+                  <p className="text-xs text-pink-300 font-semibold">🎁 Параметры розыгрыша</p>
+                  <input value={gwPrize} onChange={e => setGwPrize(e.target.value)}
+                    placeholder="Приз (например: Steam аккаунт)"
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+                  <select value={gwDays} onChange={e => setGwDays(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm">
+                    <option value="1">1 день</option>
+                    <option value="3">3 дня</option>
+                    <option value="7">7 дней</option>
+                    <option value="14">14 дней</option>
+                    <option value="30">30 дней</option>
+                  </select>
+                </div>
+              )}
 
               {/* Фото */}
               <div className="mb-3">

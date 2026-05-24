@@ -5,12 +5,12 @@ import {
   Shield, Users, Package, Receipt, Ticket, BarChart3,
   Search, Ban, VolumeX, AlertTriangle, CheckCircle2, XCircle,
   Trash2, Edit3, MessageSquare, RotateCcw, ArrowRight, X,
-  Crown, Settings as SettingsIcon
+  Crown, Settings as SettingsIcon, Megaphone, Send
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge as RB } from './RoleBadge';
 
-type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats';
+type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats' | 'broadcast';
 
 interface Props {
   // Колбек, чтобы из модерации можно было перейти на тему / товар
@@ -51,11 +51,12 @@ const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
   }
 
   const sections = [
-    { id: 'tickets',    label: 'Тикеты',     icon: Ticket },
+    { id: 'tickets',    label: 'Тикеты',       icon: Ticket },
     { id: 'users',      label: 'Пользователи', icon: Users },
-    { id: 'operations', label: 'Финансы',    icon: Receipt },
-    { id: 'products',   label: 'Товары',     icon: Package },
-    { id: 'stats',      label: 'Статистика', icon: BarChart3 },
+    { id: 'operations', label: 'Финансы',      icon: Receipt },
+    { id: 'products',   label: 'Товары',       icon: Package },
+    { id: 'broadcast',  label: 'Рассылка',     icon: Megaphone },
+    { id: 'stats',      label: 'Статистика',   icon: BarChart3 },
   ];
 
   return (
@@ -103,6 +104,7 @@ const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
           {section === 'operations' && <OperationsSection />}
           {section === 'products' && <ProductsSection onNavigate={onNavigate} />}
           {section === 'stats' && <StatsSection />}
+          {section === 'broadcast' && <BroadcastSection />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -1163,6 +1165,161 @@ const StatsSection: React.FC = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+
+/* =================== РАССЫЛКА =================== */
+const BroadcastSection: React.FC = () => {
+  const [mode, setMode] = useState<'live' | 'notif'>('live');
+
+  // Live event
+  const [liveTitle, setLiveTitle] = useState('');
+  const [liveSub, setLiveSub] = useState('');
+  const [liveIcon, setLiveIcon] = useState('📢');
+
+  // Notification
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifText, setNotifText] = useState('');
+  const [notifIcon, setNotifIcon] = useState('📢');
+
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const sendLive = async () => {
+    if (!liveTitle.trim()) return;
+    setSending(true); setResult(null);
+    const { data: u } = await supabase.auth.getUser();
+    const { data: me } = await supabase.from('users').select('username, avatar_url').eq('id', u.user!.id).maybeSingle();
+    const { error } = await supabase.from('live_events').insert({
+      event_type: 'custom',
+      user_id: u.user?.id,
+      username: me?.username,
+      avatar_url: me?.avatar_url,
+      title: liveTitle,
+      subtitle: liveSub || null,
+      icon: liveIcon,
+    });
+    setSending(false);
+    if (error) setResult('⚠️ ' + error.message);
+    else {
+      setResult('✅ Эфир показан всем!');
+      setLiveTitle(''); setLiveSub('');
+      setTimeout(() => setResult(null), 3000);
+    }
+  };
+
+  const sendNotif = async () => {
+    if (!notifTitle.trim()) return;
+    setSending(true); setResult(null);
+    const { data, error } = await supabase.rpc('broadcast_notification', {
+      p_title: notifTitle, p_text: notifText, p_icon: notifIcon,
+    });
+    setSending(false);
+    if (error) setResult('⚠️ ' + error.message);
+    else if (data?.ok) {
+      setResult(`✅ Уведомление отправлено ${data.sent} пользователям!`);
+      setNotifTitle(''); setNotifText('');
+      setTimeout(() => setResult(null), 3000);
+    } else {
+      setResult('⚠️ ' + (data?.error || 'Ошибка'));
+    }
+  };
+
+  const icons = ['📢', '⚠️', '🎉', '🎁', '🔥', '💎', '🚀', '⭐', '🌙', '📨'];
+
+  return (
+    <div className="space-y-4">
+      {/* Переключатель режима */}
+      <div className="flex gap-2">
+        <button onClick={() => setMode('live')}
+          className={`flex-1 py-2.5 rounded-xl font-semibold text-sm ${
+            mode === 'live' ? 'bg-purple-600 text-white' : 'bg-bg-card border border-purple-900/30 text-text-secondary'
+          }`}>
+          📺 Прямой эфир
+        </button>
+        <button onClick={() => setMode('notif')}
+          className={`flex-1 py-2.5 rounded-xl font-semibold text-sm ${
+            mode === 'notif' ? 'bg-purple-600 text-white' : 'bg-bg-card border border-purple-900/30 text-text-secondary'
+          }`}>
+          🔔 Уведомление всем
+        </button>
+      </div>
+
+      {mode === 'live' ? (
+        <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-white mb-1">📺 Кастомный прямой эфир</p>
+            <p className="text-xs text-text-secondary">Появится в правом нижнем углу у всех онлайн-пользователей</p>
+          </div>
+
+          <input value={liveTitle} onChange={e => setLiveTitle(e.target.value)} maxLength={80}
+            placeholder="Заголовок (например: Новое обновление!)"
+            className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+
+          <input value={liveSub} onChange={e => setLiveSub(e.target.value)} maxLength={100}
+            placeholder="Подзаголовок (необязательно)"
+            className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+
+          <div>
+            <p className="text-xs text-text-secondary mb-1">Иконка</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {icons.map(i => (
+                <button key={i} onClick={() => setLiveIcon(i)}
+                  className={`w-9 h-9 rounded-lg text-base flex items-center justify-center ${
+                    liveIcon === i ? 'bg-purple-600' : 'bg-bg-secondary border border-purple-900/30'
+                  }`}>{i}</button>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={sendLive} disabled={sending || !liveTitle.trim()}
+            className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+            <Send size={14} /> {sending ? 'Отправка...' : 'Показать в эфире'}
+          </button>
+        </div>
+      ) : (
+        <div className="bg-bg-card border border-purple-900/20 rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-white mb-1">🔔 Массовая рассылка уведомлений</p>
+            <p className="text-xs text-text-secondary">Будет отправлено ВСЕМ зарегистрированным пользователям</p>
+          </div>
+
+          <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} maxLength={100}
+            placeholder="Заголовок уведомления"
+            className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+
+          <textarea value={notifText} onChange={e => setNotifText(e.target.value)} maxLength={300} rows={3}
+            placeholder="Текст сообщения"
+            className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm resize-none" />
+
+          <div>
+            <p className="text-xs text-text-secondary mb-1">Иконка</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {icons.map(i => (
+                <button key={i} onClick={() => setNotifIcon(i)}
+                  className={`w-9 h-9 rounded-lg text-base flex items-center justify-center ${
+                    notifIcon === i ? 'bg-purple-600' : 'bg-bg-secondary border border-purple-900/30'
+                  }`}>{i}</button>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={sendNotif} disabled={sending || !notifTitle.trim()}
+            className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+            <Send size={14} /> {sending ? 'Рассылка...' : 'Отправить всем'}
+          </button>
+        </div>
+      )}
+
+      {result && (
+        <div className={`p-3 rounded-xl text-sm text-center ${
+          result.startsWith('✅') ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
+        }`}>
+          {result}
+        </div>
+      )}
     </div>
   );
 };

@@ -112,7 +112,7 @@ const UserProfileModal: React.FC = () => {
         >
           {/* Header / Banner */}
           <div
-            className="h-20 relative bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
+            className="h-24 relative bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
             style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
           >
             <div className="absolute top-2 right-2 flex gap-1.5">
@@ -141,9 +141,9 @@ const UserProfileModal: React.FC = () => {
           </div>
 
           <div className="px-4 pb-4">
-            {/* Avatar overlap */}
-            <div className="-mt-8 mb-3">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden">
+            {/* Avatar — частично в баннере, верх в контенте */}
+            <div className="-mt-10 mb-3 relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden shadow-lg">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (

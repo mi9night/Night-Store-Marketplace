@@ -144,13 +144,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   // Realtime для wall
   useEffect(() => {
     if (!user?.id) return;
+    const targetId = viewedProfileId || user.id;
     const ch = supabase.channel('profile_wall_rt')
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'profile_comments', filter: `profile_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'profile_comments', filter: `profile_id=eq.${targetId}` },
         async () => {
           const { data } = await supabase.auth.getUser();
           if (!data.user) return;
-          const { data: wc } = await supabase.from('profile_comments').select('*').eq('profile_id', user.id).order('created_at', { ascending: false });
+          const { data: wc } = await supabase.from('profile_comments').select('*').eq('profile_id', targetId).order('created_at', { ascending: false });
           if (wc) {
             const authorIds = [...new Set(wc.map((c: any) => c.author_id).filter(Boolean))];
             const { data: authors } = await supabase.from('users').select('id, username, avatar_url').in('id', authorIds);
@@ -161,7 +162,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         }
       ).subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user?.id]);
+  }, [user?.id, viewedProfileId]);
 
   // Realtime синк профиля (баланс, аватарка обновляются мгновенно)
   useEffect(() => {
@@ -179,12 +180,24 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 
   const sendWall = async () => {
     if (!wallText.trim() || !user) return;
+    const targetId = viewedProfileId || user.id;
     setSendingWall(true);
     try {
       await supabase.from('profile_comments').insert({
-        profile_id: user.id, author_id: user.id, content: wallText.trim(),
+        profile_id: targetId, author_id: user.id, content: wallText.trim(),
       });
       setWallText('');
+
+      // Уведомление владельцу стены
+      if (targetId !== user.id) {
+        const { data: me } = await supabase.from('users').select('username').eq('id', user.id).maybeSingle();
+        await supabase.from('notifications').insert({
+          user_id: targetId, type: 'message',
+          title: '💬 Новое сообщение на стене',
+          text: `${me?.username || 'Кто-то'}: ${wallText.trim().slice(0, 60)}`,
+          icon: '💬', link_type: 'profile',
+        });
+      }
     } finally { setSendingWall(false); }
   };
 
@@ -386,6 +399,22 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                   {(profile?.balance || 0).toLocaleString('ru-RU')} ₽
                 </p>
               </div>
+            )}
+
+            {/* Кнопка ЛС для чужого профиля */}
+            {!isOwnProfile && user && profile && user.id !== profile.id && (
+              <button onClick={async () => {
+                const msg = prompt('Сообщение для ' + (profile.username || 'пользователя') + ':');
+                if (msg && msg.trim()) {
+                  await supabase.from('messages').insert({
+                    sender_id: user.id, receiver_id: profile.id, text: msg.trim(), is_read: false,
+                  });
+                  alert('✅ Отправлено!');
+                }
+              }}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold flex-shrink-0">
+                <MessageSquare size={14} /> Написать
+              </button>
             )}
           </div>
 

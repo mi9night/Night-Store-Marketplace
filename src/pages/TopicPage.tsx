@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
+import GiveawayCard from '../components/GiveawayCard';
 import LabelManager from '../components/LabelManager';
 import type { Page } from '../types/pages';
 
@@ -249,6 +250,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
           <span>•</span>
           <div className="flex items-center gap-1"><Clock size={11} />{new Date(topic.created_at).toLocaleString('ru-RU')}</div>
         </div>
+
+        {topic.category?.includes('Розыгрыш') && (
+          <div className="mb-4">
+            <GiveawayCard topicId={topic.id} />
+          </div>
+        )}
 
         {topic.content && (
           <div className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-4 p-4 bg-[#0B0A12] rounded-xl border border-purple-900/20">
