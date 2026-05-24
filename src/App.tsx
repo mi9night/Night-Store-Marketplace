@@ -98,6 +98,8 @@ const App: React.FC = () => {
 
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
+      // Если переходим на profile через навигацию (сайдбар, шапка) — сбрасываем чужой
+      if (page === 'profile') setViewedProfileId(null);
       setCurrentPage(page);
       setForumFilter(filter);
       setIsMobileMenuOpen(false);
