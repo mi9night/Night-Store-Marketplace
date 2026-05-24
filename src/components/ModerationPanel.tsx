@@ -694,21 +694,24 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <input value={crLabel} onChange={e => setCrLabel(e.target.value)}
                 placeholder="Название (напр. SPONSOR)" maxLength={15}
                 className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
-              <div className="flex gap-2 mb-2 flex-wrap">
+              <div className="flex gap-2 mb-3 flex-wrap">
                 <span className="text-[10px] text-text-secondary uppercase w-full">Иконка</span>
-                {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮'].map(i => (
+                {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮','👑','🛡','⚡','🚀','🎯','🌟','💫','🎪','🦅','🐺','🦁','🌌','🎨','🎵','🍷','☕','🎲','🃏','💀','😎'].map(i => (
                   <button key={i} onClick={() => setCrIcon(i)}
-                    className={`w-8 h-8 rounded-lg text-base ${crIcon === i ? 'bg-purple-600' : 'bg-bg-secondary border border-purple-900/30'}`}>
+                    className={`w-9 h-9 rounded-lg text-base flex items-center justify-center ${crIcon === i ? 'bg-purple-600 ring-2 ring-white' : 'bg-bg-secondary border border-purple-900/30'}`}>
                     {i}
                   </button>
                 ))}
+                <input value={crIcon} onChange={e => setCrIcon(e.target.value.slice(0, 4))}
+                  placeholder="свой" maxLength={4}
+                  className="w-16 h-9 px-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm text-center" />
               </div>
-              <div className="flex gap-2 mb-2 flex-wrap">
+              <div className="flex gap-2 mb-3 flex-wrap items-center">
                 <span className="text-[10px] text-text-secondary uppercase w-full">Цвет</span>
                 {['red','orange','yellow','green','blue','cyan','purple','pink'].map(col => (
                   <button key={col} onClick={() => setCrColor(col)}
-                    className={`w-7 h-7 rounded-lg border-2 bg-${col}-500 ${crColor === col ? 'border-white' : 'border-transparent'}`}
-                    style={{ backgroundColor: { red:'#ef4444', orange:'#f97316', yellow:'#eab308', green:'#22c55e', blue:'#3b82f6', cyan:'#06b6d4', purple:'#a855f7', pink:'#ec4899' }[col] }} />
+                    className={`w-7 h-7 rounded-lg border-2 ${crColor === col ? 'border-white' : 'border-transparent'}`}
+                    style={{ backgroundColor: ({ red:'#ef4444', orange:'#f97316', yellow:'#eab308', green:'#22c55e', blue:'#3b82f6', cyan:'#06b6d4', purple:'#a855f7', pink:'#ec4899' } as any)[col] }} />
                 ))}
               </div>
               <button onClick={() => applyRole('custom')}

@@ -55,6 +55,8 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   const newImgInput = useRef<HTMLInputElement>(null);
   const [gwPrize, setGwPrize] = useState('');
   const [gwDays, setGwDays] = useState('3');
+  const [gwHours, setGwHours] = useState('0');
+  const [gwMinutes, setGwMinutes] = useState('0');
 
   useEffect(() => {
     if (filter && categoriesList.includes(filter)) setActiveCategory(filter);
@@ -164,7 +166,8 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
       // Если категория Розыгрыши — создаём giveaway
       if (newCategory?.includes('Розыгрыш') && insertedTopic && gwPrize.trim()) {
         const endsAt = new Date();
-        endsAt.setDate(endsAt.getDate() + parseInt(gwDays || '3'));
+        const totalMs = (parseInt(gwDays || '0') * 86400 + parseInt(gwHours || '0') * 3600 + parseInt(gwMinutes || '0') * 60) * 1000;
+        endsAt.setTime(endsAt.getTime() + (totalMs > 0 ? totalMs : 3 * 86400000));
         await supabase.from('giveaways').insert({
           author_id: u.user.id,
           topic_id: insertedTopic.id,
@@ -180,7 +183,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
       setNewContent('');
       setNewImages([]);
       setGwPrize('');
-      setGwDays('3');
+      setGwDays('3'); setGwHours('0'); setGwMinutes('0');
       setShowCreate(false);
       loadTopics();
     } catch (e: any) {
@@ -374,14 +377,45 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
                   <input value={gwPrize} onChange={e => setGwPrize(e.target.value)}
                     placeholder="Приз (например: Steam аккаунт)"
                     className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
-                  <select value={gwDays} onChange={e => setGwDays(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm">
-                    <option value="1">1 день</option>
-                    <option value="3">3 дня</option>
-                    <option value="7">7 дней</option>
-                    <option value="14">14 дней</option>
-                    <option value="30">30 дней</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-text-secondary block mb-1">Дней</label>
+                      <input type="number" min="0" max="365" value={gwDays}
+                        onChange={e => setGwDays(e.target.value)}
+                        placeholder="3"
+                        className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-text-secondary block mb-1">Часов</label>
+                      <input type="number" min="0" max="23" value={gwHours}
+                        onChange={e => setGwHours(e.target.value)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-text-secondary block mb-1">Минут</label>
+                      <input type="number" min="0" max="59" value={gwMinutes}
+                        onChange={e => setGwMinutes(e.target.value)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[
+                      { l: '5м', d: 0, h: 0, m: 5 },
+                      { l: '1ч', d: 0, h: 1, m: 0 },
+                      { l: '6ч', d: 0, h: 6, m: 0 },
+                      { l: '1д', d: 1, h: 0, m: 0 },
+                      { l: '3д', d: 3, h: 0, m: 0 },
+                      { l: '7д', d: 7, h: 0, m: 0 },
+                      { l: '30д', d: 30, h: 0, m: 0 },
+                    ].map(p => (
+                      <button key={p.l} onClick={() => { setGwDays(String(p.d)); setGwHours(String(p.h)); setGwMinutes(String(p.m)); }}
+                        className="px-2 py-1 text-[10px] bg-pink-900/30 text-pink-300 rounded-md hover:bg-pink-900/50">
+                        {p.l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 
 export type ThemeKey = 'night' | 'midnight' | 'royal' | 'sakura' | 'ocean' | 'forest';
 
-export const THEMES: Record<ThemeKey, { label: string; vars: Record<string, string> }> = {
-  night:    { label: '🌙 Night (по умолч.)', vars: { '--accent': '#8A2BE2', '--accent-hover': '#A855F7', '--accent-soft': '#B57CFF' } },
-  midnight: { label: '🌌 Midnight', vars: { '--accent': '#6366F1', '--accent-hover': '#818CF8', '--accent-soft': '#A5B4FC' } },
-  royal:    { label: '👑 Royal Gold', vars: { '--accent': '#D97706', '--accent-hover': '#F59E0B', '--accent-soft': '#FBBF24' } },
-  sakura:   { label: '🌸 Sakura', vars: { '--accent': '#EC4899', '--accent-hover': '#F472B6', '--accent-soft': '#F9A8D4' } },
-  ocean:    { label: '🌊 Ocean', vars: { '--accent': '#06B6D4', '--accent-hover': '#22D3EE', '--accent-soft': '#67E8F9' } },
-  forest:   { label: '🌲 Forest', vars: { '--accent': '#10B981', '--accent-hover': '#34D399', '--accent-soft': '#6EE7B7' } },
+export const THEMES: Record<ThemeKey, { label: string; accent: string; hover: string; soft: string }> = {
+  night:    { label: '🌙 Night (по умолч.)', accent: '#8A2BE2', hover: '#A855F7', soft: '#B57CFF' },
+  midnight: { label: '🌌 Midnight',          accent: '#6366F1', hover: '#818CF8', soft: '#A5B4FC' },
+  royal:    { label: '👑 Royal Gold',        accent: '#D97706', hover: '#F59E0B', soft: '#FBBF24' },
+  sakura:   { label: '🌸 Sakura',            accent: '#EC4899', hover: '#F472B6', soft: '#F9A8D4' },
+  ocean:    { label: '🌊 Ocean',             accent: '#06B6D4', hover: '#22D3EE', soft: '#67E8F9' },
+  forest:   { label: '🌲 Forest',            accent: '#10B981', hover: '#34D399', soft: '#6EE7B7' },
 };
 
 const emit = () => window.dispatchEvent(new Event('privacy-changed'));
@@ -17,7 +17,15 @@ const emit = () => window.dispatchEvent(new Event('privacy-changed'));
 export const applyTheme = (key: ThemeKey) => {
   const t = THEMES[key];
   if (!t) return;
-  Object.entries(t.vars).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
+  const root = document.documentElement;
+  // Tailwind v4 переменные
+  root.style.setProperty('--color-accent', t.accent);
+  root.style.setProperty('--color-accent-hover', t.hover);
+  root.style.setProperty('--color-accent-soft', t.soft);
+  // Дублируем для совместимости
+  root.style.setProperty('--accent', t.accent);
+  root.style.setProperty('--accent-hover', t.hover);
+  root.style.setProperty('--accent-soft', t.soft);
 };
 
 export const usePrivacy = () => {
@@ -27,10 +35,8 @@ export const usePrivacy = () => {
   const [liveFeedEnabled, setLFE] = useState<boolean>(() => localStorage.getItem('live_feed_enabled') !== '0');
   const [theme, setT] = useState<ThemeKey>(() => (localStorage.getItem('theme') as ThemeKey) || 'night');
 
-  useEffect(() => {
-    // Применить тему при загрузке
-    applyTheme(theme);
-  }, []);
+  // Применяем тему при ЛЮБОМ изменении (включая первый рендер)
+  useEffect(() => { applyTheme(theme); }, [theme]);
 
   useEffect(() => {
     const onChange = () => {

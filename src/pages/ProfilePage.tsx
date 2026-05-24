@@ -4,7 +4,7 @@ import {
   Star, ShoppingCart, Award, Clock, Package,
   CheckCircle2, Edit3, Camera, X, Save, MessageSquare,
   Shield, Ban, AlertCircle, Calendar, User
-, ThumbsUp, ThumbsDown } from 'lucide-react';
+, ThumbsUp, ThumbsDown , Image } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
@@ -49,6 +49,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   const [wallText, setWallText] = useState('');
   const [sendingWall, setSendingWall] = useState(false);
   const [wallVotes, setWallVotes] = useState<Record<string, number>>({});
+  const [wallImages, setWallImages] = useState<File[]>([]);
+  const [wallReplyTo, setWallReplyTo] = useState<any>(null);
+  const wallImgInput = useRef<HTMLInputElement>(null);
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -179,14 +182,27 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   }, [user?.id]);
 
   const sendWall = async () => {
-    if (!wallText.trim() || !user) return;
+    if ((!wallText.trim() && wallImages.length === 0) || !user) return;
     const targetId = viewedProfileId || user.id;
     setSendingWall(true);
     try {
+      // Загрузка фото
+      const urls: string[] = [];
+      for (const f of wallImages) {
+        const ext = f.name.split('.').pop() || 'png';
+        const path = `${user.id}/wall-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('forum').upload(path, f);
+        if (!upErr) {
+          const { data } = supabase.storage.from('forum').getPublicUrl(path);
+          urls.push(data.publicUrl);
+        }
+      }
       await supabase.from('profile_comments').insert({
         profile_id: targetId, author_id: user.id, content: wallText.trim(),
+        parent_id: wallReplyTo?.id || null,
+        images: urls,
       });
-      setWallText('');
+      setWallText(''); setWallImages([]); setWallReplyTo(null);
 
       // Уведомление владельцу стены
       if (targetId !== user.id) {
@@ -583,50 +599,55 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
             <div className="space-y-3">
               {/* Форма */}
               <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                {wallReplyTo && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-purple-900/20 rounded-lg text-xs">
+                    <span className="text-purple-300">↳ Ответ для {wallReplyTo.author?.username || 'Аноним'}</span>
+                    <button onClick={() => setWallReplyTo(null)} className="ml-auto text-text-secondary hover:text-white">✕</button>
+                  </div>
+                )}
                 <textarea value={wallText} onChange={e => setWallText(e.target.value)}
-                  placeholder="Оставьте сообщение на стене..."
+                  placeholder={wallReplyTo ? 'Ответ...' : 'Оставьте сообщение на стене...'}
                   rows={2}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none" />
-                <button onClick={sendWall} disabled={sendingWall || !wallText.trim()}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold disabled:opacity-50 ml-auto block">
-                  {sendingWall ? 'Отправка...' : 'Опубликовать'}
-                </button>
+
+                {wallImages.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap mb-2">
+                    {wallImages.map((f, i) => (
+                      <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden border border-purple-900/30">
+                        <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => setWallImages(wallImages.filter((_, idx) => idx !== i))}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5 text-[10px]">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button onClick={() => wallImgInput.current?.click()} disabled={wallImages.length >= 4}
+                    className="p-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg disabled:opacity-50"
+                    title="Фото (макс 4)">
+                    <Image size={14} />
+                  </button>
+                  <input ref={wallImgInput} type="file" multiple accept="image/*" className="hidden"
+                    onChange={e => {
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files).slice(0, 4 - wallImages.length);
+                        setWallImages([...wallImages, ...files]);
+                      }
+                    }} />
+                  <span className="text-[10px] text-text-secondary">{wallImages.length}/4</span>
+                  <button onClick={sendWall} disabled={sendingWall || (!wallText.trim() && wallImages.length === 0)}
+                    className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
+                    {sendingWall ? 'Отправка...' : (wallReplyTo ? 'Ответить' : 'Опубликовать')}
+                  </button>
+                </div>
               </div>
 
               {wallComments.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-sm">Стена пуста</div>
-              ) : wallComments.map((wc: any) => {
-                const v = wallVotes[wc.id];
-                return (
-                  <div key={wc.id} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
-                        {wc.author?.avatar_url ? (
-                          <img src={wc.author.avatar_url} className="w-full h-full object-cover" alt="" />
-                        ) : (
-                          <span className="text-xs font-bold text-white">{(wc.author?.username?.[0] || 'U').toUpperCase()}</span>
-                        )}
-                      </div>
-                      <span className="text-sm font-semibold text-white">{wc.author?.username || 'Аноним'}</span>
-                      <span className="text-xs text-text-secondary ml-auto">{new Date(wc.created_at).toLocaleString('ru-RU')}</span>
-                    </div>
-                    <p className="text-sm text-white whitespace-pre-wrap mb-2">{wc.content}</p>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => voteWall(wc.id, 1)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                          v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
-                        }`}>
-                        <ThumbsUp size={11} /> {wc.likes || 0}
-                      </button>
-                      <button onClick={() => voteWall(wc.id, -1)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                          v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
-                        }`}>
-                        <ThumbsDown size={11} /> {wc.dislikes || 0}
-                      </button>
-                    </div>
-                  </div>
-                );
+              ) : wallComments.filter((c: any) => !c.parent_id).map((wc: any) => {
+                const replies = wallComments.filter((r: any) => r.parent_id === wc.id);
+                return <WallItem key={wc.id} c={wc} replies={replies} myVotes={wallVotes} onVote={voteWall} onReply={setWallReplyTo} />;
               })}
             </div>
           )}
@@ -891,6 +912,69 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+const WallItem: React.FC<{
+  c: any; replies: any[]; myVotes: Record<string, number>;
+  onVote: (id: string, v: 1 | -1) => void; onReply: (c: any) => void;
+  depth?: number;
+}> = ({ c, replies, myVotes, onVote, onReply, depth = 0 }) => {
+  const v = myVotes[c.id];
+  return (
+    <div className={`bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 ${depth > 0 ? 'ml-6 border-l-2 border-l-purple-700/40' : ''}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+          {c.author?.avatar_url ? (
+            <img src={c.author.avatar_url} className="w-full h-full object-cover" alt="" />
+          ) : (
+            <span className="text-xs font-bold text-white">{(c.author?.username?.[0] || 'U').toUpperCase()}</span>
+          )}
+        </div>
+        <span className="text-sm font-semibold text-white">{c.author?.username || 'Аноним'}</span>
+        <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
+      </div>
+      {c.content && <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>}
+
+      {c.images && c.images.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap mb-2">
+          {c.images.map((url: string, i: number) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+              <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-purple-900/30 hover:border-purple-700/50" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button onClick={() => onVote(c.id, 1)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+            v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
+          }`}>
+          <ThumbsUp size={11} /> {c.likes || 0}
+        </button>
+        <button onClick={() => onVote(c.id, -1)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+            v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
+          }`}>
+          <ThumbsDown size={11} /> {c.dislikes || 0}
+        </button>
+        {depth < 3 && (
+          <button onClick={() => onReply(c)}
+            className="px-2 py-1 rounded-lg text-xs bg-purple-900/20 text-text-secondary hover:text-purple-300">
+            ↳ Ответить
+          </button>
+        )}
+      </div>
+
+      {replies.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {replies.map(r => (
+            <WallItem key={r.id} c={r} replies={[]} myVotes={myVotes} onVote={onVote} onReply={onReply} depth={Math.min(depth + 1, 3)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

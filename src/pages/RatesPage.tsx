@@ -133,23 +133,18 @@ const RatesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* График */}
+                {/* Маленький график под ценой */}
                 {r.history.length > 1 && (
-                  <div className="bg-[#0B0A12] rounded-lg p-2">
-                    <svg width="100%" height="40" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id={`grad-${r.code}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor={lineColor} stopOpacity="0.4" />
-                          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <polygon points={`0,${h} ${points} ${w},${h}`} fill={`url(#grad-${r.code})`} />
-                      <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.5" />
-                    </svg>
-                    <p className="text-[9px] text-text-secondary text-center mt-1">
-                      {r.history.length} обновлений · мин {min.toFixed(3)} · макс {max.toFixed(3)}
-                    </p>
-                  </div>
+                  <svg width="100%" height="24" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-1">
+                    <defs>
+                      <linearGradient id={`grad-${r.code}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor={lineColor} stopOpacity="0.4" />
+                        <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <polygon points={`0,${h} ${points} ${w},${h}`} fill={`url(#grad-${r.code})`} />
+                    <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.5" />
+                  </svg>
                 )}
               </motion.div>
             );
@@ -157,8 +152,8 @@ const RatesPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-purple-900/10 border border-purple-700/20 rounded-xl p-3 text-xs text-text-secondary text-center">
-        💡 График строится по данным за время сессии (хранится в браузере, обновляется раз в 5 минут)
+      <div className="text-xs text-text-secondary text-center">
+        💡 Обновление раз в 5 минут
       </div>
     </div>
   );
