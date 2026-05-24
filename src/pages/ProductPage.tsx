@@ -5,13 +5,14 @@ import {
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
   CheckCircle2 as CC2, AlertCircle, Send
-} from 'lucide-react';
+, Trash2 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 import { UserLink } from '../components/UserLink';
+import ReportButton from '../components/ReportButton';
 import LabelManager from '../components/LabelManager';
 import { useCurrency } from '../lib/CurrencyContext';
 
@@ -32,6 +33,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [buyResult, setBuyResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [isFav, setIsFav] = useState(false);
   const [me, setMe] = useState<any>(null);
+  const [myRole, setMyRole] = useState<string>('user');
 
   // Заказ покупателя (если этот товар был куплен мной)
   const [myOrder, setMyOrder] = useState<any>(null);
@@ -63,6 +65,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
       setMe(u.user);
+
+      if (u.user) {
+        const { data: meData } = await supabase.from('users').select('role').eq('id', u.user.id).maybeSingle();
+        setMyRole(meData?.role || 'user');
+      }
 
       // Я ли в избранном?
       if (u.user) {
@@ -96,6 +103,20 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
           .eq('target_user_id', sellerId)
           .order('created_at', { ascending: false });
         const reviewsList = r || [];
+
+        // Авторы отзывов
+        const authorIds = [...new Set(reviewsList.map((rv: any) => rv.user_id).filter(Boolean))];
+        if (authorIds.length > 0) {
+          const { data: authors } = await supabase.from('users')
+            .select('id, username, avatar_url, custom_id').in('id', authorIds);
+          const aMap: Record<string, any> = {};
+          authors?.forEach((a: any) => { aMap[a.id] = a; });
+          reviewsList.forEach((rv: any) => {
+            if (aMap[rv.user_id]) {
+              rv.author = aMap[rv.user_id];
+            }
+          });
+        }
 
         // Считаем рейтинг
         let rating = Number(s?.rating) || 0;
@@ -145,6 +166,26 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
       setBuyResult({ type: 'err', text: e.message });
     } finally {
       setBuying(false);
+    }
+  };
+
+  const deleteReview = async (id: string) => {
+    if (!confirm('Удалить отзыв?')) return;
+    await supabase.from('reviews').delete().eq('id', id);
+    // Перезагрузить отзывы
+    if (account.seller && (account.seller as any).id) {
+      const { data: r } = await supabase.from('reviews')
+        .select('*').eq('target_user_id', (account.seller as any).id)
+        .order('created_at', { ascending: false });
+      const reviewsList = r || [];
+      const ids = [...new Set(reviewsList.map((rv: any) => rv.user_id).filter(Boolean))];
+      if (ids.length > 0) {
+        const { data: authors } = await supabase.from('users').select('id, username, avatar_url, custom_id').in('id', ids);
+        const aMap: Record<string, any> = {};
+        authors?.forEach((a: any) => { aMap[a.id] = a; });
+        reviewsList.forEach((rv: any) => { if (aMap[rv.user_id]) rv.author = aMap[rv.user_id]; });
+      }
+      setReviews(reviewsList);
     }
   };
 
@@ -421,29 +462,65 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {reviews.map(r => (
-                      <div key={r.id} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                            r.positive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                    {reviews.map(r => {
+                      const canDel = ['moderator','admin','owner'].includes(myRole);
+                      return (
+                        <div key={r.id}
+                          className={`border rounded-xl p-3 ${
+                            r.positive
+                              ? 'bg-green-900/10 border-green-700/30'
+                              : 'bg-red-900/10 border-red-700/30'
                           }`}>
-                            {r.positive ? '👍 Положительный' : '👎 Отрицательный'}
-                          </span>
-                          {r.rating && (
-                            <div className="flex items-center gap-0.5">
-                              {Array.from({ length: 5 }).map((_, idx) => (
-                                <Star key={idx} size={11}
-                                  className={idx < r.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
-                              ))}
+                          {/* Автор */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {r.author?.avatar_url ? (
+                                <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-xs font-bold text-white">{(r.author?.username?.[0] || 'U').toUpperCase()}</span>
+                              )}
                             </div>
-                          )}
-                          <span className="text-xs text-text-secondary ml-auto">
-                            {new Date(r.created_at).toLocaleDateString('ru-RU')}
-                          </span>
+                            <UserLink userId={r.author?.id || r.user_id} username={r.author?.username || 'Аноним'} className="text-sm font-semibold text-white" />
+                            {r.author?.custom_id && (
+                              <span className="text-[10px] text-purple-300 font-mono">#{r.author.custom_id}</span>
+                            )}
+                            <span className="text-xs text-text-secondary ml-auto">
+                              {new Date(r.created_at).toLocaleDateString('ru-RU')}
+                            </span>
+                          </div>
+
+                          {/* Бейдж + звёзды */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                              r.positive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                            }`}>
+                              {r.positive ? '👍 Положительный' : '👎 Отрицательный'}
+                            </span>
+                            {r.rating && (
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }).map((_, idx) => (
+                                  <Star key={idx} size={11}
+                                    className={idx < r.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {r.text && <p className="text-sm text-white mb-2">{r.text}</p>}
+
+                          {/* Действия */}
+                          <div className="flex items-center gap-1 pt-2 border-t border-purple-900/20">
+                            <ReportButton targetType="comment" targetId={r.id} targetName={'Отзыв: ' + (r.text || '').slice(0, 40)} />
+                            {canDel && (
+                              <button onClick={() => deleteReview(r.id)}
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold ml-auto">
+                                <Trash2 size={11} /> Удалить
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        {r.text && <p className="text-sm text-white">{r.text}</p>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )
               )}

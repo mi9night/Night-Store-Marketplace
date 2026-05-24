@@ -457,8 +457,9 @@ const CommentItem: React.FC<{
         <div className="ml-auto flex items-center gap-1">
           <ReportButton targetType="comment" targetId={c.id} targetName={'Комментарий: ' + c.content.slice(0, 40)} />
           {canDelete && (
-            <button onClick={() => onDelete(c.id)} className="text-text-secondary hover:text-red-400 p-1">
-              <Trash2 size={13} />
+            <button onClick={() => onDelete(c.id)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold">
+              <Trash2 size={11} /> Удалить
             </button>
           )}
         </div>

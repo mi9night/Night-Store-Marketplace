@@ -11,6 +11,7 @@ import { Account } from '../types';
 import type { Page } from '../types/pages';
 import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
+import GlobalSearch from './GlobalSearch';
 import { useCurrency, CURRENCIES } from '../lib/CurrencyContext';
 import { usePrivacy } from '../lib/usePrivacy';
 
@@ -24,6 +25,8 @@ interface HeaderProps {
   onMenuToggle: () => void;
   isMobileMenuOpen: boolean;
   onOpenAccount?: (accountId: string) => void;
+  onOpenAccountFull?: (account: any) => void;
+  onOpenTopic?: (id: string) => void;
 }
 
 interface Notif {
@@ -336,38 +339,7 @@ const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Search */}
-        <div className="flex-1 max-w-xl mx-auto flex items-center gap-2">
-          <div className="flex-1 flex items-center bg-bg-secondary border border-purple-900/30 rounded-xl overflow-hidden hover:border-purple-700/50">
-            <div className="relative">
-              <button onClick={() => setShowCategoryFilter(!showCategoryFilter)}
-                className="flex items-center gap-1 px-3 py-2 text-xs text-text-secondary border-r border-purple-900/30 whitespace-nowrap">
-                {searchCategory} <ChevronDown size={12} />
-              </button>
-              <AnimatePresence>
-                {showCategoryFilter && (
-                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                    className="absolute top-full left-0 mt-1 bg-bg-card border border-purple-900/30 rounded-xl w-40 z-50 shadow-xl overflow-hidden">
-                    {['Все', ...categories.map(c => c.name)].map(cat => (
-                      <button key={cat} onClick={() => { setSearchCategory(cat); setShowCategoryFilter(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm ${
-                          searchCategory === cat ? 'text-accent-soft bg-purple-900/20' : 'text-text-secondary hover:bg-purple-900/10'
-                        }`}>
-                        {cat}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Поиск аккаунтов..."
-              className="flex-1 px-3 py-2 bg-transparent border-none text-sm text-text-primary placeholder:text-text-secondary min-w-0"
-              style={{ background: 'transparent', border: 'none', boxShadow: 'none' }} />
-            <button className="p-2 text-text-secondary hover:text-accent">
-              <Search size={16} />
-            </button>
-          </div>
-        </div>
+        <GlobalSearch setCurrentPage={setCurrentPage} onOpenAccount={onOpenAccountFull} onOpenTopic={onOpenTopic} />
 
         <div className="flex items-center gap-2">
           {/* ===== BALANCE (выезжающий дропдаун) ===== */}

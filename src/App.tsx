@@ -133,6 +133,11 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleOpenAccountFull = useCallback((acc: Account) => {
+    setSelectedAccount(acc);
+    setCurrentPage('product');
+  }, []);
+
   const handleRemoveFromCart = useCallback((id: string) => {
     setCartItems(prev => prev.filter(i => i.id !== id));
   }, []);
@@ -166,6 +171,8 @@ const App: React.FC = () => {
             onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isMobileMenuOpen={isMobileMenuOpen}
             onOpenAccount={handleOpenAccount}
+            onOpenAccountFull={handleOpenAccountFull}
+            onOpenTopic={handleOpenTopic}
           />
 
           <Sidebar
