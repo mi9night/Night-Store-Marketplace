@@ -1,262 +1,165 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/RatesPage.tsx
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 
 interface Rate {
   code: string;
   name: string;
   flag: string;
-  rateRub: number;        // сколько рублей за 1 единицу валюты
-  prev?: number;
+  current: number;        // сколько ₽ за 1 единицу
+  history: number[];      // последние значения
 }
 
 const CURRENCIES = [
   { code: 'USD', name: 'Доллар США', flag: '🇺🇸' },
-  { code: 'EUR', name: 'Евро', flag: '🇪🇺' },
-  { code: 'UAH', name: 'Гривна', flag: '🇺🇦' },
-  { code: 'KZT', name: 'Тенге', flag: '🇰🇿' },
+  { code: 'EUR', name: 'Евро',       flag: '🇪🇺' },
+  { code: 'UAH', name: 'Гривна',     flag: '🇺🇦' },
+  { code: 'KZT', name: 'Тенге',      flag: '🇰🇿' },
+  { code: 'BYN', name: 'Бел. рубль', flag: '🇧🇾' },
+  { code: 'CNY', name: 'Юань',       flag: '🇨🇳' },
 ];
 
 const RatesPage: React.FC = () => {
-  const [rates, setRates] = useState<Rate[]>([]);
+  const [rates, setRates] = useState<Record<string, Rate>>({});
   const [loading, setLoading] = useState(true);
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Конвертер
-  const [fromCurrency, setFromCurrency] = useState('USD');
-  const [toCurrency, setToCurrency] = useState('RUB');
-  const [amount, setAmount] = useState('100');
-
-  const loadRates = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchRates = async () => {
     try {
-      // Бесплатное публичное API (без ключа). База — RUB
-      const res = await fetch('https://open.er-api.com/v6/latest/RUB');
-      const data = await res.json();
+      const r = await fetch('https://open.er-api.com/v6/latest/RUB');
+      const d = await r.json();
+      if (d?.result !== 'success') throw new Error();
 
-      if (data.result !== 'success' || !data.rates) {
-        throw new Error('Не удалось загрузить курсы');
-      }
+      const stored = JSON.parse(localStorage.getItem('rates_history') || '{}');
+      const newRates: Record<string, Rate> = {};
 
-      // data.rates содержит сколько единиц валюты за 1 RUB → инвертируем
-      const previous = JSON.parse(localStorage.getItem('rates_prev') || '{}');
-
-      const newRates: Rate[] = CURRENCIES.map(c => {
-        const rateRub = 1 / data.rates[c.code];
-        return {
-          ...c,
-          rateRub,
-          prev: previous[c.code]
-        };
+      CURRENCIES.forEach(c => {
+        const inRub = 1 / d.rates[c.code];
+        const prevHistory: number[] = stored[c.code] || [];
+        const history = [...prevHistory, inRub].slice(-20);
+        newRates[c.code] = { code: c.code, name: c.name, flag: c.flag, current: inRub, history };
       });
 
+      // Сохраняем историю
+      const toSave: Record<string, number[]> = {};
+      Object.values(newRates).forEach(r => { toSave[r.code] = r.history; });
+      localStorage.setItem('rates_history', JSON.stringify(toSave));
+
       setRates(newRates);
-      setUpdatedAt(new Date(data.time_last_update_unix * 1000));
-
-      // Сохраняем для отслеживания тренда
-      const toSave: Record<string, number> = {};
-      newRates.forEach(r => toSave[r.code] = r.rateRub);
-      localStorage.setItem('rates_prev', JSON.stringify(toSave));
-
-    } catch (e: any) {
-      setError(e.message || 'Ошибка загрузки');
+      setLastUpdate(new Date());
+    } catch (e) {
+      console.warn('Не удалось загрузить курсы');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRates();
-    // Обновляем каждые 5 минут
-    const interval = setInterval(loadRates, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    fetchRates();
+    const t = setInterval(fetchRates, 5 * 60 * 1000);
+    return () => clearInterval(t);
   }, []);
 
-  /* ============ Конвертер ============ */
-  const getRubValue = (code: string): number => {
-    if (code === 'RUB') return 1;
-    return rates.find(r => r.code === code)?.rateRub || 0;
-  };
-
-  const fromRub = getRubValue(fromCurrency);
-  const toRub = getRubValue(toCurrency);
-  const converted = (parseFloat(amount) || 0) * fromRub / toRub;
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
+    <div className="max-w-4xl mx-auto space-y-5">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <DollarSign size={24} className="text-accent" />
-          <div>
-            <h1 className="text-2xl font-bold text-white">Курсы валют</h1>
-            {updatedAt && (
-              <p className="text-xs text-text-secondary mt-0.5">
-                Обновлено: {updatedAt.toLocaleString('ru-RU')}
-              </p>
-            )}
-          </div>
+          <DollarSign size={24} className="text-purple-400" />
+          <h1 className="text-2xl font-bold text-white">Курсы валют</h1>
         </div>
-        <motion.button
-          onClick={loadRates}
-          disabled={loading}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-900/20 border border-purple-800/30 text-white rounded-xl text-sm hover:border-purple-600/50 disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Обновить
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {lastUpdate && (
+            <span className="text-xs text-text-secondary">
+              Обновлено: {lastUpdate.toLocaleTimeString('ru-RU')}
+            </span>
+          )}
+          <button onClick={fetchRates} disabled={loading}
+            className="p-2 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-lg disabled:opacity-50">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </motion.div>
 
-      {error && (
-        <div className="bg-error/10 border border-error/30 text-error p-4 rounded-xl text-sm">
-          ⚠️ {error}
+      {loading && Object.keys(rates).length === 0 ? (
+        <div className="text-center py-12 text-text-secondary">Загрузка курсов...</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {Object.values(rates).map((r, i) => {
+            const prev = r.history.length > 1 ? r.history[r.history.length - 2] : r.current;
+            const diff = r.current - prev;
+            const diffPct = prev > 0 ? (diff / prev) * 100 : 0;
+            const isUp = diff > 0;
+            const isDown = diff < 0;
+
+            // SVG спарклайн
+            const w = 100, h = 30;
+            const min = Math.min(...r.history);
+            const max = Math.max(...r.history);
+            const range = max - min || 1;
+            const points = r.history.map((v, idx) => {
+              const x = (idx / Math.max(r.history.length - 1, 1)) * w;
+              const y = h - ((v - min) / range) * h;
+              return `${x},${y}`;
+            }).join(' ');
+
+            const lineColor = isUp ? '#22c55e' : isDown ? '#ef4444' : '#a855f7';
+
+            return (
+              <motion.div key={r.code}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="bg-[#171425] border border-purple-900/20 rounded-xl p-4 hover:border-purple-700/40 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{r.flag}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{r.code}</p>
+                        <p className="text-xs text-text-secondary">{r.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-white">
+                      {r.current.toFixed(2)} <span className="text-sm text-text-secondary">₽</span>
+                    </p>
+                    {Math.abs(diff) > 0.001 && (
+                      <p className={`text-xs flex items-center justify-end gap-1 ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+                        {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        {diff > 0 ? '+' : ''}{diff.toFixed(3)} ({diffPct.toFixed(2)}%)
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* График */}
+                {r.history.length > 1 && (
+                  <div className="bg-[#0B0A12] rounded-lg p-2">
+                    <svg width="100%" height="40" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id={`grad-${r.code}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor={lineColor} stopOpacity="0.4" />
+                          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <polygon points={`0,${h} ${points} ${w},${h}`} fill={`url(#grad-${r.code})`} />
+                      <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.5" />
+                    </svg>
+                    <p className="text-[9px] text-text-secondary text-center mt-1">
+                      {r.history.length} обновлений · мин {min.toFixed(3)} · макс {max.toFixed(3)}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
-      {/* Курсы относительно рубля */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* RUB как база */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-bg-card border border-accent/30 rounded-xl p-4"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🇷🇺</span>
-              <div>
-                <p className="text-sm font-semibold text-white">Рубль</p>
-                <p className="text-xs text-text-secondary">RUB · базовая валюта</p>
-              </div>
-            </div>
-            <span className="text-lg font-bold text-accent-soft">1.00</span>
-          </div>
-        </motion.div>
-
-        {rates.map((r, i) => {
-          const trend = r.prev ? (r.rateRub > r.prev ? 'up' : r.rateRub < r.prev ? 'down' : 'same') : 'same';
-          const diff = r.prev ? ((r.rateRub - r.prev) / r.prev * 100) : 0;
-
-          return (
-            <motion.div
-              key={r.code}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-bg-card border border-purple-900/20 rounded-xl p-4 hover:border-purple-700/40 transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{r.flag}</span>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{r.name}</p>
-                    <p className="text-xs text-text-secondary">{r.code}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-white">
-                    {r.rateRub < 1
-                      ? r.rateRub.toFixed(4)
-                      : r.rateRub.toFixed(2)} ₽
-                  </p>
-                  {trend !== 'same' && (
-                    <div className={`flex items-center gap-1 justify-end text-xs ${
-                      trend === 'up' ? 'text-success' : 'text-error'
-                    }`}>
-                      {trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                      {Math.abs(diff).toFixed(2)}%
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+      <div className="bg-purple-900/10 border border-purple-700/20 rounded-xl p-3 text-xs text-text-secondary text-center">
+        💡 График строится по данным за время сессии (хранится в браузере, обновляется раз в 5 минут)
       </div>
-
-      {/* Конвертер */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-bg-card border border-purple-900/20 rounded-2xl p-6"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <ArrowRightLeft size={18} className="text-accent" />
-          <h2 className="text-base font-semibold text-white">Конвертер валют</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-end">
-          {/* From */}
-          <div>
-            <label className="text-xs text-text-secondary mb-1.5 block">Из</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white"
-              />
-              <select
-                value={fromCurrency}
-                onChange={e => setFromCurrency(e.target.value)}
-                className="px-3 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white"
-              >
-                <option value="RUB">🇷🇺 RUB</option>
-                {CURRENCIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              const tmp = fromCurrency;
-              setFromCurrency(toCurrency);
-              setToCurrency(tmp);
-            }}
-            className="p-3 bg-purple-900/20 hover:bg-purple-900/40 text-accent-soft rounded-xl"
-          >
-            <ArrowRightLeft size={16} />
-          </button>
-
-          {/* To */}
-          <div>
-            <label className="text-xs text-text-secondary mb-1.5 block">В</label>
-            <div className="flex gap-2">
-              <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white font-semibold">
-                {converted.toFixed(2)}
-              </div>
-              <select
-                value={toCurrency}
-                onChange={e => setToCurrency(e.target.value)}
-                className="px-3 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white"
-              >
-                <option value="RUB">🇷🇺 RUB</option>
-                {CURRENCIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-text-secondary mt-3 text-center">
-          1 {fromCurrency} = {(fromRub / toRub).toFixed(4)} {toCurrency}
-        </p>
-      </motion.div>
-
-      <p className="text-xs text-text-secondary text-center">
-        Данные предоставлены open.er-api.com · обновляются каждые 5 минут
-      </p>
     </div>
   );
 };

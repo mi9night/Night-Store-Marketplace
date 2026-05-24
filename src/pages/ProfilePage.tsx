@@ -4,7 +4,7 @@ import {
   Star, ShoppingCart, Award, Clock, Package,
   CheckCircle2, Edit3, Camera, X, Save, MessageSquare,
   Shield, Ban, AlertCircle, Calendar, User
-} from 'lucide-react';
+, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
@@ -584,16 +584,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                     <p className="text-sm text-white whitespace-pre-wrap mb-2">{wc.content}</p>
                     <div className="flex items-center gap-2">
                       <button onClick={() => voteWall(wc.id, 1)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                           v === 1 ? 'bg-green-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-green-400'
                         }`}>
-                        👍 {wc.likes || 0}
+                        <ThumbsUp size={11} /> {wc.likes || 0}
                       </button>
                       <button onClick={() => voteWall(wc.id, -1)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                           v === -1 ? 'bg-red-600 text-white' : 'bg-purple-900/20 text-text-secondary hover:text-red-400'
                         }`}>
-                        👎 {wc.dislikes || 0}
+                        <ThumbsDown size={11} /> {wc.dislikes || 0}
                       </button>
                     </div>
                   </div>

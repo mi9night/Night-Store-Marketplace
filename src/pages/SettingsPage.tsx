@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Shield, Bell, Palette, Key, CreditCard,
-  Eye, EyeOff, Save, X, Clock, Check, AlertCircle
+  Eye, EyeOff, Save, X, Clock, Check, AlertCircle, Camera, Image
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCurrency } from '../lib/CurrencyContext';
+import { usePrivacy, THEMES, ThemeKey } from '../lib/usePrivacy';
+import { LevelBadge } from '../components/LevelBadge';
+import { RoleBadge } from '../components/RoleBadge';
+import ModerationPanel from '../components/ModerationPanel';
 
-type ActionType = 'username' | 'email' | 'password' | null;
+type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
 
-const SettingsPage: React.FC = () => {
-  const [activeSection, setActiveSection] = useState('profile');
+interface SettingsPageProps {
+  onNavigate?: (page: any, payload?: any) => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
+  const [activeSection, setActiveSection] = useState(() => {
+    return localStorage.getItem('mod_open_user_id') ? 'moderation' : 'profile';
+  });
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +33,28 @@ const SettingsPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [showEmailLocal, setShowEmailLocal] = useState(false);
+  const { glowEnabled, setGlowEnabled, liveFeedEnabled, setLiveFeedEnabled, theme, setTheme } = usePrivacy();
+
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const bannerInput = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (type: 'avatar' | 'banner', file: File) => {
+    if (!user) return;
+    try {
+      const bucket = type === 'avatar' ? 'avatars' : 'banners';
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${user.id}/${type}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+      const field = type === 'avatar' ? 'avatar_url' : 'banner_url';
+      await supabase.from('users').update({ [field]: urlData.publicUrl }).eq('id', user.id);
+      setProfile((p: any) => p ? { ...p, [field]: urlData.publicUrl } : p);
+    } catch (e: any) {
+      alert('Ошибка загрузки: ' + e.message);
+    }
+  };
 
   // Уведомления
   const [notifications, setNotifications] = useState({
@@ -36,7 +69,7 @@ const SettingsPage: React.FC = () => {
 
       if (data.user) {
         const { data: p } = await supabase
-          .from('profiles')
+          .from('users')
           .select('*')
           .eq('id', data.user.id)
           .maybeSingle();
@@ -61,6 +94,8 @@ const SettingsPage: React.FC = () => {
 
   const canChangeUsername = daysUntilCanChange === 0;
 
+  const isMod = ['moderator', 'admin', 'owner'].includes(profile?.role || '');
+
   const sections = [
     { id: 'profile', label: 'Профиль', icon: Settings },
     { id: 'security', label: 'Безопасность', icon: Shield },
@@ -68,6 +103,7 @@ const SettingsPage: React.FC = () => {
     { id: 'appearance', label: 'Внешний вид', icon: Palette },
     { id: 'payments', label: 'Оплата', icon: CreditCard },
     { id: 'api', label: 'API', icon: Key },
+    ...(isMod ? [{ id: 'moderation', label: 'Модерация', icon: Shield }] : []),
   ];
 
   /* ============ Открыть модалку ============ */
@@ -90,6 +126,17 @@ const SettingsPage: React.FC = () => {
         return;
       }
     }
+    if (action === 'custom_id') {
+      const clean = newValue.toLowerCase().trim();
+      if (!/^[a-z0-9_.]{3,15}$/.test(clean)) {
+        setActionMessage({ type: 'err', text: 'ID: 3-15 символов (a-z, 0-9, _ .)' });
+        return;
+      }
+      if (/^[0-9]+$/.test(clean) && clean.length < 8) {
+        setActionMessage({ type: 'err', text: 'Чисто цифровой ID должен быть от 8 цифр' });
+        return;
+      }
+    }
     if (action === 'email') {
       if (!newValue.includes('@')) {
         setActionMessage({ type: 'err', text: 'Введите корректный email' });
@@ -106,34 +153,59 @@ const SettingsPage: React.FC = () => {
         return;
       }
     }
-    if (!currentPassword) {
+    // Для custom_id пароль не нужен (это просто покупка)
+    if (action !== 'custom_id' && !currentPassword) {
       setActionMessage({ type: 'err', text: 'Введите текущий пароль' });
       return;
     }
 
     setActionLoading(true);
     try {
-      // 1. Проверка текущего пароля через signIn
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword
-      });
-      if (signInError) {
-        setActionMessage({ type: 'err', text: 'Неверный текущий пароль' });
-        setActionLoading(false);
+      // 1. Проверка текущего пароля через signIn (только если он нужен)
+      if (action !== 'custom_id') {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword
+        });
+        if (signInError) {
+          setActionMessage({ type: 'err', text: 'Неверный текущий пароль' });
+          setActionLoading(false);
+          return;
+        }
+      }
+
+      // Custom ID — отдельная логика (через buy_custom_id RPC, баланс уже проверяется внутри)
+      if (action === 'custom_id') {
+        const { data, error } = await supabase.rpc('buy_custom_id', { p_new_id: newValue });
+        if (error) throw error;
+        if (!data?.ok) {
+          const errMap: Record<string, string> = {
+            invalid_format: 'Можно: a-z, 0-9, _ . (3-15 символов)',
+            numeric_too_short: 'Чисто цифровой ID должен быть от 8 цифр',
+            id_taken: 'Этот ID уже занят',
+            reserved: 'Это зарезервированный ID',
+            insufficient_balance: 'Недостаточно средств (нужно 350₽)',
+          };
+          setActionMessage({ type: 'err', text: errMap[data?.error] || data?.error || 'Ошибка' });
+          setActionLoading(false);
+          return;
+        }
+        setProfile((p: any) => p ? { ...p, custom_id: newValue } : p);
+        setActionMessage({ type: 'ok', text: '✅ ID изменён! С баланса списано 350₽' });
+        setTimeout(() => setAction(null), 1500);
         return;
       }
 
       // 2. Выполняем действие
       if (action === 'username') {
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            username: newValue,
-            username_changed_at: new Date().toISOString()
-          });
+        // Используем RPC — серверная проверка лимита 7 дней
+        const { data: result, error } = await supabase.rpc('update_username', { new_username: newValue });
         if (error) throw error;
+        if (result === 'too_soon') {
+          setActionMessage({ type: 'err', text: 'Никнейм можно менять раз в 7 дней' });
+          setActionLoading(false);
+          return;
+        }
         setProfile({ ...profile, username: newValue, username_changed_at: new Date().toISOString() });
       }
 
@@ -211,6 +283,53 @@ const SettingsPage: React.FC = () => {
             <>
               <h3 className="text-base font-semibold text-white">Данные профиля</h3>
 
+              {/* Аватар и баннер */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <label className="text-sm text-text-secondary mb-3 block">Аватарка и баннер</label>
+
+                {/* Баннер превью */}
+                <div
+                  className="h-24 rounded-xl mb-3 relative overflow-hidden bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
+                  style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
+                >
+                  <button
+                    onClick={() => bannerInput.current?.click()}
+                    className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur rounded-lg text-xs text-white hover:bg-black/80"
+                  >
+                    <Image size={12} /> Загрузить баннер
+                  </button>
+                  <input ref={bannerInput} type="file" accept="image/*" className="hidden"
+                    onChange={e => e.target.files?.[0] && handleUpload('banner', e.target.files[0])} />
+                </div>
+
+                {/* Аватар */}
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden border-2 border-purple-900/40">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl font-bold text-white">
+                          {(profile?.username?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => avatarInput.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center border-2 border-bg-card"
+                    >
+                      <Camera size={12} className="text-white" />
+                    </button>
+                    <input ref={avatarInput} type="file" accept="image/*" className="hidden"
+                      onChange={e => e.target.files?.[0] && handleUpload('avatar', e.target.files[0])} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">Нажмите на иконку 📷 чтобы сменить аватарку</p>
+                    <p className="text-xs text-text-secondary mt-0.5">PNG / JPG / GIF, до 2 МБ</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Никнейм */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -239,20 +358,26 @@ const SettingsPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Email */}
+              {/* Кастомный ID */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <label className="text-sm text-text-secondary mb-2 block">Email</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-text-secondary">ID профиля</label>
+                  <span className="text-[10px] text-text-secondary">💎 350₽ за смену</span>
+                </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white">
-                    {user?.email}
+                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
+                    #{profile?.custom_id || '—'}
                   </div>
                   <button
-                    onClick={() => openAction('email')}
+                    onClick={() => openAction('custom_id')}
                     className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
                   >
                     Изменить
                   </button>
                 </div>
+                <p className="text-xs text-text-secondary mt-2">
+                  💡 Хочешь короткий красивый ID? Можно купить за 350₽
+                </p>
               </div>
 
               {/* О себе */}
@@ -265,7 +390,7 @@ const SettingsPage: React.FC = () => {
                   className="w-full px-4 py-3 rounded-xl text-sm resize-none bg-bg-secondary border border-purple-900/30 text-white"
                   onBlur={async (e) => {
                     if (user) {
-                      await supabase.from('profiles').upsert({ id: user.id, bio: e.target.value });
+                      await supabase.from('users').upsert({ id: user.id, bio: e.target.value });
                     }
                   }}
                 />
@@ -278,11 +403,34 @@ const SettingsPage: React.FC = () => {
             <>
               <h3 className="text-base font-semibold text-white">Безопасность</h3>
 
+              {/* Email (перенесён сюда) */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <label className="text-sm text-text-secondary mb-2 block">Email</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-4 py-3 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
+                    {showEmailLocal ? user?.email : '••••••••@' + (user?.email?.split('@')[1] || '••••')}
+                  </div>
+                  <button
+                    onClick={() => setShowEmailLocal(!showEmailLocal)}
+                    title={showEmailLocal ? 'Скрыть' : 'Показать'}
+                    className="p-3 bg-purple-900/20 hover:bg-purple-900/40 text-purple-300 rounded-xl">
+                    {showEmailLocal ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                  <button
+                    onClick={() => openAction('email')}
+                    className="px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold"
+                  >
+                    Изменить
+                  </button>
+                </div>
+              </div>
+
+              {/* Пароль */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-white">Пароль</p>
-                    <p className="text-xs text-text-secondary mt-1">Последнее изменение давно</p>
+                    <p className="text-xs text-text-secondary mt-1">Регулярно меняйте для безопасности</p>
                   </div>
                   <button
                     onClick={() => openAction('password')}
@@ -293,6 +441,44 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Приватность */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-white">🔒 Приватность</p>
+
+                <label className="flex items-center justify-between p-3 bg-bg-card rounded-xl cursor-pointer">
+                  <div>
+                    <p className="text-sm text-white">Скрыть email от других</p>
+                    <p className="text-xs text-text-secondary">В профиле и поиске</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const v = !profile?.hide_email;
+                      await supabase.from('users').update({ hide_email: v }).eq('id', user.id);
+                      setProfile({ ...profile, hide_email: v });
+                    }}
+                    className={`w-11 h-6 rounded-full transition-all relative ${profile?.hide_email ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${profile?.hide_email ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between p-3 bg-bg-card rounded-xl cursor-pointer">
+                  <div>
+                    <p className="text-sm text-white">Скрыть баланс от других</p>
+                    <p className="text-xs text-text-secondary">Чужие профили не увидят сумму</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const v = !profile?.hide_balance;
+                      await supabase.from('users').update({ hide_balance: v }).eq('id', user.id);
+                      setProfile({ ...profile, hide_balance: v });
+                    }}
+                    className={`w-11 h-6 rounded-full transition-all relative ${profile?.hide_balance ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${profile?.hide_balance ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </label>
+              </div>
+
+              {/* 2FA */}
               <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -340,7 +526,67 @@ const SettingsPage: React.FC = () => {
           {activeSection === 'appearance' && (
             <>
               <h3 className="text-base font-semibold text-white">Внешний вид</h3>
-              <p className="text-sm text-text-secondary">Скоро здесь появятся темы оформления 🌙</p>
+
+              {/* === Тема оформления === */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <p className="text-sm font-medium text-white mb-3">🎨 Тема акцентного цвета</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.keys(THEMES) as ThemeKey[]).map(k => {
+                    const t = THEMES[k];
+                    const isActive = theme === k;
+                    return (
+                      <button key={k} onClick={() => setTheme(k)}
+                        className={`p-3 rounded-xl border-2 transition-all text-left ${
+                          isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
+                        }`}
+                        style={{ background: `linear-gradient(135deg, ${t.vars['--accent']}30, ${t.vars['--accent-soft']}10)` }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg" style={{ background: t.vars['--accent'] }} />
+                          <span className="text-xs font-semibold text-white">{t.label}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-text-secondary mt-2">💡 Меняет фиолетовый акцент на выбранный цвет по всему сайту</p>
+              </div>
+
+              {/* === Свечение === */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">✨ Свечение значков</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Glow-эффект на бейджах ролей и уровней</p>
+                  </div>
+                  <button onClick={() => setGlowEnabled(!glowEnabled)}
+                    className={`w-11 h-6 rounded-full transition-all relative ${glowEnabled ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${glowEnabled ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+                <div className="bg-bg-card rounded-lg p-3 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-text-secondary">Превью:</span>
+                  <RoleBadge user={{ role: 'owner' }} />
+                  <RoleBadge user={{ role: 'admin' }} />
+                  <RoleBadge user={{ role: 'moderator' }} />
+                  <LevelBadge level={1} />
+                  <LevelBadge level={4} />
+                  <LevelBadge level={6} />
+                </div>
+              </div>
+
+              {/* === Прямой эфир === */}
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-white">📺 Прямой эфир</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Показ плашек о покупках в левом углу</p>
+                  </div>
+                  <button onClick={() => setLiveFeedEnabled(!liveFeedEnabled)}
+                    className={`w-11 h-6 rounded-full transition-all relative ${liveFeedEnabled ? 'bg-accent' : 'bg-purple-900/30'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${liveFeedEnabled ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
@@ -359,6 +605,9 @@ const SettingsPage: React.FC = () => {
               <p className="text-sm text-text-secondary">Скоро можно будет создавать API-токены для автоматизации 🔑</p>
             </>
           )}
+
+          {/* === МОДЕРАЦИЯ === */}
+          {activeSection === 'moderation' && isMod && <ModerationPanel onNavigate={onNavigate} />}
         </motion.div>
       </div>
 
@@ -381,6 +630,7 @@ const SettingsPage: React.FC = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-white">
+                  {action === 'custom_id' && 'Купить кастомный ID'}
                   {action === 'username' && 'Изменить никнейм'}
                   {action === 'email' && 'Изменить email'}
                   {action === 'password' && 'Изменить пароль'}
@@ -391,6 +641,27 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* Новое значение */}
+              {action === 'custom_id' && (
+                <>
+                  <div className="bg-purple-900/20 border border-purple-700/30 rounded-xl p-3 mb-3 text-xs text-purple-300">
+                    💎 Смена ID стоит <b>350 ₽</b> · спишется с баланса
+                  </div>
+                  <label className="text-sm text-text-secondary mb-1.5 block">Новый ID</label>
+                  <input
+                    type="text"
+                    value={newValue}
+                    onChange={e => setNewValue(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                    placeholder="midnight"
+                    maxLength={15}
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-1 font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary mb-3">
+                    💡 От 3 до 15 символов: буквы (a-z), цифры (0-9), <code className="text-purple-300">_</code> и <code className="text-purple-300">.</code><br/>
+                    🔢 Чисто цифровой — минимум 8 цифр (короткие зарезервированы)
+                  </p>
+                </>
+              )}
+
               {action === 'username' && (
                 <>
                   <label className="text-sm text-text-secondary mb-1.5 block">Новый никнейм</label>
@@ -439,8 +710,9 @@ const SettingsPage: React.FC = () => {
                 </>
               )}
 
-              {/* Текущий пароль */}
-              <label className="text-sm text-text-secondary mb-1.5 block flex items-center gap-2">
+              {/* Текущий пароль (не нужен для custom_id) */}
+              {action !== 'custom_id' && (
+              <><label className="text-sm text-text-secondary mb-1.5 block flex items-center gap-2">
                 <Shield size={12} /> Текущий пароль (для подтверждения)
               </label>
               <div className="relative mb-3">
@@ -457,7 +729,7 @@ const SettingsPage: React.FC = () => {
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              </div>
+              </div></>)}
 
               {actionMessage && (
                 <div className={`text-sm mb-3 p-2 rounded-lg flex items-center gap-2 ${

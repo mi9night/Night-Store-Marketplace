@@ -6,7 +6,6 @@ import { useUserNav } from './lib/UserNavContext';
 
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import RealTimeNotification from './components/RealTimeNotification';
 import UserProfileModal from './components/UserProfileModal';
 import LiveFeed from './components/LiveFeed';
 
@@ -57,6 +56,14 @@ const App: React.FC = () => {
     const checkHash = () => {
       if (window.location.hash === '#mod-user') {
         setCurrentPage('settings');
+        window.location.hash = '';
+      } else if (window.location.hash === '#view-profile') {
+        const id = localStorage.getItem('view_profile_id');
+        if (id) {
+          localStorage.removeItem('view_profile_id');
+          setViewedProfileId(id);
+          setCurrentPage('profile');
+        }
         window.location.hash = '';
       }
     };
@@ -256,7 +263,6 @@ const App: React.FC = () => {
             </div>
           </main>
 
-          <RealTimeNotification />
           <LiveFeed />
         </>
       )}

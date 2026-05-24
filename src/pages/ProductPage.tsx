@@ -89,20 +89,34 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
         const { data: s } = await supabase.from('users')
           .select('*').eq('id', sellerId).maybeSingle();
         setSeller(s);
-        setSellerStats({
-          sales: s?.sales || 0,
-          rating: Number(s?.rating) || 0,
-          positive: s?.positive_reviews || 0,
-          reviewsCount: 0,
-        });
 
         // Отзывы о продавце
         const { data: r, count } = await supabase.from('reviews')
           .select('*', { count: 'exact' })
           .eq('target_user_id', sellerId)
           .order('created_at', { ascending: false });
-        setReviews(r || []);
-        setSellerStats(prev => ({ ...prev, reviewsCount: count || 0 }));
+        const reviewsList = r || [];
+
+        // Считаем рейтинг
+        let rating = Number(s?.rating) || 0;
+        if (rating === 0 && reviewsList.length > 0) {
+          const withRating = reviewsList.filter((r: any) => r.rating);
+          if (withRating.length > 0) {
+            rating = withRating.reduce((sum: number, r: any) => sum + r.rating, 0) / withRating.length;
+          } else {
+            rating = reviewsList.reduce((sum: number, r: any) => sum + (r.positive ? 5 : 1), 0) / reviewsList.length;
+          }
+        }
+        const positive = reviewsList.filter((r: any) => r.positive).length;
+        const positivePct = reviewsList.length > 0 ? Math.round(positive / reviewsList.length * 100) : 0;
+
+        setReviews(reviewsList);
+        setSellerStats({
+          sales: s?.sales || 0,
+          rating: rating,
+          positive: positivePct,
+          reviewsCount: count || reviewsList.length,
+        });
       }
     };
     load();
@@ -567,7 +581,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                 { label: 'Рейтинг',  value: sellerStats.rating > 0 ? `${sellerStats.rating.toFixed(1)}/5` : '—',  icon: Star },
                 { label: 'Отзывы',   value: sellerStats.reviewsCount, icon: CheckCircle2 },
                 { label: 'Продаж',   value: sellerStats.sales,  icon: ShoppingCart },
-                { label: 'Положит.', value: sellerStats.positive, icon: MessageSquare },
+                { label: 'Положит.', value: sellerStats.positive + '%', icon: MessageSquare },
               ].map(stat => (
                 <div key={stat.label} className="bg-[#0B0A12] rounded-xl p-2.5 border border-purple-900/20">
                   <stat.icon size={12} className="text-purple-400 mb-1" />

@@ -623,11 +623,26 @@ const Header: React.FC<HeaderProps> = ({
                 <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   className="absolute right-0 top-full mt-2 w-80 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden">
                   <div className="p-4 border-b border-purple-900/20">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <h3 className="font-semibold text-text-primary">Уведомления</h3>
-                      {unreadCount > 0 && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-soft">{unreadCount} новых</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <>
+                            <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent-soft">{unreadCount} новых</span>
+                            <button
+                              onClick={async () => {
+                                if (!user?.id) return;
+                                await supabase.from('notifications').update({ is_read: true })
+                                  .eq('user_id', user.id).eq('is_read', false);
+                                loadNotifications(user.id);
+                              }}
+                              title="Прочитать все"
+                              className="text-xs px-2 py-1 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold">
+                              ✓ Все
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto">

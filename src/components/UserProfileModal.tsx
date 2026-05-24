@@ -38,18 +38,35 @@ const UserProfileModal: React.FC = () => {
         setMyRole(myData?.role || 'user');
       }
 
-      const [p, aCnt, tCnt, rCnt] = await Promise.all([
+      const [p, aCnt, tCnt, revData] = await Promise.all([
         supabase.from('users').select('*').eq('id', viewedUserId).maybeSingle(),
         supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('seller_id', viewedUserId),
         supabase.from('forum_topics').select('id', { count: 'exact', head: true }).eq('author_id', viewedUserId),
-        supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('target_user_id', viewedUserId),
+        supabase.from('reviews').select('rating, positive').eq('target_user_id', viewedUserId),
       ]);
+
+      const reviews = revData.data || [];
+      // Считаем рейтинг — приоритет:
+      //   1) users.rating если > 0
+      //   2) средний по reviews.rating
+      //   3) % положительных
+      let computedRating = Number(p.data?.rating) || 0;
+      if (computedRating === 0 && reviews.length > 0) {
+        const withRating = reviews.filter((r: any) => r.rating);
+        if (withRating.length > 0) {
+          computedRating = withRating.reduce((s: number, r: any) => s + r.rating, 0) / withRating.length;
+        } else {
+          // только positive/negative — считаем как 5 за позитив, 1 за негатив
+          computedRating = reviews.reduce((s: number, r: any) => s + (r.positive ? 5 : 1), 0) / reviews.length;
+        }
+      }
+      if (p.data) p.data.rating = computedRating;
 
       setProfile(p.data);
       setStats({
         accounts: aCnt.count || 0,
         topics:   tCnt.count || 0,
-        reviews:  rCnt.count || 0,
+        reviews:  reviews.length,
       });
       setLoading(false);
     };
