@@ -41,11 +41,11 @@ const CategoryFilters: React.FC<Props> = ({ groups, values, onChange }) => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className={groups.length > 1 ? "space-y-3" : "space-y-2"}>
       {groups.map((g, gi) => (
-        <div key={gi} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+        <div key={gi} className={g.title ? "bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2" : "space-y-2"}>
           {g.title && (
-            <p className="text-xs font-semibold text-white mb-1">{g.title}</p>
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">{g.title}</p>
           )}
           {g.fields.map(f => {
             if (f.type === 'range') {
