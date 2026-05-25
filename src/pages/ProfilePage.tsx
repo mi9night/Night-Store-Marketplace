@@ -444,9 +444,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 {(() => {
                   const xp = profile?.xp || 0;
                   const lv = Math.floor(Math.sqrt(xp / 50)) + 1;
+                  const glowOn = typeof localStorage !== 'undefined' && localStorage.getItem('glow_enabled') !== '0';
                   return (
                     <BadgeTooltip text={'✨ LVL ' + lv + '\n' + xp + ' XP · уровень активности'}>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border bg-pink-900/30 text-pink-300 border-pink-700/40 shadow-[0_0_10px_rgba(236,72,153,0.5)]">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border bg-pink-900/30 text-pink-300 border-pink-700/40 ${glowOn ? (lv >= 30 ? 'shadow-[0_0_18px_rgba(236,72,153,0.8)] animate-pulse' : lv >= 10 ? 'shadow-[0_0_14px_rgba(236,72,153,0.6)] animate-pulse' : 'shadow-[0_0_10px_rgba(236,72,153,0.5)] animate-pulse') : ''}`}>
                         ✨ LVL {lv}
                       </span>
                     </BadgeTooltip>
