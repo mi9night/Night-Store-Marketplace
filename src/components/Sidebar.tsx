@@ -5,7 +5,7 @@ import {
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code, Eye, EyeOff,
   ChevronDown, Plus, MessageSquare, X
-, Globe, Gamepad2, Send, Swords, Target, Hexagon, Crown, Box, Star, MessageCircle, Music, Camera, Brain, Atom, Hash , Lock } from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Square, Target, Hexagon, Crown, Box, Star, MessageCircle, Music, Camera, Brain, Atom, Hash , Lock } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
