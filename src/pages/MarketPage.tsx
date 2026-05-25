@@ -8,6 +8,8 @@ import AccountCard from '../components/AccountCard';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
+import CategoryFilters from '../components/CategoryFilters';
+import { CATEGORY_FILTERS } from '../data/categoryFilters';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
 
@@ -450,104 +452,20 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                 {/* === Динамические фильтры под категорию === */}
                 {(() => {
                   if (selectedCategory === 'all') return null;
-                  const cat = categories.find(c => c.id === selectedCategory);
+                  const cat = categories.find(cc => cc.id === selectedCategory);
                   if (!cat) return null;
-
-                  // Под каждую категорию свои фильтры
-                  const dynamicFilters: Record<string, Array<{ key: string; label: string; type: 'text' | 'number' | 'check' }>> = {
-                    steam: [
-                      { key: 'min_games',  label: '🎮 Игр от',         type: 'number' },
-                      { key: 'min_hours',  label: '⏱ Часов в CS от',   type: 'number' },
-                      { key: 'has_prime',  label: '💎 Только Prime',    type: 'check' },
-                    ],
-                    telegram: [
-                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
-                      { key: 'channel',    label: '📢 Только каналы',   type: 'check' },
-                      { key: 'premium',    label: '⭐ Premium',          type: 'check' },
-                    ],
-                    discord: [
-                      { key: 'nitro',      label: '🚀 Nitro',           type: 'check' },
-                      { key: 'badge',      label: '🏆 С бейджами',      type: 'check' },
-                    ],
-                    minecraft: [
-                      { key: 'cape',       label: '🦸 С плащом',        type: 'check' },
-                      { key: 'java',       label: '☕ Только Java',     type: 'check' },
-                    ],
-                    roblox: [
-                      { key: 'min_robux',  label: '💎 Robux от',        type: 'number' },
-                      { key: 'premium',    label: '⭐ Premium',          type: 'check' },
-                    ],
-                    instagram: [
-                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
-                      { key: 'verified',   label: '✅ Верифик.',         type: 'check' },
-                    ],
-                    tiktok: [
-                      { key: 'min_subs',   label: '👥 Подписчиков от',  type: 'number' },
-                      { key: 'verified',   label: '✅ Верифик.',         type: 'check' },
-                    ],
-                    ea: [
-                      { key: 'min_games',  label: '🎮 Игр от',          type: 'number' },
-                      { key: 'fifa_pts',   label: '⚽ FIFA points от',  type: 'number' },
-                    ],
-                    rockstar: [
-                      { key: 'min_money',  label: '💰 GTA $ от',         type: 'number' },
-                      { key: 'min_lvl',    label: '📈 Уровень от',      type: 'number' },
-                    ],
-                    brawl: [
-                      { key: 'min_trophies', label: '🏆 Кубков от',     type: 'number' },
-                      { key: 'min_brawlers', label: '👤 Бойцов от',     type: 'number' },
-                    ],
-                    supercell: [
-                      { key: 'min_th',     label: '🏰 Town Hall от',    type: 'number' },
-                    ],
-                    wot: [
-                      { key: 'min_tanks',  label: '🛡 Танков от',       type: 'number' },
-                      { key: 'min_battles', label: '⚔️ Боёв от',        type: 'number' },
-                    ],
-                    vpn: [
-                      { key: 'days_left',  label: '📅 Дней до конца от', type: 'number' },
-                    ],
-                    ai: [
-                      { key: 'plan',       label: '💎 План (free/plus/pro)', type: 'text' },
-                    ],
-                  };
-
-                  const filters = dynamicFilters[selectedCategory];
-                  if (!filters) return (
+                  const groups = CATEGORY_FILTERS[selectedCategory];
+                  if (!groups) return (
                     <div className="bg-purple-900/10 border border-purple-700/20 rounded-xl p-3 text-xs text-text-secondary">
                       💡 Для категории <b className="text-white">{cat.name}</b> используются базовые фильтры
                     </div>
                   );
-
                   return (
                     <div className="border-t border-purple-900/20 pt-4">
-                      <label className="text-sm text-text-secondary mb-2 block font-semibold">
-                        {cat.icon} Фильтры для {cat.name}
+                      <label className="text-sm text-text-secondary mb-3 block font-semibold">
+                        Фильтры для {cat.name}
                       </label>
-                      <div className="space-y-2">
-                        {filters.map(f => (
-                          <div key={f.key}>
-                            {f.type === 'check' ? (
-                              <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg-secondary rounded-xl">
-                                <input type="checkbox"
-                                  checked={!!extraFilters[f.key]}
-                                  onChange={e => setExtraFilters({ ...extraFilters, [f.key]: e.target.checked })}
-                                  className="accent-purple-500 w-4 h-4" />
-                                <span className="text-sm text-white">{f.label}</span>
-                              </label>
-                            ) : (
-                              <>
-                                <label className="text-xs text-text-secondary mb-1 block">{f.label}</label>
-                                <input
-                                  type={f.type}
-                                  value={extraFilters[f.key] || ''}
-                                  onChange={e => setExtraFilters({ ...extraFilters, [f.key]: e.target.value })}
-                                  className="w-full px-3 py-2 bg-bg-secondary border border-purple-900/30 rounded-lg text-sm text-white" />
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      <CategoryFilters groups={groups} values={extraFilters} onChange={setExtraFilters} />
                     </div>
                   );
                 })()}
