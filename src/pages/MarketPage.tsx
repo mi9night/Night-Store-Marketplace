@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   SlidersHorizontal, ChevronDown, X, Search,
   Package, Zap, ShoppingBag
-, Globe, Gamepad2, Send, Swords, Target, Hexagon, Square, Crown, Box, Shield, Star, MessageCircle, Music, Camera, Brain, Atom, Lock, Hash } from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Target, Hexagon, Square, Crown, Box, Shield, Star, MessageCircle, Music, Camera, Brain, Atom, Lock, Hash , Sparkles } from 'lucide-react';
 import AccountCard from '../components/AccountCard';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -38,7 +38,7 @@ const CAT_ICONS: Record<string, { Icon: any; color: string }> = {
   ai:        { Icon: Brain,         color: 'text-purple-400' },
   neural:    { Icon: Atom,          color: 'text-purple-500' },
   vpn:       { Icon: Lock,          color: 'text-orange-400' },
-  mu:        { Icon: Hash,         color: 'text-cyan-300' },
+  mihoyo:    { Icon: Sparkles,      color: 'text-cyan-300' },
 };
 
 const CatIcon: React.FC<{ id: string; size?: number }> = ({ id, size = 24 }) => {

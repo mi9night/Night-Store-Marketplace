@@ -35,7 +35,7 @@ export const categories: Category[] = [
   { id: 'ai',         name: 'AI сервисы',     icon: '🧠', count: 0, subcategories: ['ChatGPT', 'Claude', 'Midjourney'] },
   { id: 'neural',     name: 'Нейросети',      icon: '⚛️', count: 0 },
   { id: 'vpn',        name: 'VPN',            icon: '🔐', count: 0 },
-  { id: 'mu',         name: 'MU',             icon: 'μ',  count: 0 },
+  { id: 'mihoyo',     name: 'miHoYo',         icon: '⭐', count: 0, subcategories: ['Genshin Impact', 'Honkai Star Rail', 'Honkai Impact 3', 'Zenless Zone Zero'] },
 ];
 
 const sellers = [
