@@ -100,7 +100,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         if (p) {
           // Подгружаем массив кастомных ролей
           const { data: cr } = await supabase.from('user_custom_roles')
-            .select('id, label, icon, color, description').eq('user_id', targetId);
+            .select('id, label, icon, color, description, has_glow, has_pulse').eq('user_id', targetId);
           if (cr && cr.length > 0) (p as any).custom_roles = cr;
           setProfile(p);
           setEditBio(p.bio || '');

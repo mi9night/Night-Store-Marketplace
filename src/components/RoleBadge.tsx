@@ -8,6 +8,8 @@ interface CustomRole {
   icon?: string;
   color?: string;
   description?: string;
+  has_glow?: boolean;
+  has_pulse?: boolean;
 }
 
 interface User {
@@ -16,6 +18,8 @@ interface User {
   custom_role_icon?: string;
   custom_role_color?: string;
   custom_role_description?: string;
+  custom_role_glow?: boolean;
+  custom_role_pulse?: boolean;
   custom_roles?: CustomRole[];
 }
 
@@ -96,24 +100,28 @@ export const RoleBadge: React.FC<Props> = ({ role, user }) => {
   if (user?.custom_roles && user.custom_roles.length > 0) {
     user.custom_roles.forEach((cr, i) => {
       const cls = colorClasses[cr.color || 'purple'] || colorClasses.purple;
-      const cglow = glowEnabled ? (glowByColor[cr.color || 'purple'] || '') : '';
+      // Свечение — по флагу has_glow (по умолчанию true), отключается глобально через glowEnabled
+      const wantGlow = cr.has_glow !== false;
+      const cglow = (glowEnabled && wantGlow) ? (glowByColor[cr.color || 'purple'] || '') : '';
+      const pulse = (glowEnabled && cr.has_pulse) ? 'animate-pulse' : '';
       const tip = `${cr.icon || '⭐'} ${cr.label.toUpperCase()}\n${cr.description || DEFAULT_CUSTOM_DESC}`;
       badges.push(
         <BadgeTooltip key={`cr-${cr.id || i}`} text={tip}>
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow}`}>
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow} ${pulse}`}>
             {cr.icon || '⭐'} {cr.label.toUpperCase()}
           </span>
         </BadgeTooltip>
       );
     });
   } else if (user?.custom_role_label) {
-    // Старая одиночная кастомная (fallback)
     const cls = colorClasses[user.custom_role_color || 'purple'] || colorClasses.purple;
-    const cglow = glowEnabled ? (glowByColor[user.custom_role_color || 'purple'] || '') : '';
+    const wantGlow = user.custom_role_glow !== false;
+    const cglow = (glowEnabled && wantGlow) ? (glowByColor[user.custom_role_color || 'purple'] || '') : '';
+    const pulse = (glowEnabled && user.custom_role_pulse) ? 'animate-pulse' : '';
     const tip = `${user.custom_role_icon || '⭐'} ${user.custom_role_label.toUpperCase()}\n${user.custom_role_description || DEFAULT_CUSTOM_DESC}`;
     badges.push(
       <BadgeTooltip key="custom" text={tip}>
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow}`}>
+        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow} ${pulse}`}>
           {user.custom_role_icon || '⭐'} {user.custom_role_label.toUpperCase()}
         </span>
       </BadgeTooltip>

@@ -101,11 +101,11 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
             .in('id', sellerIds);
           // Подгружаем custom_roles массив
           const { data: crs } = await supabase.from('user_custom_roles')
-            .select('user_id, id, label, icon, color, description').in('user_id', sellerIds);
+            .select('user_id, id, label, icon, color, description, has_glow, has_pulse').in('user_id', sellerIds);
           const crMap: Record<string, any[]> = {};
           crs?.forEach((cr: any) => {
             if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
-            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description });
+            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description, has_glow: cr.has_glow, has_pulse: cr.has_pulse });
           });
           sellers?.forEach((s: any) => { s.custom_roles = crMap[s.id] || []; sellersMap[s.id] = s; });
         }

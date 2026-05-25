@@ -447,6 +447,8 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   const [crIcon, setCrIcon] = useState('⭐');
   const [crColor, setCrColor] = useState('purple');
   const [crDesc, setCrDesc] = useState('');
+  const [crGlow, setCrGlow] = useState(true);
+  const [crPulse, setCrPulse] = useState(false);
 
   const applyRole = async (preset: string) => {
     if (!active) return;
@@ -459,10 +461,14 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
         icon: crIcon,
         color: crColor,
         description: crDesc || null,
+        has_glow: crGlow,
+        has_pulse: crPulse,
         granted_by: (await supabase.auth.getUser()).data.user?.id,
       });
       setCrLabel('');
       setCrDesc('');
+      setCrGlow(true);
+      setCrPulse(false);
       await loadCustomRoles(active.id);
       setModal(null);
       return;
@@ -721,6 +727,17 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
                 placeholder="Описание роли (для тултипа)" maxLength={120}
                 className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-xs" />
               <p className="text-[10px] text-text-secondary mb-2">💡 Если оставить пустым — покажется «Кастомная роль, выданная за определённые услуги»</p>
+
+              <div className="flex gap-2 mb-3">
+                <label className="flex items-center gap-2 cursor-pointer flex-1 p-2 bg-bg-secondary rounded-lg">
+                  <input type="checkbox" checked={crGlow} onChange={e => setCrGlow(e.target.checked)} className="accent-purple-500" />
+                  <span className="text-xs text-white">✨ Свечение</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer flex-1 p-2 bg-bg-secondary rounded-lg">
+                  <input type="checkbox" checked={crPulse} onChange={e => setCrPulse(e.target.checked)} className="accent-purple-500" />
+                  <span className="text-xs text-white">💫 Загасание</span>
+                </label>
+              </div>
               <div className="flex gap-2 mb-3 flex-wrap">
                 <span className="text-[10px] text-text-secondary uppercase w-full">Иконка</span>
                 {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮','👑','🛡','⚡','🚀','🎯','🌟','💫','🎪','🦅','🐺','🦁','🌌','🎨','🎵','🍷','☕','🎲','🃏','💀','😎'].map(i => (

@@ -67,7 +67,7 @@ const UserProfileModal: React.FC = () => {
       // Подгружаем custom_roles
       if (p.data) {
         const { data: cr } = await supabase.from('user_custom_roles')
-          .select('id, label, icon, color, description').eq('user_id', viewedUserId);
+          .select('id, label, icon, color, description, has_glow, has_pulse').eq('user_id', viewedUserId);
         if (cr && cr.length > 0) (p.data as any).custom_roles = cr;
       }
       setProfile(p.data);

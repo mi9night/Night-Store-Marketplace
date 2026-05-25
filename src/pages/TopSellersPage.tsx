@@ -66,13 +66,13 @@ const TopSellersPage: React.FC = () => {
         if (data && data.length > 0) {
           const ids = data.map((u: any) => u.id);
           const [crRes, revRes] = await Promise.all([
-            supabase.from('user_custom_roles').select('user_id, id, label, icon, color, description').in('user_id', ids),
+            supabase.from('user_custom_roles').select('user_id, id, label, icon, color, description, has_glow, has_pulse').in('user_id', ids),
             supabase.from('reviews').select('target_user_id, rating, positive').in('target_user_id', ids),
           ]);
           const crMap: Record<string, any[]> = {};
           crRes.data?.forEach((cr: any) => {
             if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
-            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description });
+            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description, has_glow: cr.has_glow, has_pulse: cr.has_pulse });
           });
 
           // Группируем отзывы по продавцу
