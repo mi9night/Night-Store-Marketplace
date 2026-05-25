@@ -465,8 +465,10 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
 
                   // Распределение групп по колонкам по их title
                   const LEFT  = ['АККАУНТ'];
-                  const MID   = ['РЕГИОН И АКТИВНОСТЬ', 'STEAM · ОГРАНИЧЕНИЯ', 'КАРТОЧКИ И КЛЮЧИ', 'ГИФТЫ'];
-                  const RIGHT = ['БАЛАНС И ИНВЕНТАРЬ', 'CS2', 'DOTA 2', 'RUST', 'СВОЯ ИГРА'];
+                  const MID   = ['РЕГИОН И АКТИВНОСТЬ', 'STEAM · ОГРАНИЧЕНИЯ', 'КАРТОЧКИ И КЛЮЧИ', 'ГИФТЫ',
+                                  'РЕГИОН И DC', 'TELEGRAM PREMIUM', 'СТАТИСТИКА', 'ВОЗРАСТ ВЛАДЕЛЬЦА'];
+                  const RIGHT = ['БАЛАНС И ИНВЕНТАРЬ', 'CS2', 'DOTA 2', 'RUST', 'СВОЯ ИГРА',
+                                  'БЕЗОПАСНОСТЬ', 'ПОДАРКИ', 'БОТЫ'];
 
                   const byCol = (cols: string[]) =>
                     groups.filter(g => g.title && cols.includes(g.title));
