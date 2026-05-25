@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Shield, Bell, Palette, Key, CreditCard,
   Eye, EyeOff, Save, X, Clock, Check, AlertCircle, Camera, Image
-} from 'lucide-react';
+, Link2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
 import { usePrivacy, THEMES, ThemeKey, FULL_THEMES, FullThemeKey } from '../lib/usePrivacy';
 import { LevelBadge } from '../components/LevelBadge';
 import { RoleBadge } from '../components/RoleBadge';
+import IntegrationsSection from '../components/IntegrationsSection';
 import ModerationPanel from '../components/ModerationPanel';
 
 type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
@@ -101,6 +102,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
     { id: 'security', label: 'Безопасность', icon: Shield },
     { id: 'notifications', label: 'Уведомления', icon: Bell },
     { id: 'appearance', label: 'Внешний вид', icon: Palette },
+    { id: 'integrations', label: 'Интеграции', icon: Link2 },
     { id: 'payments', label: 'Оплата', icon: CreditCard },
     { id: 'api', label: 'API', icon: Key },
     ...(isMod ? [{ id: 'moderation', label: 'Модерация', icon: Shield }] : []),
@@ -629,6 +631,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
               <p className="text-sm text-text-secondary">Скоро можно будет создавать API-токены для автоматизации 🔑</p>
             </>
           )}
+
+          {/* === ИНТЕГРАЦИИ === */}
+          {activeSection === 'integrations' && <IntegrationsSection />}
 
           {/* === МОДЕРАЦИЯ === */}
           {activeSection === 'moderation' && isMod && <ModerationPanel onNavigate={onNavigate} />}
