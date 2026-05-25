@@ -10,6 +10,7 @@ import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
 import VerifiedBadge from '../components/VerifiedBadge';
+import BadgeTooltip from '../components/BadgeTooltip';
 import { UserLink } from '../components/UserLink';
 import LabelManager from '../components/LabelManager';
 import ReportButton from '../components/ReportButton';
