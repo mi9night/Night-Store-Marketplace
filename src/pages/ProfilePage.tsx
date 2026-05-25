@@ -406,6 +406,12 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
                 {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
+                {profile?.discord_verified && (
+                  <span title={`Discord: ${profile.discord_username || ''}`}
+                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/20 border border-red-500/50">
+                    <CheckCircle2 size={12} className="text-red-400" />
+                  </span>
+                )}
                 <RoleBadge user={profile} />
                 <LevelBadge level={profile?.level || 1} />
               </div>

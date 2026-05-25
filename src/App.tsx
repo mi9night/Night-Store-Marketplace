@@ -10,6 +10,7 @@ import UserProfileModal from './components/UserProfileModal';
 import LiveFeed from './components/LiveFeed';
 
 import AuthPage from './pages/AuthPage';
+import DiscordCallback from './pages/DiscordCallback';
 import MarketPage from './pages/MarketPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
@@ -145,6 +146,11 @@ const App: React.FC = () => {
   const handleClearCart = useCallback(() => {
     setCartItems([]);
   }, []);
+
+  // Discord callback — отдельная страница
+  if (typeof window !== 'undefined' && window.location.pathname === '/auth/discord/callback') {
+    return <DiscordCallback />;
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary">

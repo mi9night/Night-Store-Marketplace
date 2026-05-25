@@ -167,6 +167,12 @@ const UserProfileModal: React.FC = () => {
                 <div className="flex items-center gap-1.5 flex-wrap mb-1">
                   <h2 className="text-lg font-bold text-white">{displayName}</h2>
                   {profile.verified && <CheckCircle2 size={14} className="text-blue-400" />}
+                  {profile.discord_verified && (
+                    <span title={`Discord: ${profile.discord_username || ''}`}
+                      className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500/20 border border-red-500/50">
+                      <CheckCircle2 size={10} className="text-red-400" />
+                    </span>
+                  )}
                   <RoleBadge user={profile} />
                   <LevelBadge level={profile.level || 1} compact />
                 </div>
