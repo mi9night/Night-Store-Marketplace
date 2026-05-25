@@ -29,7 +29,7 @@ const COLOR_PALETTE = {
               bg: '#0A1228', bg2: '#0F1838', bg3: '#152048', text: '#E0EAFF', text2: '#94A3B8' },
   mint:     { label: '🍃 Mint',      accent: '#14B8A6', hover: '#2DD4BF', soft: '#5EEAD4',
               bg: '#0A1A14', bg2: '#0E241D', bg3: '#142E26', text: '#E0FFF4', text2: '#94B8AB' },
-  light:    { label: '☀️ Light',     accent: '#8A2BE2', hover: '#7C3AED', soft: '#A78BFA',
+  light:    { label: '☀️ Light',     accent: '#FFFFFF', hover: '#F3F4F6', soft: '#E5E7EB',
               bg: '#F8F8FB', bg2: '#FFFFFF', bg3: '#FFFFFF', text: '#1A1A2E', text2: '#6B7280' },
 } as const;
 
@@ -63,10 +63,22 @@ export const applyTheme = (key: ThemeKey) => {
   root.style.setProperty('--accent-soft', t.soft);
 };
 
+// Определяем, светлая ли тема (по фону)
+const isLightTheme = (bg: string): boolean => {
+  const hex = bg.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  // YIQ формула — светлота
+  return ((r * 299 + g * 587 + b * 114) / 1000) > 128;
+};
+
 export const applyFullTheme = (key: FullThemeKey) => {
   const t = FULL_THEMES[key];
   if (!t) return;
   const root = document.documentElement;
+
+  // Стандартные переменные
   root.style.setProperty('--color-bg-primary',    t.bg);
   root.style.setProperty('--color-bg-secondary',  t.bg2);
   root.style.setProperty('--color-bg-card',       t.bg3);
@@ -77,8 +89,53 @@ export const applyFullTheme = (key: FullThemeKey) => {
   root.style.setProperty('--bg-card',             t.bg3);
   root.style.setProperty('--text-primary',        t.text);
   root.style.setProperty('--text-secondary',      t.text2);
+
   document.body.style.backgroundColor = t.bg;
   document.body.style.color = t.text;
+
+  // Глобальный CSS-override для hardcoded цветов
+  let style = document.getElementById('theme-override') as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'theme-override';
+    document.head.appendChild(style);
+  }
+
+  const light = isLightTheme(t.bg);
+
+  style.textContent = `
+    /* Перекрываем hardcoded тёмные цвета на переменные темы */
+    .bg-\\[\\#0B0A12\\] { background-color: ${t.bg} !important; }
+    .bg-\\[\\#12101C\\] { background-color: ${t.bg2} !important; }
+    .bg-\\[\\#171425\\] { background-color: ${t.bg3} !important; }
+
+    /* Текст */
+    .text-white { color: ${t.text} !important; }
+    .text-text-primary { color: ${t.text} !important; }
+    .text-text-secondary { color: ${t.text2} !important; }
+
+    /* Для светлой темы — инвертируем некоторые приглушённые элементы */
+    ${light ? `
+      /* Полупрозрачные фоны на тёмных карточках в светлой теме становятся тёмными */
+      .bg-purple-900\\/10,
+      .bg-purple-900\\/20,
+      .bg-purple-900\\/30 {
+        background-color: rgba(138, 43, 226, 0.08) !important;
+      }
+      /* Тёмные плэйсхолдеры читаемые */
+      ::placeholder { color: ${t.text2} !important; opacity: 0.7; }
+
+      /* Инвертируем элементы которые были тёмными */
+      input, textarea, select {
+        background-color: ${t.bg3} !important;
+        color: ${t.text} !important;
+        border-color: rgba(138, 43, 226, 0.2) !important;
+      }
+    ` : ''}
+
+    /* Фон body всегда из темы */
+    body { background-color: ${t.bg} !important; color: ${t.text} !important; }
+  `;
 };
 
 export const usePrivacy = () => {

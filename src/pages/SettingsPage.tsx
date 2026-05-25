@@ -539,10 +539,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         className={`p-3 rounded-xl border-2 transition-all text-left ${
                           isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
                         }`}
-                        style={{ background: `linear-gradient(135deg, ${ft.bg2}, ${ft.bg3})` }}>
+                        style={{ background: `linear-gradient(135deg, ${ft.accent}30, ${ft.accent}10)` }}>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg border border-white/10" style={{ background: ft.bg }} />
-                          <span className="text-xs font-semibold" style={{ color: ft.text }}>{ft.label}</span>
+                          <div className="w-6 h-6 rounded-lg" style={{ background: ft.accent }} />
+                          <span className="text-xs font-semibold text-white">{ft.label}</span>
                         </div>
                       </button>
                     );
