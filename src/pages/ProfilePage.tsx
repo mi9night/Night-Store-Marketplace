@@ -143,7 +143,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 
         setAccounts(accRes.data || []);
         // Подгружаем авторов отзывов
-        const revList = revRes.data || [];
         const reviewerIds = [...new Set(revList.map((r: any) => r.user_id).filter(Boolean))];
         if (reviewerIds.length > 0) {
           const { data: reviewers } = await supabase.from('users')
