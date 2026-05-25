@@ -5,7 +5,7 @@ import {
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code, Eye, EyeOff,
   ChevronDown, Plus, MessageSquare, X
-} from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Target, Hexagon, Crown, Box, Star, MessageCircle, Music, Camera, Brain, Atom, Sigma } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
@@ -21,6 +21,18 @@ interface SidebarProps {
 }
 
 type BalanceAction = 'deposit' | 'withdraw' | 'transfer' | null;
+
+
+const SIDE_ICONS: Record<string, any> = {
+  steam: Gamepad2, telegram: Send, brawl: Swords, ea: Target, ubisoft: Hexagon,
+  minecraft: Square, supercell: Crown, roblox: Box, wot: Shield, wr: Zap,
+  rockstar: Star, discord: MessageCircle, tiktok: Music, instagram: Camera,
+  ai: Brain, neural: Atom, vpn: Lock, mu: Sigma,
+};
+const CatIconSm: React.FC<{ id: string }> = ({ id }) => {
+  const Ico = SIDE_ICONS[id] || Box;
+  return <Ico size={14} className="text-purple-300" />;
+};
 
 const Sidebar: React.FC<SidebarProps> = ({
   currentPage,
@@ -207,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-text-secondary'
               }`}
             >
-              <span className="w-6 h-6 rounded-md bg-purple-900/30 flex items-center justify-center text-sm flex-shrink-0">{cat.icon}</span>
+              <span className="w-6 h-6 rounded-md bg-purple-900/30 flex items-center justify-center flex-shrink-0"><CatIconSm id={cat.id} /></span>
               {cat.name}
               {cat.subcategories && (
                 <ChevronDown size={14} className={`ml-auto transition-transform ${

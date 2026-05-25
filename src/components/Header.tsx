@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, Headphones,
+  Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, Headset,
   User, Settings, LogOut, Star, Package,
   Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
@@ -91,7 +91,13 @@ const Header: React.FC<HeaderProps> = ({
           .eq('id', data.user.id)
           .maybeSingle();
         if (profile?.balance != null) setBalance(profile.balance);
-        if (profile) setMyProfile(profile);
+        if (profile) {
+          // Подгружаем массив кастомных ролей
+          const { data: cr } = await supabase.from('user_custom_roles')
+            .select('id, label, icon, color').eq('user_id', data.user.id);
+          if (cr && cr.length > 0) (profile as any).custom_roles = cr;
+          setMyProfile(profile);
+        }
 
         loadNotifications(data.user.id);
         loadUnreadMessages(data.user.id);
@@ -186,6 +192,9 @@ const Header: React.FC<HeaderProps> = ({
             .select('balance, role, verified, username, level, custom_id, avatar_url, custom_role_label, custom_role_icon, custom_role_color')
             .eq('id', user.id).maybeSingle();
           if (p) {
+            const { data: cr } = await supabase.from('user_custom_roles')
+              .select('id, label, icon, color').eq('user_id', user.id);
+            if (cr && cr.length > 0) (p as any).custom_roles = cr;
             setMyProfile(p);
             if (p.balance != null) setBalance(p.balance);
           }
@@ -575,7 +584,7 @@ const Header: React.FC<HeaderProps> = ({
             }`}
             whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
             title="Поддержка">
-            <Headphones size={20} />
+            <Headset size={20} />
           </motion.button>
 
           {/* Notifications */}

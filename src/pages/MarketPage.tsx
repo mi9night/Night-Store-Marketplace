@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   SlidersHorizontal, ChevronDown, X, Search,
   Package, Zap, ShoppingBag
-} from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Target, Hexagon, Square, Crown, Box, Shield, Star, MessageCircle, Music, Camera, Brain, Atom, Lock, Sigma } from 'lucide-react';
 import AccountCard from '../components/AccountCard';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -18,6 +18,34 @@ interface MarketPageProps {
 }
 
 type SortOption = 'default' | 'cheap' | 'expensive' | 'new' | 'old' | 'popular';
+
+
+const CAT_ICONS: Record<string, { Icon: any; color: string }> = {
+  steam:     { Icon: Gamepad2,      color: 'text-blue-400' },
+  telegram:  { Icon: Send,          color: 'text-cyan-400' },
+  brawl:     { Icon: Swords,        color: 'text-yellow-500' },
+  ea:        { Icon: Target,        color: 'text-red-500' },
+  ubisoft:   { Icon: Hexagon,       color: 'text-blue-500' },
+  minecraft: { Icon: Square,        color: 'text-green-500' },
+  supercell: { Icon: Crown,         color: 'text-yellow-400' },
+  roblox:    { Icon: Box,           color: 'text-red-400' },
+  wot:       { Icon: Shield,        color: 'text-gray-400' },
+  wr:        { Icon: Zap,           color: 'text-yellow-300' },
+  rockstar:  { Icon: Star,          color: 'text-yellow-400' },
+  discord:   { Icon: MessageCircle, color: 'text-indigo-400' },
+  tiktok:    { Icon: Music,         color: 'text-pink-400' },
+  instagram: { Icon: Camera,        color: 'text-pink-500' },
+  ai:        { Icon: Brain,         color: 'text-purple-400' },
+  neural:    { Icon: Atom,          color: 'text-purple-500' },
+  vpn:       { Icon: Lock,          color: 'text-orange-400' },
+  mu:        { Icon: Sigma,         color: 'text-cyan-300' },
+};
+
+const CatIcon: React.FC<{ id: string; size?: number }> = ({ id, size = 24 }) => {
+  const c = CAT_ICONS[id];
+  if (!c) return <span className="text-2xl">📦</span>;
+  return <c.Icon size={size} className={c.color} />;
+};
 
 const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage, onAddToCart }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -68,7 +96,15 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
             .from('users')
             .select('id, username, avatar_url, rating, sales, verified, role, level, custom_role_label, custom_role_icon, custom_role_color')
             .in('id', sellerIds);
-          sellers?.forEach((s: any) => { sellersMap[s.id] = s; });
+          // Подгружаем custom_roles массив
+          const { data: crs } = await supabase.from('user_custom_roles')
+            .select('user_id, id, label, icon, color').in('user_id', sellerIds);
+          const crMap: Record<string, any[]> = {};
+          crs?.forEach((cr: any) => {
+            if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
+            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color });
+          });
+          sellers?.forEach((s: any) => { s.custom_roles = crMap[s.id] || []; sellersMap[s.id] = s; });
         }
 
         const mapped = (data || []).map((row: any) => {
@@ -91,7 +127,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
               responseTime: '~1ч',
               role: s.role,
               userLevel: s.level || 1,
-              custom_role_label: s.custom_role_label, custom_role_icon: s.custom_role_icon, custom_role_color: s.custom_role_color,
+              custom_role_label: s.custom_role_label, custom_role_icon: s.custom_role_icon, custom_role_color: s.custom_role_color, custom_roles: s.custom_roles,
             } as any : undefined
           });
         });
@@ -158,7 +194,6 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
   };
 
   const activeFiltersCount = [
-    selectedCategory !== 'all',
     minPrice || maxPrice,
     showGuaranteeOnly,
     showEscrowOnly,
@@ -195,7 +230,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                 : 'bg-bg-secondary border-purple-900/20 hover:border-purple-700/50'
             }`}
           >
-            <span className="text-2xl">🌐</span>
+            <Globe size={24} className="text-purple-300" />
             <span className={`text-[10px] font-semibold truncate w-full text-center px-1 ${
               selectedCategory === 'all' ? 'text-white' : 'text-text-secondary'
             }`}>Все</span>
@@ -215,7 +250,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                     : 'bg-bg-secondary border-purple-900/20 hover:border-purple-700/50'
                 }`}
               >
-                <span className="text-2xl">{cat.icon}</span>
+                <CatIcon id={cat.id} />
                 <span className={`text-[10px] font-semibold truncate w-full text-center px-1 ${
                   selectedCategory === cat.id ? 'text-white' : 'text-text-secondary'
                 }`}>{cat.name}</span>

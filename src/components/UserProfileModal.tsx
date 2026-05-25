@@ -39,7 +39,7 @@ const UserProfileModal: React.FC = () => {
       }
 
       const [p, aCnt, tCnt, revData] = await Promise.all([
-        supabase.from('users_full').select('*').eq('id', viewedUserId).maybeSingle(),
+        supabase.from('users').select('*').eq('id', viewedUserId).maybeSingle(),
         supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('seller_id', viewedUserId),
         supabase.from('forum_topics').select('id', { count: 'exact', head: true }).eq('author_id', viewedUserId),
         supabase.from('reviews').select('rating, positive').eq('target_user_id', viewedUserId),
@@ -62,6 +62,12 @@ const UserProfileModal: React.FC = () => {
       }
       if (p.data) p.data.rating = computedRating;
 
+      // Подгружаем custom_roles
+      if (p.data) {
+        const { data: cr } = await supabase.from('user_custom_roles')
+          .select('id, label, icon, color').eq('user_id', viewedUserId);
+        if (cr && cr.length > 0) (p.data as any).custom_roles = cr;
+      }
       setProfile(p.data);
       setStats({
         accounts: aCnt.count || 0,

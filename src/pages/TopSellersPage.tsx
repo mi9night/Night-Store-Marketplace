@@ -58,11 +58,22 @@ const TopSellersPage: React.FC = () => {
     const load = async () => {
       try {
         const { data } = await supabase
-          .from('users_full')
-          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp, custom_roles')
+          .from('users')
+          .select('id, username, email, avatar_url, sales, rating, positive_reviews, verified, level, role, created_at, xp, custom_role_label, custom_role_icon, custom_role_color')
           .gt('sales', 0)
           .order('sales', { ascending: false })
           .limit(20);
+        if (data && data.length > 0) {
+          const ids = data.map((u: any) => u.id);
+          const { data: crs } = await supabase.from('user_custom_roles')
+            .select('user_id, id, label, icon, color').in('user_id', ids);
+          const crMap: Record<string, any[]> = {};
+          crs?.forEach((cr: any) => {
+            if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
+            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color });
+          });
+          data.forEach((u: any) => { u.custom_roles = crMap[u.id] || []; });
+        }
         setSellers(data || []);
       } catch (e) {
         setSellers([]);

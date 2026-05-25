@@ -95,6 +95,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
       if (sellerId) {
         const { data: s } = await supabase.from('users')
           .select('*').eq('id', sellerId).maybeSingle();
+        if (s) {
+          const { data: cr } = await supabase.from('user_custom_roles')
+            .select('id, label, icon, color').eq('user_id', sellerId);
+          if (cr && cr.length > 0) (s as any).custom_roles = cr;
+        }
         setSeller(s);
 
         // Отзывы о продавце
