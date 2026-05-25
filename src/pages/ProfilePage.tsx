@@ -4,11 +4,12 @@ import {
   Star, ShoppingCart, Award, Clock, Package,
   CheckCircle2, Edit3, Camera, X, Save, MessageSquare,
   Shield, Ban, AlertCircle, Calendar, User
-, ThumbsUp, ThumbsDown , Image , Trash2 } from 'lucide-react';
+, ThumbsUp, ThumbsDown , Image , Trash2 , Sparkles , Link2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import { RoleBadge } from '../components/RoleBadge';
 import { LevelBadge } from '../components/LevelBadge';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { UserLink } from '../components/UserLink';
 import LabelManager from '../components/LabelManager';
 import ReportButton from '../components/ReportButton';
@@ -31,6 +32,13 @@ interface UserData {
   xp?: number;
   forum_activity_xp?: number;
   created_at?: string;
+  discord_id?: string;
+  discord_username?: string;
+  discord_avatar?: string;
+  discord_verified?: boolean;
+  custom_id?: string;
+  hide_balance?: boolean;
+  hide_email?: boolean;
 }
 
 interface ProfilePageProps {
@@ -46,7 +54,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'wall' | 'products' | 'reviews' | 'themes' | 'bans'>('wall');
+  const [activeTab, setActiveTab] = useState<'wall' | 'products' | 'reviews' | 'themes' | 'integrations' | 'bans'>('wall');
   const [wallComments, setWallComments] = useState<any[]>([]);
   const [wallText, setWallText] = useState('');
   const [sendingWall, setSendingWall] = useState(false);
@@ -91,7 +99,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         if (p) {
           // Подгружаем массив кастомных ролей
           const { data: cr } = await supabase.from('user_custom_roles')
-            .select('id, label, icon, color').eq('user_id', targetId);
+            .select('id, label, icon, color, description').eq('user_id', targetId);
           if (cr && cr.length > 0) (p as any).custom_roles = cr;
           setProfile(p);
           setEditBio(p.bio || '');
@@ -106,13 +114,32 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         }
 
         // Параллельно — товары, отзывы, темы, баны
-        const [accRes, revRes, topRes, banRes, wallRes] = await Promise.all([
+        const [accRes, revRes, topRes, banRes, wallRes, purchRes] = await Promise.all([
           supabase.from('accounts').select('*').eq('seller_id', targetId).order('created_at', { ascending: false }),
           supabase.from('reviews').select('*').eq('target_user_id', targetId).order('created_at', { ascending: false }),
           supabase.from('forum_topics').select('*').eq('author_id', targetId).order('created_at', { ascending: false }),
           supabase.from('bans').select('*').eq('user_id', targetId).order('created_at', { ascending: false }),
           supabase.from('profile_comments').select('*').eq('profile_id', targetId).order('created_at', { ascending: false }),
+          supabase.from('orders').select('id', { count: 'exact', head: true }).eq('buyer_id', targetId),
         ]);
+
+        // Реальные покупки (count из orders)
+        const realPurchases = (purchRes as any)?.count || 0;
+        // Реальный рейтинг — среднее по reviews
+        const revList = revRes.data || [];
+        let realRating = Number(p?.rating) || 0;
+        if (realRating === 0 && revList.length > 0) {
+          const withRating = revList.filter((r: any) => r.rating);
+          if (withRating.length > 0) {
+            realRating = withRating.reduce((s: number, r: any) => s + r.rating, 0) / withRating.length;
+          } else {
+            realRating = revList.reduce((s: number, r: any) => s + (r.positive ? 5 : 1), 0) / revList.length;
+          }
+        }
+        if (p) {
+          (p as any).purchases = realPurchases;
+          (p as any).rating = realRating;
+        }
 
         setAccounts(accRes.data || []);
         // Подгружаем авторов отзывов
@@ -309,11 +336,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     ? new Date(profile.created_at).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' })
     : '—';
 
+  // Расчёт LVL по xp (как в шкале)
+  const xpVal = profile?.xp || 0;
+  const lvlVal = Math.floor(Math.sqrt(xpVal / 50)) + 1;
+
   const stats = [
     { label: 'Покупок',  value: profile?.purchases || 0,     icon: ShoppingCart, color: 'text-blue-400' },
     { label: 'Продаж',   value: profile?.sales || 0,         icon: Package,      color: 'text-green-400' },
     { label: 'Рейтинг',  value: (Number(profile?.rating) || 0).toFixed(1), icon: Star, color: 'text-yellow-400' },
-    { label: 'XP',       value: profile?.xp || 0,            icon: Award,        color: 'text-purple-400' },
+    { label: 'LVL',      value: lvlVal,                      icon: Sparkles,     color: 'text-pink-400' },
+    { label: 'XP',       value: xpVal,                       icon: Award,        color: 'text-purple-400' },
   ];
 
   const activeBan = bans.find(b => b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
@@ -405,13 +437,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-bold text-white">{displayName}</h2>
-                {profile?.verified && <CheckCircle2 size={18} className="text-blue-400" />}
-                {profile?.discord_verified && (
-                  <span title={`Discord: ${profile.discord_username || ''}`}
-                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/20 border border-red-500/50">
-                    <CheckCircle2 size={12} className="text-red-400" />
-                  </span>
-                )}
+                {profile?.verified && <VerifiedBadge type="verified" size={18} />}
+                {profile?.discord_verified && <VerifiedBadge type="discord" size={18} discordName={profile?.discord_username} />}
                 <RoleBadge user={profile} />
                 <LevelBadge level={profile?.level || 1} />
               </div>
@@ -457,7 +484,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -596,6 +623,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
             { id: 'products', label: 'Товары', icon: Package, count: accounts.length },
             { id: 'reviews',  label: 'Отзывы', icon: Star,    count: reviews.length },
             { id: 'themes',   label: 'Темы',   icon: MessageSquare, count: topics.length },
+            { id: 'integrations', label: 'Интеграции', icon: Link2, count: (profile?.discord_id ? 1 : 0) },
             { id: 'bans',     label: 'История блокировок', icon: Shield, count: bans.length },
           ].map(tab => (
             <button
@@ -841,6 +869,57 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           )}
 
           {/* === История блокировок === */}
+          {/* === Интеграции пользователя === */}
+          {activeTab === 'integrations' && (
+            <div className="space-y-3">
+              {profile?.discord_id ? (
+                <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    {/* Дискорд лого */}
+                    <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center text-2xl flex-shrink-0">
+                      💬
+                    </div>
+                    {/* Аватарка из Discord */}
+                    {profile.discord_avatar && (
+                      <img src={profile.discord_avatar} alt="" className="w-12 h-12 rounded-xl" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {profile.discord_username}
+                        </p>
+                        <VerifiedBadge type="discord" size={14} discordName={profile.discord_username} />
+                      </div>
+                      <p className="text-xs text-text-secondary font-mono truncate">@{profile.discord_username}</p>
+                      <p className="text-[10px] text-text-secondary">ID: {profile.discord_id}</p>
+                    </div>
+                    {/* Кнопка написать */}
+                    <a href={`https://discord.com/users/${profile.discord_id}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                      <MessageSquare size={12} /> Написать
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Link2 size={40} className="mx-auto text-purple-700/50 mb-3" />
+                  <p className="text-text-secondary text-sm">
+                    {isOwnProfile
+                      ? 'Вы пока не привязали ни одну интеграцию'
+                      : 'У пользователя пока нет привязанных интеграций'}
+                  </p>
+                  {isOwnProfile && (
+                    <button onClick={() => setCurrentPage?.('settings')}
+                      className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold">
+                      Перейти в Настройки → Интеграции
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'bans' && (
             bans.length === 0 ? (
               <div className="text-center py-12">

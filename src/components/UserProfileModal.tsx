@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { useUserNav } from '../lib/UserNavContext';
 import { RoleBadge } from './RoleBadge';
 import { LevelBadge } from './LevelBadge';
+import VerifiedBadge from './VerifiedBadge';
 
 const UserProfileModal: React.FC = () => {
   const { viewedUserId, closeUser, goToFullProfile } = useUserNav();
@@ -65,7 +66,7 @@ const UserProfileModal: React.FC = () => {
       // Подгружаем custom_roles
       if (p.data) {
         const { data: cr } = await supabase.from('user_custom_roles')
-          .select('id, label, icon, color').eq('user_id', viewedUserId);
+          .select('id, label, icon, color, description').eq('user_id', viewedUserId);
         if (cr && cr.length > 0) (p.data as any).custom_roles = cr;
       }
       setProfile(p.data);
@@ -166,13 +167,8 @@ const UserProfileModal: React.FC = () => {
               <>
                 <div className="flex items-center gap-1.5 flex-wrap mb-1">
                   <h2 className="text-lg font-bold text-white">{displayName}</h2>
-                  {profile.verified && <CheckCircle2 size={14} className="text-blue-400" />}
-                  {profile.discord_verified && (
-                    <span title={`Discord: ${profile.discord_username || ''}`}
-                      className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500/20 border border-red-500/50">
-                      <CheckCircle2 size={10} className="text-red-400" />
-                    </span>
-                  )}
+                  {profile.verified && <VerifiedBadge type="verified" size={14} />}
+                  {profile.discord_verified && <VerifiedBadge type="discord" size={14} discordName={profile.discord_username} />}
                   <RoleBadge user={profile} />
                   <LevelBadge level={profile.level || 1} compact />
                 </div>

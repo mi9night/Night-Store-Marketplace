@@ -446,6 +446,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   const [crLabel, setCrLabel] = useState('');
   const [crIcon, setCrIcon] = useState('⭐');
   const [crColor, setCrColor] = useState('purple');
+  const [crDesc, setCrDesc] = useState('');
 
   const applyRole = async (preset: string) => {
     if (!active) return;
@@ -457,9 +458,11 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
         label: crLabel,
         icon: crIcon,
         color: crColor,
+        description: crDesc || null,
         granted_by: (await supabase.auth.getUser()).data.user?.id,
       });
       setCrLabel('');
+      setCrDesc('');
       await loadCustomRoles(active.id);
       setModal(null);
       return;
@@ -714,6 +717,10 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
               <input value={crLabel} onChange={e => setCrLabel(e.target.value)}
                 placeholder="Название (напр. SPONSOR)" maxLength={15}
                 className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-sm" />
+              <input value={crDesc} onChange={e => setCrDesc(e.target.value)}
+                placeholder="Описание роли (для тултипа)" maxLength={120}
+                className="w-full px-3 py-2 mb-2 rounded-lg bg-bg-secondary border border-purple-900/30 text-white text-xs" />
+              <p className="text-[10px] text-text-secondary mb-2">💡 Если оставить пустым — покажется «Кастомная роль, выданная за определённые услуги»</p>
               <div className="flex gap-2 mb-3 flex-wrap">
                 <span className="text-[10px] text-text-secondary uppercase w-full">Иконка</span>
                 {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮','👑','🛡','⚡','🚀','🎯','🌟','💫','🎪','🦅','🐺','🦁','🌌','🎨','🎵','🍷','☕','🎲','🃏','💀','😎'].map(i => (

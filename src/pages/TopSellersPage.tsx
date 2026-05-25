@@ -66,11 +66,11 @@ const TopSellersPage: React.FC = () => {
         if (data && data.length > 0) {
           const ids = data.map((u: any) => u.id);
           const { data: crs } = await supabase.from('user_custom_roles')
-            .select('user_id, id, label, icon, color').in('user_id', ids);
+            .select('user_id, id, label, icon, color, description').in('user_id', ids);
           const crMap: Record<string, any[]> = {};
           crs?.forEach((cr: any) => {
             if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
-            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color });
+            crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description });
           });
           data.forEach((u: any) => { u.custom_roles = crMap[u.id] || []; });
         }

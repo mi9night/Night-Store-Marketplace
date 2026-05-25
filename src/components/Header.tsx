@@ -94,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({
         if (profile) {
           // Подгружаем массив кастомных ролей
           const { data: cr } = await supabase.from('user_custom_roles')
-            .select('id, label, icon, color').eq('user_id', data.user.id);
+            .select('id, label, icon, color, description').eq('user_id', data.user.id);
           if (cr && cr.length > 0) (profile as any).custom_roles = cr;
           setMyProfile(profile);
         }
@@ -193,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({
             .eq('id', user.id).maybeSingle();
           if (p) {
             const { data: cr } = await supabase.from('user_custom_roles')
-              .select('id, label, icon, color').eq('user_id', user.id);
+              .select('id, label, icon, color, description').eq('user_id', user.id);
             if (cr && cr.length > 0) (p as any).custom_roles = cr;
             setMyProfile(p);
             if (p.balance != null) setBalance(p.balance);
