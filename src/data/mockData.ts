@@ -19,7 +19,8 @@ export const categories: Category[] = [
   // Игры
   { id: 'steam',      name: 'Steam',          icon: '🎮', count: 0, subcategories: ['CS2', 'Dota 2', 'PUBG', 'Rust', 'Prime'] },
   { id: 'telegram',   name: 'Telegram',       icon: '✈️', count: 0, subcategories: ['Каналы', 'Аккаунты', 'Stars', 'Premium'] },
-  { id: 'brawl',      name: 'Brawl Stars',    icon: '👊', count: 0 },
+  { id: 'epic',       name: 'Epic Games',     icon: '🎯', count: 0, subcategories: ['Fortnite', 'Rocket League', 'GTA V', 'Fall Guys'] },
+  { id: 'fortnite',   name: 'Fortnite',       icon: '🏗', count: 0, subcategories: ['Skins OG', 'V-Bucks', 'Battle Pass'] },
   { id: 'ea',         name: 'EA Games',       icon: '🎯', count: 0, subcategories: ['FIFA', 'Apex Legends'] },
   { id: 'ubisoft',    name: 'Ubisoft',        icon: '🌀', count: 0, subcategories: ['Rainbow Six', 'Assassins Creed'] },
   { id: 'minecraft',  name: 'Minecraft',      icon: '🟩', count: 0 },

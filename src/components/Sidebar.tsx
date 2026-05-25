@@ -5,7 +5,7 @@ import {
   Package, ShoppingBag, Receipt, Heart, Tag, Zap,
   Settings, Shield, TrendingUp, DollarSign, Code, Eye, EyeOff,
   ChevronDown, Plus, MessageSquare, X
-, Globe, Gamepad2, Send, Swords, Square, Target, Hexagon, Crown, Box, Star, MessageCircle, Music, Camera, Brain, Atom, Hash , Lock , Sparkles } from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Square, Target, Hexagon, Crown, Box, Star, MessageCircle, Music, Camera, Brain, Atom, Hash , Lock , Sparkles , Joystick, Pickaxe } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
@@ -24,7 +24,7 @@ type BalanceAction = 'deposit' | 'withdraw' | 'transfer' | null;
 
 
 const SIDE_ICONS: Record<string, any> = {
-  steam: Gamepad2, telegram: Send, brawl: Swords, ea: Target, ubisoft: Hexagon,
+  steam: Gamepad2, telegram: Send, epic: Joystick, fortnite: Pickaxe, ea: Target, ubisoft: Hexagon,
   minecraft: Square, supercell: Crown, roblox: Box, wot: Shield, wr: Zap,
   rockstar: Star, discord: MessageCircle, tiktok: Music, instagram: Camera,
   ai: Brain, neural: Atom, vpn: Lock, mihoyo: Sparkles,

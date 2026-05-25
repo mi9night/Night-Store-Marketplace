@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   SlidersHorizontal, ChevronDown, X, Search,
   Package, Zap, ShoppingBag
-, Globe, Gamepad2, Send, Swords, Target, Hexagon, Square, Crown, Box, Shield, Star, MessageCircle, Music, Camera, Brain, Atom, Lock, Hash , Sparkles } from 'lucide-react';
+, Globe, Gamepad2, Send, Swords, Target, Hexagon, Square, Crown, Box, Shield, Star, MessageCircle, Music, Camera, Brain, Atom, Lock, Hash , Sparkles , Joystick, Pickaxe } from 'lucide-react';
 import AccountCard from '../components/AccountCard';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -23,7 +23,8 @@ type SortOption = 'default' | 'cheap' | 'expensive' | 'new' | 'old' | 'popular';
 const CAT_ICONS: Record<string, { Icon: any; color: string }> = {
   steam:     { Icon: Gamepad2,      color: 'text-blue-400' },
   telegram:  { Icon: Send,          color: 'text-cyan-400' },
-  brawl:     { Icon: Swords,        color: 'text-yellow-500' },
+  epic:      { Icon: Joystick,      color: 'text-gray-200' },
+  fortnite:  { Icon: Pickaxe,       color: 'text-blue-400' },
   ea:        { Icon: Target,        color: 'text-red-500' },
   ubisoft:   { Icon: Hexagon,       color: 'text-blue-500' },
   minecraft: { Icon: Square,        color: 'text-green-500' },
