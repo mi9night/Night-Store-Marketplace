@@ -343,7 +343,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     { label: 'Покупок',  value: profile?.purchases || 0,     icon: ShoppingCart, color: 'text-blue-400' },
     { label: 'Продаж',   value: profile?.sales || 0,         icon: Package,      color: 'text-green-400' },
     { label: 'Рейтинг',  value: (Number(profile?.rating) || 0).toFixed(1), icon: Star, color: 'text-yellow-400' },
-    { label: 'LVL',      value: lvlVal,                      icon: Sparkles,     color: 'text-pink-400' },
     { label: 'XP',       value: xpVal,                       icon: Award,        color: 'text-purple-400' },
   ];
 
@@ -440,6 +439,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 {profile?.discord_verified && <VerifiedBadge type="discord" size={18} discordName={profile?.discord_username} />}
                 <RoleBadge user={profile} />
                 <LevelBadge level={profile?.level || 1} />
+                {/* XP-уровень (LVL по xp) */}
+                {(() => {
+                  const xp = profile?.xp || 0;
+                  const lv = Math.floor(Math.sqrt(xp / 50)) + 1;
+                  return (
+                    <BadgeTooltip text={`✨ LVL ${lv}\n${xp} XP · уровень активности`}>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border bg-pink-900/30 text-pink-300 border-pink-700/40 shadow-[0_0_10px_rgba(236,72,153,0.5)]">
+                        ✨ LVL {lv}
+                      </span>
+                    </BadgeTooltip>
+                  );
+                })()}
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-text-secondary">
                 <span>ID: {profile?.custom_id || profile?.id?.slice(0, 8)}</span>
@@ -483,7 +494,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}

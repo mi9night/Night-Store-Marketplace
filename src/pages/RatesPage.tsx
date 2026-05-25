@@ -168,76 +168,28 @@ const RatesPage: React.FC = () => {
             const isUp = diff > 0;
             const isDown = diff < 0;
 
-            // Реальный график с точками
-            const w = 200, h = 60;
-            const min = Math.min(...r.history);
-            const max = Math.max(...r.history);
-            const range = max - min || 1;
-            const pad = 5;
-            const innerH = h - pad * 2;
-            const innerW = w - pad * 2;
-
-            const points = r.history.map((v, idx) => {
-              const x = pad + (idx / Math.max(r.history.length - 1, 1)) * innerW;
-              const y = pad + innerH - ((v - min) / range) * innerH;
-              return { x, y, v };
-            });
-
-            const pathLine = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
-            const pathArea = `${pathLine} L ${points[points.length - 1]?.x || 0},${h - pad} L ${pad},${h - pad} Z`;
-
-            const lineColor = isUp ? '#22c55e' : isDown ? '#ef4444' : '#a855f7';
-
             return (
               <motion.div key={r.code}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="bg-[#171425] border border-purple-900/20 rounded-xl p-3 hover:border-purple-700/40 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{r.flag}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{r.code}</p>
-                      <p className="text-xs text-text-secondary">{r.name}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-white">
-                      {r.current.toFixed(2)} <span className="text-sm text-text-secondary">₽</span>
-                    </p>
-                    {Math.abs(diff) > 0.001 && (
-                      <p className={`text-xs flex items-center justify-end gap-1 ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                        {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                        {diffPct.toFixed(2)}%
-                      </p>
-                    )}
+                className="bg-[#171425] border border-purple-900/20 rounded-xl p-3 hover:border-purple-700/40 transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{r.flag}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{r.code}</p>
+                    <p className="text-xs text-text-secondary">{r.name}</p>
                   </div>
                 </div>
-
-                {/* Реальный график */}
-                {r.history.length > 1 ? (
-                  <svg width="100%" height="60" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2">
-                    <defs>
-                      <linearGradient id={`grad-${r.code}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor={lineColor} stopOpacity="0.4" />
-                        <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {/* Сетка */}
-                    <line x1={pad} y1={h/2} x2={w-pad} y2={h/2} stroke="rgba(255,255,255,0.05)" strokeDasharray="2,2" />
-                    {/* Заливка */}
-                    <path d={pathArea} fill={`url(#grad-${r.code})`} />
-                    {/* Линия */}
-                    <path d={pathLine} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    {/* Точки */}
-                    {points.map((p, idx) => (
-                      <circle key={idx} cx={p.x} cy={p.y} r={idx === points.length - 1 ? 3 : 1.5} fill={lineColor} />
-                    ))}
-                  </svg>
-                ) : (
-                  <div className="h-[60px] flex items-center justify-center text-[10px] text-text-secondary">
-                    Накапливается история...
-                  </div>
-                )}
+                <div className="text-right">
+                  <p className="text-lg font-bold text-white">
+                    {r.current.toFixed(2)} <span className="text-sm text-text-secondary">₽</span>
+                  </p>
+                  {Math.abs(diff) > 0.001 && (
+                    <p className={`text-xs flex items-center justify-end gap-1 ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+                      {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                      {diffPct.toFixed(2)}%
+                    </p>
+                  )}
+                </div>
               </motion.div>
             );
           })}

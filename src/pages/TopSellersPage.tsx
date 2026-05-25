@@ -65,14 +65,40 @@ const TopSellersPage: React.FC = () => {
           .limit(20);
         if (data && data.length > 0) {
           const ids = data.map((u: any) => u.id);
-          const { data: crs } = await supabase.from('user_custom_roles')
-            .select('user_id, id, label, icon, color, description').in('user_id', ids);
+          const [crRes, revRes] = await Promise.all([
+            supabase.from('user_custom_roles').select('user_id, id, label, icon, color, description').in('user_id', ids),
+            supabase.from('reviews').select('target_user_id, rating, positive').in('target_user_id', ids),
+          ]);
           const crMap: Record<string, any[]> = {};
-          crs?.forEach((cr: any) => {
+          crRes.data?.forEach((cr: any) => {
             if (!crMap[cr.user_id]) crMap[cr.user_id] = [];
             crMap[cr.user_id].push({ id: cr.id, label: cr.label, icon: cr.icon, color: cr.color, description: cr.description });
           });
-          data.forEach((u: any) => { u.custom_roles = crMap[u.id] || []; });
+
+          // Группируем отзывы по продавцу
+          const revBy: Record<string, any[]> = {};
+          revRes.data?.forEach((r: any) => {
+            if (!revBy[r.target_user_id]) revBy[r.target_user_id] = [];
+            revBy[r.target_user_id].push(r);
+          });
+
+          data.forEach((u: any) => {
+            u.custom_roles = crMap[u.id] || [];
+            const revs = revBy[u.id] || [];
+            // Реальный рейтинг
+            let realRating = Number(u.rating) || 0;
+            if (realRating === 0 && revs.length > 0) {
+              const withR = revs.filter(r => r.rating);
+              if (withR.length > 0) {
+                realRating = withR.reduce((s, r) => s + r.rating, 0) / withR.length;
+              } else {
+                realRating = revs.reduce((s, r) => s + (r.positive ? 5 : 1), 0) / revs.length;
+              }
+            }
+            u.rating = realRating;
+            // Реальное количество положительных
+            u.positive_reviews = revs.filter(r => r.positive).length;
+          });
         }
         setSellers(data || []);
       } catch (e) {
