@@ -454,8 +454,9 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     if (!active) return;
     if (preset === 'custom') {
       if (!crLabel.trim()) { alert('Введите название роли'); return; }
-      // Добавляем НОВУЮ кастомную роль (можно много)
-      await supabase.from('user_custom_roles').insert({
+      // Добавляем НОВУЮ кастомную роль
+      const granter = (await supabase.auth.getUser()).data.user?.id;
+      const { error: insErr } = await supabase.from('user_custom_roles').insert({
         user_id: active.id,
         label: crLabel,
         icon: crIcon,
@@ -463,8 +464,24 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
         description: crDesc || null,
         has_glow: crGlow,
         has_pulse: crPulse,
-        granted_by: (await supabase.auth.getUser()).data.user?.id,
+        granted_by: granter,
       });
+
+      // Если упало (например миграция V19 не запущена) — пробуем без новых полей
+      if (insErr) {
+        const { error: insErr2 } = await supabase.from('user_custom_roles').insert({
+          user_id: active.id,
+          label: crLabel,
+          icon: crIcon,
+          color: crColor,
+          description: crDesc || null,
+          granted_by: granter,
+        });
+        if (insErr2) {
+          alert('Ошибка: ' + insErr2.message + '\n\nЗапусти SUPABASE_MIGRATION_V19.sql в Supabase SQL Editor');
+          return;
+        }
+      }
       setCrLabel('');
       setCrDesc('');
       setCrGlow(true);
