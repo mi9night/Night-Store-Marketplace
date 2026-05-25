@@ -115,16 +115,21 @@ export const CATEGORY_FILTERS: Record<string, FilterGroup[]> = {
       ],
     },
     {
+      title: 'СВОЯ ИГРА',
+      fields: [
+        { type: 'text',   key: 'custom_game_name', label: 'Название игры' },
+        { type: 'text',   key: 'custom_stat_1',    label: 'Параметр 1 (например MMR)' },
+        { type: 'range',  key: 'custom_stat_1_val', label: 'Значение от / до' },
+        { type: 'text',   key: 'custom_stat_2',    label: 'Параметр 2 (например побед)' },
+        { type: 'range',  key: 'custom_stat_2_val', label: 'Значение от / до' },
+        { type: 'number', key: 'custom_hours',     label: 'Часов в игре от' },
+      ],
+    },
+    {
       title: 'ГИФТЫ',
       fields: [
         { type: 'text',  key: 'gift_choose', label: 'Выберите гифт' },
         { type: 'range', key: 'gifts_count', label: 'Гифтов от / до' },
-      ],
-    },
-    {
-      title: 'ЦЕНА',
-      fields: [
-        { type: 'range', key: 'price', label: 'Цена ₽ от / до' },
       ],
     },
   ],

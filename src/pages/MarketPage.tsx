@@ -402,55 +402,56 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
 
               {/* Контент с прокруткой */}
               <div className="flex-1 overflow-y-auto p-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {/* === Базовые фильтры — каждый отдельная карточка === */}
-                <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">💰 ЦЕНА</p>
-                  <div className="flex gap-2">
-                    <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="от ₽"
-                      className="flex-1 px-2 py-1.5 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white" />
-                    <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="до ₽"
-                      className="flex-1 px-2 py-1.5 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white" />
+                {/* Верхний ряд: ЦЕНА · ЗАЩИТА · РИСК — на всю ширину */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">💰 ЦЕНА</p>
+                    <div className="flex gap-2">
+                      <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="от ₽"
+                        className="flex-1 px-2 py-1.5 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white" />
+                      <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="до ₽"
+                        className="flex-1 px-2 py-1.5 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white" />
+                    </div>
+                  </div>
+
+                  <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">🛡️ ЗАЩИТА</p>
+                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-bg-card rounded-md">
+                      <input type="checkbox" checked={showGuaranteeOnly} onChange={e => setShowGuaranteeOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
+                      <span className="text-xs text-white">Только с гарантией</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-bg-card rounded-md">
+                      <input type="checkbox" checked={showEscrowOnly} onChange={e => setShowEscrowOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
+                      <span className="text-xs text-white">Только эскроу</span>
+                    </label>
+                  </div>
+
+                  <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">🚦 УРОВЕНЬ РИСКА</p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { id: 'all', label: 'Любой' },
+                        { id: 'low', label: 'Низкий', cls: 'green' },
+                        { id: 'medium', label: 'Средний', cls: 'yellow' },
+                        { id: 'high', label: 'Высокий', cls: 'red' },
+                      ].map(r => (
+                        <button key={r.id} onClick={() => setSelectedRisk(r.id)}
+                          className={`py-1.5 rounded-md text-xs font-semibold border transition-all ${
+                            selectedRisk === r.id
+                              ? r.cls === 'green' ? 'bg-green-900/30 border-green-500 text-green-400'
+                                : r.cls === 'yellow' ? 'bg-yellow-900/30 border-yellow-500 text-yellow-400'
+                                : r.cls === 'red' ? 'bg-red-900/30 border-red-500 text-red-400'
+                                : 'bg-purple-900/30 border-purple-500 text-white'
+                              : 'bg-bg-card border-purple-900/30 text-text-secondary'
+                          }`}>
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">🛡️ ЗАЩИТА</p>
-                  <label className="flex items-center gap-2 cursor-pointer p-2 bg-bg-card rounded-md">
-                    <input type="checkbox" checked={showGuaranteeOnly} onChange={e => setShowGuaranteeOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
-                    <span className="text-xs text-white">Только с гарантией</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer p-2 bg-bg-card rounded-md">
-                    <input type="checkbox" checked={showEscrowOnly} onChange={e => setShowEscrowOnly(e.target.checked)} className="accent-purple-500 w-4 h-4" />
-                    <span className="text-xs text-white">Только эскроу</span>
-                  </label>
-                </div>
-
-                <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">🚦 УРОВЕНЬ РИСКА</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {[
-                      { id: 'all', label: 'Любой', cls: '' },
-                      { id: 'low', label: 'Низкий', cls: 'green' },
-                      { id: 'medium', label: 'Средний', cls: 'yellow' },
-                      { id: 'high', label: 'Высокий', cls: 'red' },
-                    ].map(r => (
-                      <button key={r.id} onClick={() => setSelectedRisk(r.id)}
-                        className={`py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                          selectedRisk === r.id
-                            ? r.cls === 'green' ? 'bg-green-900/30 border-green-500 text-green-400' :
-                              r.cls === 'yellow' ? 'bg-yellow-900/30 border-yellow-500 text-yellow-400' :
-                              r.cls === 'red' ? 'bg-red-900/30 border-red-500 text-red-400' :
-                              'bg-purple-900/30 border-purple-500 text-white'
-                            : 'bg-bg-card border-purple-900/30 text-text-secondary'
-                        }`}>
-                        {r.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* === Динамические фильтры под категорию === */}
+                {/* === Категория-специфичные фильтры по 3 колонкам === */}
                 {(() => {
                   if (selectedCategory === 'all') return null;
                   const cat = categories.find(cc => cc.id === selectedCategory);
@@ -461,14 +462,49 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                       💡 Для категории <b className="text-white">{cat.name}</b> используются базовые фильтры
                     </div>
                   );
-                  return <>{groups.map((g, gi) => (
-                    <div key={gi} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
-                      <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{g.title}</p>
-                      <CategoryFilters groups={[{ fields: g.fields }]} values={extraFilters} onChange={setExtraFilters} />
+
+                  // Распределение групп по колонкам по их title
+                  const LEFT  = ['АККАУНТ'];
+                  const MID   = ['РЕГИОН И АКТИВНОСТЬ', 'STEAM · ОГРАНИЧЕНИЯ', 'КАРТОЧКИ И КЛЮЧИ', 'ГИФТЫ'];
+                  const RIGHT = ['БАЛАНС И ИНВЕНТАРЬ', 'CS2', 'DOTA 2', 'RUST', 'СВОЯ ИГРА'];
+
+                  const byCol = (cols: string[]) =>
+                    groups.filter(g => g.title && cols.includes(g.title));
+                  const restGroups = groups.filter(g =>
+                    !g.title || (!LEFT.includes(g.title) && !MID.includes(g.title) && !RIGHT.includes(g.title))
+                  );
+
+                  const Col: React.FC<{ items: any[] }> = ({ items }) => (
+                    <div className="space-y-3">
+                      {items.map((g: any, gi: number) => (
+                        <div key={gi} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{g.title}</p>
+                          <CategoryFilters groups={[{ fields: g.fields }]} values={extraFilters} onChange={setExtraFilters} />
+                        </div>
+                      ))}
                     </div>
-                  ))}</>;
+                  );
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Col items={byCol(LEFT)} />
+                        <Col items={byCol(MID)} />
+                        <Col items={byCol(RIGHT)} />
+                      </div>
+                      {restGroups.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                          {restGroups.map((g: any, gi: number) => (
+                            <div key={gi} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{g.title || 'Прочее'}</p>
+                              <CategoryFilters groups={[{ fields: g.fields }]} values={extraFilters} onChange={setExtraFilters} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
                 })()}
-                </div>
               </div>
 
               {/* Фиксированный нижний бар */}
