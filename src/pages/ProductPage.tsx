@@ -28,6 +28,8 @@ const riskConfig = {
   high:   { label: 'Высокий риск', className: 'bg-red-900/20 border-red-700/40 text-red-400',          Icon: XCircle,        desc: 'Аккаунт имеет признаки возможной блокировки. Покупайте с осторожностью.' },
 };
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 МБ
+
 const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAddToCart }) => {
   const [buying, setBuying] = useState(false);
   const [buyResult, setBuyResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -56,7 +58,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [ticketCategory, setTicketCategory] = useState('Проблемы с аккаунтом');
   const [ticketSubject, setTicketSubject] = useState('');
   const [disputeAnswer, setDisputeAnswer] = useState('');
+  const [problemDescription, setProblemDescription] = useState('');
   const [creatingTicket, setCreatingTicket] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
@@ -202,7 +206,30 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setTicketCategory('Проблемы с аккаунтом');
     setTicketSubject(`Спор по аккаунту: ${account.title}`);
     setDisputeAnswer('');
+    setProblemDescription('');
+    setAttachedFiles([]);
     setShowTicketModal(true);
+  };
+
+  // Выбор файлов
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`Файл "${file.name}" превышает 25 МБ`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 4)); // максимум 4 файла
+  };
+
+  // Удалить файл
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Создать тикет
@@ -218,8 +245,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
 Вопрос: Вели ли вы общение ещё где-то кроме нашего сайта?
 Ответ: ${disputeAnswer || '—'}
 
-Опишите ситуацию:
-${disputeAnswer || ''}`;
+Опишите проблему:
+${problemDescription || '—'}`;
 
     try {
       const { error } = await supabase.from('tickets').insert({
@@ -408,10 +435,10 @@ ${disputeAnswer || ''}`;
         </div>
       </div>
 
-      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА ==================== */}
+      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА (ШИРЕ) ==================== */}
       {showTicketModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-md p-6">
+          <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-lg p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-white">Новый тикет</h3>
               <button onClick={() => setShowTicketModal(false)} className="text-text-secondary hover:text-white">
@@ -465,7 +492,7 @@ ${disputeAnswer || ''}`;
                   <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
                 </div>
 
-                {/* Ответ на вопрос (отдельная строчка) */}
+                {/* Ответ на вопрос */}
                 <div>
                   <span className="text-text-secondary text-xs">Ответ на вопрос</span>
                   <textarea
@@ -477,20 +504,60 @@ ${disputeAnswer || ''}`;
                   />
                 </div>
 
-                {/* Блок загрузки файлов (кнопки) */}
-                <div className="pt-3 border-t border-purple-900/20">
-                  <div className="flex gap-3">
-                    {/* Кнопка Фото */}
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                      <Image size={16} /> Фото <span className="text-xs text-text-secondary">0/4</span>
-                    </button>
+                {/* Опишите проблему */}
+                <div>
+                  <span className="text-text-secondary text-xs">Опишите проблему</span>
+                  <textarea
+                    value={problemDescription}
+                    onChange={(e) => setProblemDescription(e.target.value)}
+                    placeholder="Опишите ситуацию подробно..."
+                    rows={4}
+                    className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                  />
+                </div>
 
-                    {/* Кнопка Файлы */}
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                      <Paperclip size={16} /> Файлы
-                    </button>
+                {/* Загрузка файлов */}
+                <div className="pt-3 border-t border-purple-900/20">
+                  <div className="flex gap-3 mb-2">
+                    <label className="flex-1 cursor-pointer">
+                      <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                        <Image size={16} /> Фото ({attachedFiles.length}/4)
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <label className="flex-1 cursor-pointer">
+                      <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                        <Paperclip size={16} /> Файлы
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
-                  <p className="text-[10px] text-text-secondary mt-2 text-center">Максимальный размер 25мб</p>
+
+                  <p className="text-[10px] text-text-secondary text-center mb-2">Максимальный размер 25мб</p>
+
+                  {/* Список прикреплённых файлов */}
+                  {attachedFiles.length > 0 && (
+                    <div className="space-y-1">
+                      {attachedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-[#171425] px-3 py-1.5 rounded-lg text-xs">
+                          <span className="truncate">{file.name}</span>
+                          <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>
