@@ -28,7 +28,8 @@ const riskConfig = {
   high:   { label: 'Высокий риск', className: 'bg-red-900/20 border-red-700/40 text-red-400',          Icon: XCircle,        desc: 'Аккаунт имеет признаки возможной блокировки. Покупайте с осторожностью.' },
 };
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 МБ
+const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25 МБ всего
+const MAX_FILES = 4;
 
 const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAddToCart }) => {
   const [buying, setBuying] = useState(false);
@@ -61,7 +62,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [problemDescription, setProblemDescription] = useState('');
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [ticketCreated, setTicketCreated] = useState(false); // Новое состояние для уведомления
+  const [ticketCreated, setTicketCreated] = useState(false);
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
@@ -198,7 +199,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     }, 700);
   };
 
-  // Открыть модалку спора
   const openDisputeModal = () => {
     if (!me || !myOrder) {
       alert('Открыть спор можно только на купленных аккаунтах');
@@ -213,33 +213,40 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setShowTicketModal(true);
   };
 
-  // Выбор файлов с ограничением 25 МБ
+  // Выбор файлов с общим ограничением 25 МБ
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
+    let currentTotalSize = attachedFiles.reduce((sum, f) => sum + f.size, 0);
 
     for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        alert(`Файл "${file.name}" превышает максимальный размер 25 МБ`);
+      if (attachedFiles.length + validFiles.length >= MAX_FILES) {
+        alert(`Можно прикрепить максимум ${MAX_FILES} файла`);
+        break;
+      }
+
+      const newTotal = currentTotalSize + file.size;
+      if (newTotal > MAX_TOTAL_SIZE) {
+        alert(`Общий размер всех файлов не должен превышать 25 МБ`);
         continue;
       }
+
       validFiles.push(file);
+      currentTotalSize += file.size;
     }
 
-    setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 4));
+    setAttachedFiles(prev => [...prev, ...validFiles]);
   };
 
   const removeFile = (index: number) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Создать тикет
   const createTicket = async () => {
     if (!me || !myOrder || !ticketSubject.trim()) return;
 
     setCreatingTicket(true);
 
-    // Формируем описание с информацией о файлах
     let filesInfo = '';
     if (attachedFiles.length > 0) {
       filesInfo = '\n\nПрикреплённые файлы:\n' + 
@@ -273,10 +280,8 @@ ${problemDescription || '—'}${filesInfo}`;
         return;
       }
 
-      // Показываем своё красивое уведомление
       setTicketCreated(true);
 
-      // Через 2 секунды закрываем модалку и переходим в поддержку
       setTimeout(() => {
         setShowTicketModal(false);
         setTicketCreated(false);
@@ -466,7 +471,6 @@ ${problemDescription || '—'}${filesInfo}`;
               </button>
             </div>
 
-            {/* Если тикет создан — показываем красивое уведомление */}
             {ticketCreated ? (
               <div className="text-center py-8">
                 <CheckCircle2 size={48} className="mx-auto text-green-400 mb-4" />
@@ -541,7 +545,7 @@ ${problemDescription || '—'}${filesInfo}`;
                       <div className="flex gap-3 mb-2">
                         <label className="flex-1 cursor-pointer">
                           <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                            <Image size={16} /> Фото ({attachedFiles.length}/4)
+                            <Image size={16} /> Фото ({attachedFiles.length}/{MAX_FILES})
                           </div>
                           <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
                         </label>
@@ -554,7 +558,9 @@ ${problemDescription || '—'}${filesInfo}`;
                         </label>
                       </div>
 
-                      <p className="text-[10px] text-text-secondary text-center mb-2">Максимальный размер 25мб</p>
+                      <p className="text-[10px] text-text-secondary text-center mb-2">
+                        Максимум {MAX_FILES} файла • Общий размер до 25 МБ
+                      </p>
 
                       {attachedFiles.length > 0 && (
                         <div className="space-y-1">
