@@ -4,7 +4,7 @@ import {
   ArrowLeft, ShoppingCart, Zap, Heart, Shield, Star,
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
-  CheckCircle2 as CC2, AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X
+  CheckCircle2 as CC2, AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X, Image, Paperclip
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -459,22 +459,38 @@ ${disputeAnswer || ''}`;
                   <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
                 </div>
 
-                {/* Вопрос (узкий по высоте) */}
+                {/* Вопрос */}
                 <div className="pt-2 border-t border-purple-900/20">
                   <span className="text-text-secondary text-xs">Вопрос</span>
                   <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
                 </div>
 
-                {/* Большая строка "Опишите ситуацию" */}
-                <div className="pt-3 border-t border-purple-900/20">
+                {/* Ответ на вопрос (отдельная строчка) */}
+                <div>
+                  <span className="text-text-secondary text-xs">Ответ на вопрос</span>
                   <textarea
                     value={disputeAnswer}
                     onChange={(e) => setDisputeAnswer(e.target.value)}
-                    placeholder="Опишите ситуацию..."
-                    rows={6}
-                    className="w-full px-3 py-3 rounded-xl bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                    placeholder="Ваш ответ..."
+                    rows={2}
+                    className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
                   />
-                  <p className="text-[10px] text-text-secondary mt-1.5">Можно прикрепить фотографии и файлы</p>
+                </div>
+
+                {/* Блок загрузки файлов (кнопки) */}
+                <div className="pt-3 border-t border-purple-900/20">
+                  <div className="flex gap-3">
+                    {/* Кнопка Фото */}
+                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                      <Image size={16} /> Фото <span className="text-xs text-text-secondary">0/4</span>
+                    </button>
+
+                    {/* Кнопка Файлы */}
+                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                      <Paperclip size={16} /> Файлы
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-secondary mt-2 text-center">Максимальный размер 25мб</p>
                 </div>
 
               </div>
