@@ -61,6 +61,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [problemDescription, setProblemDescription] = useState('');
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [ticketCreated, setTicketCreated] = useState(false); // Новое состояние для уведомления
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
@@ -208,10 +209,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setDisputeAnswer('');
     setProblemDescription('');
     setAttachedFiles([]);
+    setTicketCreated(false);
     setShowTicketModal(true);
   };
 
-  // Выбор файлов
+  // Выбор файлов с ограничением 25 МБ
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
@@ -231,11 +233,18 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Создать тикет (используем reporter_id)
+  // Создать тикет
   const createTicket = async () => {
     if (!me || !myOrder || !ticketSubject.trim()) return;
 
     setCreatingTicket(true);
+
+    // Формируем описание с информацией о файлах
+    let filesInfo = '';
+    if (attachedFiles.length > 0) {
+      filesInfo = '\n\nПрикреплённые файлы:\n' + 
+        attachedFiles.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} МБ)`).join('\n');
+    }
 
     const fullDescription = 
 `Товар: ${account.title}
@@ -245,11 +254,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
 Ответ: ${disputeAnswer || '—'}
 
 Опишите проблему:
-${problemDescription || '—'}`;
+${problemDescription || '—'}${filesInfo}`;
 
     try {
       const { error } = await supabase.from('tickets').insert({
-        reporter_id: me.id,           // ← используем reporter_id
+        reporter_id: me.id,
         category: ticketCategory,
         subject: ticketSubject,
         description: fullDescription,
@@ -260,13 +269,19 @@ ${problemDescription || '—'}`;
 
       if (error) {
         console.error('Ошибка создания тикета:', error);
-        alert('Не удалось создать тикет. Проверьте структуру таблицы tickets.');
+        alert('Не удалось создать тикет.');
         return;
       }
 
-      setShowTicketModal(false);
-      alert('✅ Тикет успешно создан!');
-      setCurrentPage('support');
+      // Показываем своё красивое уведомление
+      setTicketCreated(true);
+
+      // Через 2 секунды закрываем модалку и переходим в поддержку
+      setTimeout(() => {
+        setShowTicketModal(false);
+        setTicketCreated(false);
+        setCurrentPage('support');
+      }, 2000);
 
     } catch (e: any) {
       alert('Ошибка при создании тикета: ' + e.message);
@@ -398,7 +413,6 @@ ${problemDescription || '—'}`;
                 <ShoppingCart size={18} /> В корзину
               </motion.button>
 
-              {/* Кнопка "Открыть спор" — только для купленных аккаунтов */}
               {myOrder && (
                 <button
                   onClick={openDisputeModal}
@@ -452,109 +466,120 @@ ${problemDescription || '—'}`;
               </button>
             </div>
 
-            <div className="mb-4">
-              <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
-              <select
-                value={ticketCategory}
-                disabled
-                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm opacity-75 cursor-not-allowed"
-              >
-                <option value="Проблемы с аккаунтом">Проблемы с аккаунтом</option>
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="text-sm text-text-secondary mb-1.5 block">Тема</label>
-              <input
-                type="text"
-                value={ticketSubject}
-                onChange={(e) => setTicketSubject(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="text-sm text-text-secondary mb-2 block">Описание</label>
-              <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-4 text-sm">
-
-                <div>
-                  <span className="text-text-secondary text-xs">Товар</span>
-                  <p className="text-white font-medium mt-0.5">{account.title}</p>
-                </div>
-
-                <div>
-                  <span className="text-text-secondary text-xs">Цена</span>
-                  <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
-                </div>
-
-                <div className="pt-2 border-t border-purple-900/20">
-                  <span className="text-text-secondary text-xs">Вопрос</span>
-                  <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
-                </div>
-
-                <div>
-                  <span className="text-text-secondary text-xs">Ответ на вопрос</span>
-                  <textarea
-                    value={disputeAnswer}
-                    onChange={(e) => setDisputeAnswer(e.target.value)}
-                    placeholder="Ваш ответ..."
-                    rows={2}
-                    className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
-                  />
-                </div>
-
-                <div>
-                  <span className="text-text-secondary text-xs">Опишите проблему</span>
-                  <textarea
-                    value={problemDescription}
-                    onChange={(e) => setProblemDescription(e.target.value)}
-                    placeholder="Опишите ситуацию подробно..."
-                    rows={4}
-                    className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
-                  />
-                </div>
-
-                <div className="pt-3 border-t border-purple-900/20">
-                  <div className="flex gap-3 mb-2">
-                    <label className="flex-1 cursor-pointer">
-                      <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                        <Image size={16} /> Фото ({attachedFiles.length}/4)
-                      </div>
-                      <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
-                    </label>
-
-                    <label className="flex-1 cursor-pointer">
-                      <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                        <Paperclip size={16} /> Файлы
-                      </div>
-                      <input type="file" multiple onChange={handleFileSelect} className="hidden" />
-                    </label>
-                  </div>
-
-                  <p className="text-[10px] text-text-secondary text-center mb-2">Максимальный размер 25мб</p>
-
-                  {attachedFiles.length > 0 && (
-                    <div className="space-y-1">
-                      {attachedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-[#171425] px-3 py-1.5 rounded-lg text-xs">
-                          <span className="truncate">{file.name}</span>
-                          <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">×</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
+            {/* Если тикет создан — показываем красивое уведомление */}
+            {ticketCreated ? (
+              <div className="text-center py-8">
+                <CheckCircle2 size={48} className="mx-auto text-green-400 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Тикет успешно создан!</h3>
+                <p className="text-text-secondary">Перенаправляем в Поддержку...</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
+                  <select
+                    value={ticketCategory}
+                    disabled
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm opacity-75 cursor-not-allowed"
+                  >
+                    <option value="Проблемы с аккаунтом">Проблемы с аккаунтом</option>
+                  </select>
+                </div>
 
-            <button
-              onClick={createTicket}
-              disabled={creatingTicket || !ticketSubject.trim()}
-              className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold disabled:opacity-50"
-            >
-              {creatingTicket ? 'Создаём...' : 'Создать тикет'}
-            </button>
+                <div className="mb-4">
+                  <label className="text-sm text-text-secondary mb-1.5 block">Тема</label>
+                  <input
+                    type="text"
+                    value={ticketSubject}
+                    onChange={(e) => setTicketSubject(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-sm text-text-secondary mb-2 block">Описание</label>
+                  <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-4 text-sm">
+
+                    <div>
+                      <span className="text-text-secondary text-xs">Товар</span>
+                      <p className="text-white font-medium mt-0.5">{account.title}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-text-secondary text-xs">Цена</span>
+                      <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-purple-900/20">
+                      <span className="text-text-secondary text-xs">Вопрос</span>
+                      <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
+                    </div>
+
+                    <div>
+                      <span className="text-text-secondary text-xs">Ответ на вопрос</span>
+                      <textarea
+                        value={disputeAnswer}
+                        onChange={(e) => setDisputeAnswer(e.target.value)}
+                        placeholder="Ваш ответ..."
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-text-secondary text-xs">Опишите проблему</span>
+                      <textarea
+                        value={problemDescription}
+                        onChange={(e) => setProblemDescription(e.target.value)}
+                        placeholder="Опишите ситуацию подробно..."
+                        rows={4}
+                        className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                      />
+                    </div>
+
+                    <div className="pt-3 border-t border-purple-900/20">
+                      <div className="flex gap-3 mb-2">
+                        <label className="flex-1 cursor-pointer">
+                          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                            <Image size={16} /> Фото ({attachedFiles.length}/4)
+                          </div>
+                          <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
+                        </label>
+
+                        <label className="flex-1 cursor-pointer">
+                          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
+                            <Paperclip size={16} /> Файлы
+                          </div>
+                          <input type="file" multiple onChange={handleFileSelect} className="hidden" />
+                        </label>
+                      </div>
+
+                      <p className="text-[10px] text-text-secondary text-center mb-2">Максимальный размер 25мб</p>
+
+                      {attachedFiles.length > 0 && (
+                        <div className="space-y-1">
+                          {attachedFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between bg-[#171425] px-3 py-1.5 rounded-lg text-xs">
+                              <span className="truncate">{file.name}</span>
+                              <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">×</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+
+                <button
+                  onClick={createTicket}
+                  disabled={creatingTicket || !ticketSubject.trim()}
+                  className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold disabled:opacity-50"
+                >
+                  {creatingTicket ? 'Создаём...' : 'Создать тикет'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
