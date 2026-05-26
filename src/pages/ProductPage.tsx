@@ -4,7 +4,7 @@ import {
   ArrowLeft, ShoppingCart, Zap, Heart, Shield, Star,
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
-  CheckCircle2 as CC2, AlertCircle, Send, Trash2, RefreshCw, AlertOctagon
+  CheckCircle2 as CC2, AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -50,9 +50,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const { convert, symbol, currency } = useCurrency();
   const [chatMsg, setChatMsg] = useState('');
   const [checkingChanges, setCheckingChanges] = useState(false);
-  const [showDispute, setShowDispute] = useState(false);
-  const [disputeText, setDisputeText] = useState('');
-  const [disputeSending, setDisputeSending] = useState(false);
+
+  // === Новое: состояние модального окна создания тикета ===
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketCategory, setTicketCategory] = useState('Проблемы с аккаунтом');
+  const [ticketSubject, setTicketSubject] = useState('');
+  const [ticketDescription, setTicketDescription] = useState('');
+  const [creatingTicket, setCreatingTicket] = useState(false);
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
@@ -190,28 +194,54 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     }, 700);
   };
 
-  // === Открыть спор ===
-  const openDispute = async () => {
-    if (!me || !disputeText.trim()) return;
-    
-    setDisputeSending(true);
+  // === Открыть окно создания тикета (спор) ===
+  const openDisputeModal = () => {
+    if (!me) {
+      alert('Войдите в систему');
+      return;
+    }
+
+    setTicketCategory('Проблемы с аккаунтом');
+    setTicketSubject(`Спор по аккаунту: ${account.title}`);
+    setTicketDescription(
+`Товар: ${account.title}
+Цена: ${account.price} ₽
+Ссылка: ${window.location.href}
+
+Вопрос: Вели ли вы общение ещё где-то кроме нашего сайта?
+
+Дополнительная информация:`
+    );
+    setShowTicketModal(true);
+  };
+
+  // === Создание тикета ===
+  const createTicket = async () => {
+    if (!me || !ticketSubject.trim() || !ticketDescription.trim()) return;
+
+    setCreatingTicket(true);
+
     try {
-      await supabase.from('tickets').insert({
+      const { error } = await supabase.from('tickets').insert({
         user_id: me.id,
-        category: 'Спор',
-        subject: `Спор об аккаунте: ${account.title}`,
-        description: `Товар: ${account.title}\nСсылка: ${window.location.href}\nЦена: ${account.price} ₽\n\nВопрос: Вели ли вы общение ещё где-то кроме нашего сайта?\n\n${disputeText}`,
+        category: ticketCategory,
+        subject: ticketSubject,
+        description: ticketDescription,
         target_type: 'account',
         target_id: account.id,
         status: 'open',
       });
-      alert('✅ Спор открыт! Тикет создан.');
-      setShowDispute(false);
-      setDisputeText('');
+
+      if (error) throw error;
+
+      setShowTicketModal(false);
+      alert('✅ Тикет успешно создан!');
+      setCurrentPage('support'); // Переход на страницу всех тикетов
+
     } catch (e: any) {
-      alert('Ошибка при создании спора: ' + e.message);
+      alert('Ошибка при создании тикета: ' + e.message);
     } finally {
-      setDisputeSending(false);
+      setCreatingTicket(false);
     }
   };
 
@@ -304,52 +334,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
               ))}
             </div>
           </motion.div>
-
-          {/* Кнопка "Открыть спор" */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => setShowDispute(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-xl text-sm font-semibold border border-red-700/30"
-            >
-              <AlertOctagon size={16} /> Открыть спор
-            </button>
-          </div>
-
-          {/* Модалка спора */}
-          {showDispute && (
-            <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-              <div className="bg-[#171425] border border-purple-900/30 rounded-2xl p-6 w-full max-w-md">
-                <h3 className="text-lg font-bold text-white mb-4">Открыть спор по аккаунту</h3>
-                
-                <div className="text-sm text-text-secondary mb-4 space-y-1">
-                  <p><b>Товар:</b> {account.title}</p>
-                  <p><b>Цена:</b> {account.price} ₽</p>
-                  <p><b>Вопрос:</b> Вели ли вы общение ещё где-то кроме нашего сайта?</p>
-                </div>
-
-                <textarea
-                  value={disputeText}
-                  onChange={(e) => setDisputeText(e.target.value)}
-                  placeholder="Опишите ситуацию подробно..."
-                  rows={5}
-                  className="w-full px-3 py-2 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none mb-4"
-                />
-
-                <div className="flex gap-3">
-                  <button onClick={() => setShowDispute(false)} className="flex-1 py-2.5 bg-purple-900/20 text-white rounded-xl text-sm">
-                    Отмена
-                  </button>
-                  <button 
-                    onClick={openDispute} 
-                    disabled={!disputeText.trim() || disputeSending}
-                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
-                  >
-                    {disputeSending ? 'Отправка...' : 'Открыть спор'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ПРАВАЯ КОЛОНКА */}
@@ -385,6 +369,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                 <ShoppingCart size={18} /> В корзину
               </motion.button>
 
+              {/* Кнопка "Открыть спор" — открывает обычное окно тикета */}
+              <button
+                onClick={openDisputeModal}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-red-600 hover:bg-red-500 text-white"
+              >
+                <AlertOctagon size={18} /> Открыть спор
+              </button>
+
               {/* Кнопка проверки изменений (только для админов) */}
               {isAdmin && (
                 <button
@@ -416,6 +408,65 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
           </motion.div>
         </div>
       </div>
+
+      {/* ==================== МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ТИКЕТА ==================== */}
+      {showTicketModal && (
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-white">Новый тикет</h3>
+              <button onClick={() => setShowTicketModal(false)} className="text-text-secondary hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Категория */}
+            <div className="mb-4">
+              <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
+              <select
+                value={ticketCategory}
+                onChange={(e) => setTicketCategory(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
+              >
+                <option value="Проблемы с аккаунтом">Проблемы с аккаунтом</option>
+                <option value="Оспорить покупку">Оспорить покупку</option>
+                <option value="Техническая проблема">Техническая проблема</option>
+                <option value="Другое">Другое</option>
+              </select>
+            </div>
+
+            {/* Тема */}
+            <div className="mb-4">
+              <label className="text-sm text-text-secondary mb-1.5 block">Тема</label>
+              <input
+                type="text"
+                value={ticketSubject}
+                onChange={(e) => setTicketSubject(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
+              />
+            </div>
+
+            {/* Описание */}
+            <div className="mb-6">
+              <label className="text-sm text-text-secondary mb-1.5 block">Описание</label>
+              <textarea
+                value={ticketDescription}
+                onChange={(e) => setTicketDescription(e.target.value)}
+                rows={8}
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none"
+              />
+            </div>
+
+            <button
+              onClick={createTicket}
+              disabled={creatingTicket || !ticketSubject.trim() || !ticketDescription.trim()}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold disabled:opacity-50"
+            >
+              {creatingTicket ? 'Создаём...' : 'Создать тикет'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
