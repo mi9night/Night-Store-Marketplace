@@ -51,13 +51,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [chatMsg, setChatMsg] = useState('');
   const [checkingChanges, setCheckingChanges] = useState(false);
 
-  // === Состояние модального окна создания тикета ===
+  // Модалка создания тикета
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketCategory, setTicketCategory] = useState('Проблемы с аккаунтом');
   const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketDescription, setTicketDescription] = useState('');
+  const [disputeAnswer, setDisputeAnswer] = useState('');
   const [creatingTicket, setCreatingTicket] = useState(false);
-  const [disputeAnswer, setDisputeAnswer] = useState(''); // Ответ на вопрос
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
 
@@ -186,7 +185,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     alert('✅ Сообщение отправлено!');
   };
 
-  // === Проверка изменений (только для админов) ===
   const checkAccountChanges = async () => {
     setCheckingChanges(true);
     setTimeout(() => {
@@ -195,20 +193,19 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     }, 700);
   };
 
-  // === Открыть окно создания тикета (спор) ===
+  // Открыть модалку спора
   const openDisputeModal = () => {
     if (!me) {
       alert('Войдите в систему');
       return;
     }
-
     setTicketCategory('Проблемы с аккаунтом');
     setTicketSubject(`Спор по аккаунту: ${account.title}`);
     setDisputeAnswer('');
     setShowTicketModal(true);
   };
 
-  // === Создание тикета ===
+  // Создать тикет
   const createTicket = async () => {
     if (!me || !ticketSubject.trim()) return;
 
@@ -217,12 +214,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     const fullDescription = 
 `Товар: ${account.title}
 Цена: ${account.price} ₽
-Ссылка: ${window.location.href}
 
 Вопрос: Вели ли вы общение ещё где-то кроме нашего сайта?
 Ответ: ${disputeAnswer || '—'}
 
-Дополнительная информация:`;
+Опишите ситуацию:
+${disputeAnswer || ''}`;
 
     try {
       const { error } = await supabase.from('tickets').insert({
@@ -318,7 +315,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
             </div>
           </motion.div>
 
-          {/* Информация об аккаунте */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
             <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
@@ -372,7 +368,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                 <ShoppingCart size={18} /> В корзину
               </motion.button>
 
-              {/* Кнопка "Открыть спор" — мягкий красный с свечением */}
               <button
                 onClick={openDisputeModal}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold 
@@ -382,7 +377,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                 <AlertOctagon size={18} /> Открыть спор
               </button>
 
-              {/* Кнопка проверки изменений (только для админов) */}
               {isAdmin && (
                 <button
                   onClick={checkAccountChanges}
@@ -414,7 +408,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
         </div>
       </div>
 
-      {/* ==================== МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ТИКЕТА ==================== */}
+      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА ==================== */}
       {showTicketModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-md p-6">
@@ -425,18 +419,15 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
               </button>
             </div>
 
-            {/* Категория */}
+            {/* Категория (залочена) */}
             <div className="mb-4">
               <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
               <select
                 value={ticketCategory}
-                onChange={(e) => setTicketCategory(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
+                disabled
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm opacity-75 cursor-not-allowed"
               >
                 <option value="Проблемы с аккаунтом">Проблемы с аккаунтом</option>
-                <option value="Оспорить покупку">Оспорить покупку</option>
-                <option value="Техническая проблема">Техническая проблема</option>
-                <option value="Другое">Другое</option>
               </select>
             </div>
 
@@ -451,12 +442,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
               />
             </div>
 
-            {/* Описание тикета (красивое оформление) */}
+            {/* Описание */}
             <div className="mb-4">
               <label className="text-sm text-text-secondary mb-2 block">Описание</label>
-              
-              <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-3 text-sm">
-                {/* Название товара */}
+              <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-4 text-sm">
+
+                {/* Товар */}
                 <div>
                   <span className="text-text-secondary text-xs">Товар</span>
                   <p className="text-white font-medium mt-0.5">{account.title}</p>
@@ -468,25 +459,24 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
                   <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
                 </div>
 
-                {/* Ссылка */}
-                <div>
-                  <span className="text-text-secondary text-xs">Ссылка</span>
-                  <p className="text-purple-400 text-xs mt-0.5 break-all">{window.location.href}</p>
-                </div>
-
-                {/* Вопрос + поле для ответа */}
+                {/* Вопрос (узкий по высоте) */}
                 <div className="pt-2 border-t border-purple-900/20">
                   <span className="text-text-secondary text-xs">Вопрос</span>
-                  <p className="text-white mt-1">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
-                  
+                  <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
+                </div>
+
+                {/* Большая строка "Опишите ситуацию" */}
+                <div className="pt-3 border-t border-purple-900/20">
                   <textarea
                     value={disputeAnswer}
                     onChange={(e) => setDisputeAnswer(e.target.value)}
-                    placeholder="Ваш ответ..."
-                    rows={3}
-                    className="mt-2 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                    placeholder="Опишите ситуацию..."
+                    rows={6}
+                    className="w-full px-3 py-3 rounded-xl bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
                   />
+                  <p className="text-[10px] text-text-secondary mt-1.5">Можно прикрепить фотографии и файлы</p>
                 </div>
+
               </div>
             </div>
 
