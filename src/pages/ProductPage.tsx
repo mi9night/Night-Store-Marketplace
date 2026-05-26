@@ -211,20 +211,20 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setShowTicketModal(true);
   };
 
-  // Выбор файлов
+  // Выбор файлов с проверкой размера
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
 
     for (const file of files) {
       if (file.size > MAX_FILE_SIZE) {
-        alert(`Файл "${file.name}" превышает 25 МБ`);
+        alert(`Файл "${file.name}" превышает максимальный размер 25 МБ`);
         continue;
       }
       validFiles.push(file);
     }
 
-    setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 4)); // максимум 4 файла
+    setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 4));
   };
 
   // Удалить файл
@@ -259,7 +259,11 @@ ${problemDescription || '—'}`;
         status: 'open',
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Ошибка создания тикета:', error);
+        alert('Ошибка при создании тикета. Проверьте название колонки user_id в таблице tickets.');
+        return;
+      }
 
       setShowTicketModal(false);
       alert('✅ Тикет успешно создан!');
@@ -435,7 +439,7 @@ ${problemDescription || '—'}`;
         </div>
       </div>
 
-      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА (ШИРЕ) ==================== */}
+      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА ==================== */}
       {showTicketModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-lg p-6">
