@@ -197,7 +197,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     }, 700);
   };
 
-  // Открыть модалку спора (только для купленных аккаунтов)
+  // Открыть модалку спора
   const openDisputeModal = () => {
     if (!me || !myOrder) {
       alert('Открыть спор можно только на купленных аккаунтах');
@@ -231,7 +231,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Создать тикет
+  // Создать тикет (используем reporter_id)
   const createTicket = async () => {
     if (!me || !myOrder || !ticketSubject.trim()) return;
 
@@ -249,7 +249,7 @@ ${problemDescription || '—'}`;
 
     try {
       const { error } = await supabase.from('tickets').insert({
-        user_id: me.id,
+        reporter_id: me.id,           // ← используем reporter_id
         category: ticketCategory,
         subject: ticketSubject,
         description: fullDescription,
@@ -260,7 +260,7 @@ ${problemDescription || '—'}`;
 
       if (error) {
         console.error('Ошибка создания тикета:', error);
-        alert('Не удалось создать тикет. Проверьте структуру таблицы tickets (нужна колонка user_id).');
+        alert('Не удалось создать тикет. Проверьте структуру таблицы tickets.');
         return;
       }
 
