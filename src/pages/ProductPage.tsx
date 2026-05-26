@@ -197,10 +197,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     }, 700);
   };
 
-  // Открыть модалку спора
+  // Открыть модалку спора (только для купленных аккаунтов)
   const openDisputeModal = () => {
-    if (!me) {
-      alert('Войдите в систему');
+    if (!me || !myOrder) {
+      alert('Открыть спор можно только на купленных аккаунтах');
       return;
     }
     setTicketCategory('Проблемы с аккаунтом');
@@ -211,7 +211,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setShowTicketModal(true);
   };
 
-  // Выбор файлов с проверкой размера
+  // Выбор файлов
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
@@ -227,14 +227,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 4));
   };
 
-  // Удалить файл
   const removeFile = (index: number) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Создать тикет
   const createTicket = async () => {
-    if (!me || !ticketSubject.trim()) return;
+    if (!me || !myOrder || !ticketSubject.trim()) return;
 
     setCreatingTicket(true);
 
@@ -261,7 +260,7 @@ ${problemDescription || '—'}`;
 
       if (error) {
         console.error('Ошибка создания тикета:', error);
-        alert('Ошибка при создании тикета. Проверьте название колонки user_id в таблице tickets.');
+        alert('Не удалось создать тикет. Проверьте структуру таблицы tickets (нужна колонка user_id).');
         return;
       }
 
@@ -399,14 +398,17 @@ ${problemDescription || '—'}`;
                 <ShoppingCart size={18} /> В корзину
               </motion.button>
 
-              <button
-                onClick={openDisputeModal}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold 
-                           bg-red-900/20 border border-red-700/40 text-red-400 hover:bg-red-900/30 
-                           hover:border-red-600/60 transition-all shadow-[0_0_8px_rgba(239,68,68,0.15)]"
-              >
-                <AlertOctagon size={18} /> Открыть спор
-              </button>
+              {/* Кнопка "Открыть спор" — только для купленных аккаунтов */}
+              {myOrder && (
+                <button
+                  onClick={openDisputeModal}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold 
+                             bg-red-900/20 border border-red-700/40 text-red-400 hover:bg-red-900/30 
+                             hover:border-red-600/60 transition-all shadow-[0_0_8px_rgba(239,68,68,0.15)]"
+                >
+                  <AlertOctagon size={18} /> Открыть спор
+                </button>
+              )}
 
               {isAdmin && (
                 <button
@@ -450,7 +452,6 @@ ${problemDescription || '—'}`;
               </button>
             </div>
 
-            {/* Категория (залочена) */}
             <div className="mb-4">
               <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
               <select
@@ -462,7 +463,6 @@ ${problemDescription || '—'}`;
               </select>
             </div>
 
-            {/* Тема */}
             <div className="mb-4">
               <label className="text-sm text-text-secondary mb-1.5 block">Тема</label>
               <input
@@ -473,30 +473,25 @@ ${problemDescription || '—'}`;
               />
             </div>
 
-            {/* Описание */}
             <div className="mb-4">
               <label className="text-sm text-text-secondary mb-2 block">Описание</label>
               <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-4 text-sm">
 
-                {/* Товар */}
                 <div>
                   <span className="text-text-secondary text-xs">Товар</span>
                   <p className="text-white font-medium mt-0.5">{account.title}</p>
                 </div>
 
-                {/* Цена */}
                 <div>
                   <span className="text-text-secondary text-xs">Цена</span>
                   <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
                 </div>
 
-                {/* Вопрос */}
                 <div className="pt-2 border-t border-purple-900/20">
                   <span className="text-text-secondary text-xs">Вопрос</span>
                   <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
                 </div>
 
-                {/* Ответ на вопрос */}
                 <div>
                   <span className="text-text-secondary text-xs">Ответ на вопрос</span>
                   <textarea
@@ -508,7 +503,6 @@ ${problemDescription || '—'}`;
                   />
                 </div>
 
-                {/* Опишите проблему */}
                 <div>
                   <span className="text-text-secondary text-xs">Опишите проблему</span>
                   <textarea
@@ -520,38 +514,25 @@ ${problemDescription || '—'}`;
                   />
                 </div>
 
-                {/* Загрузка файлов */}
                 <div className="pt-3 border-t border-purple-900/20">
                   <div className="flex gap-3 mb-2">
                     <label className="flex-1 cursor-pointer">
                       <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
                         <Image size={16} /> Фото ({attachedFiles.length}/4)
                       </div>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
+                      <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
                     </label>
 
                     <label className="flex-1 cursor-pointer">
                       <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
                         <Paperclip size={16} /> Файлы
                       </div>
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
+                      <input type="file" multiple onChange={handleFileSelect} className="hidden" />
                     </label>
                   </div>
 
                   <p className="text-[10px] text-text-secondary text-center mb-2">Максимальный размер 25мб</p>
 
-                  {/* Список прикреплённых файлов */}
                   {attachedFiles.length > 0 && (
                     <div className="space-y-1">
                       {attachedFiles.map((file, index) => (
