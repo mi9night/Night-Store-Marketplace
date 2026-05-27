@@ -274,5 +274,3 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
     </div>
   );
 };
-
-export default PurchasesPage;
