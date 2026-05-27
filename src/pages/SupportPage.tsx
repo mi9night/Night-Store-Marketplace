@@ -393,20 +393,6 @@ const CreateTicketModal: React.FC<{
         status:       'open',
       });
 
-      console.log('Insert result:', { data, error });
-
-    if (error) {
-      alert(`Ошибка: ${error.message}`);
-      return;
-    }
-
-    onCreated();
-    onClose();
-  } finally {
-    setSubmitting(false);
-  }
-};
-
       onCreated();
       onClose();
     } finally {
