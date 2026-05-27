@@ -387,14 +387,12 @@ const CreateTicketModal: React.FC<{
   .insert({
     reporter_id: userId,
     category: selected.name,
-    category_id: selected.id,
     subject: `${selected.icon} ${subjectField}`,
     description: descLines,
-    fields_data: JSON.stringify(fieldValues),
-    attachments: uploadedUrls.length > 0
-      ? JSON.stringify(uploadedUrls)
-      : null,
     status: 'open',
+    target_type: null,
+    target_id: null,
+    accused_id: null
   })
   .select();
 
