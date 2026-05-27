@@ -29,6 +29,7 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState<number>(Date.now());
   const [revealedData, setRevealedData] = useState<Record<string, boolean>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -52,6 +53,18 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
         }
         const withAccounts = (data || []).map(o => ({ ...o, account: accMap[o.account_id] }));
         setOrders(withAccounts);
+
+        // Check if we should highlight a specific purchase
+        const hlId = localStorage.getItem('highlight_purchase_account');
+        if (hlId) {
+          localStorage.removeItem('highlight_purchase_account');
+          setHighlightId(hlId);
+          const matchOrder = withAccounts.find((o: any) => o.account_id === hlId);
+          if (matchOrder) {
+            setRevealedData(prev => ({ ...prev, [matchOrder.id]: true }));
+          }
+          setTimeout(() => setHighlightId(null), 5000);
+        }
       } catch (e) {
         setOrders([]);
       } finally {
@@ -125,7 +138,26 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
             return (
               <motion.div key={o.id}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                className="bg-bg-card border border-purple-900/20 rounded-2xl p-4">
+                className={`bg-bg-card border rounded-2xl p-4 transition-all duration-700 ${
+                  highlightId && o.account_id === highlightId
+                    ? 'border-green-500/60 shadow-[0_0_30px_rgba(34,197,94,0.15)] ring-1 ring-green-500/30'
+                    : 'border-purple-900/20'
+                }`}>
+
+                {/* New purchase badge */}
+                <AnimatePresence>
+                  {highlightId && o.account_id === highlightId && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mb-3 flex items-center gap-2 px-3 py-2 bg-green-900/20 border border-green-700/30 rounded-xl"
+                    >
+                      <CheckCircle2 size={14} className="text-green-400" />
+                      <span className="text-xs font-semibold text-green-400">🎉 Новая покупка!</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Шапка */}
                 <div className="flex items-start gap-4 mb-3">

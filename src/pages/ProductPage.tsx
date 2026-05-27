@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, ShoppingCart, Zap, Heart, Shield, Star,
+  ArrowLeft, ShoppingCart, ShoppingBag, Zap, Heart, Shield, Star,
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
   AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X,
-  Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight
+  Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight,
+  ThumbsUp, ThumbsDown, Award
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -271,6 +272,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [ticketCreated, setTicketCreated] = useState(false);
   const [modalShake, setModalShake] = useState(false);
 
+  // Purchase success modal
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+
   // Image viewer
   const [viewerImages, setViewerImages] = useState<{ url: string; name: string }[] | null>(null);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -354,8 +358,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
       const { data, error } = await supabase.rpc('purchase_account', { p_account_id: account.id });
       if (error) throw error;
       if (data?.ok) {
-        setBuyResult({ type: 'ok', text: '✅ Куплено! Аккаунт в "Мои покупки"' });
-        setTimeout(() => setCurrentPage('purchases'), 1800);
+        setShowPurchaseModal(true);
+        setMyOrder({ id: data.order_id || 'new', account_id: account.id });
       } else {
         const errMap: Record<string, string> = {
           insufficient_balance: 'Недостаточно средств на балансе',
@@ -686,6 +690,399 @@ ${problemDescription || '—'}${filesInfo}`;
           </motion.div>
         </div>
       </div>
+
+
+      {/* ═══════════════════ SELLER & REVIEWS ═══════════════════ */}
+      {seller && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-6 bg-[#171425] border border-purple-900/20 rounded-2xl overflow-hidden"
+        >
+          {/* Seller info */}
+          <div className="p-5 border-b border-purple-900/20">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {seller.avatar_url ? (
+                  <img src={seller.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-lg font-bold text-white">
+                    {(seller.username?.[0] || 'P').toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <UserLink userId={seller.id} username={seller.username || seller.email?.split('@')[0]} className="text-base font-semibold text-white" />
+                  {seller.verified && <CheckCircle2 size={14} className="text-blue-400" />}
+                  {seller.role && <RoleBadge role={seller.role} />}
+                  {seller.level && <LevelBadge level={seller.level} />}
+                </div>
+                <div className="flex items-center gap-4 mt-1 text-xs text-text-secondary">
+                  <span className="flex items-center gap-1"><Star size={11} className="text-yellow-400" /> {sellerStats.rating.toFixed(1)}</span>
+                  <span className="flex items-center gap-1"><Package size={11} /> {sellerStats.sales} продаж</span>
+                  <span className="flex items-center gap-1"><ThumbsUp size={11} className="text-green-400" /> {sellerStats.positive}%</span>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <motion.button
+                  onClick={() => setShowChat(true)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2.5 bg-purple-900/30 border border-purple-700/30 rounded-xl text-purple-300 hover:bg-purple-900/50 transition-all"
+                >
+                  <MessageSquare size={16} />
+                </motion.button>
+                <ReportButton targetType="user" targetId={seller.id} targetName={seller.username || 'Продавец'} />
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-purple-900/20">
+            {([
+              { id: 'reviews', label: `Отзывы (${sellerStats.reviewsCount})` },
+              { id: 'stats', label: 'Статистика' },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 py-3 text-sm font-medium transition-all relative ${
+                  activeTab === tab.id ? 'text-white' : 'text-text-secondary hover:text-white'
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="product-tab-indicator"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"
+                    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <AnimatePresence mode="wait">
+            {activeTab === 'reviews' && (
+              <motion.div
+                key="reviews"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="p-5"
+              >
+                {/* Write review button */}
+                {myOrder && !myReview && (
+                  <motion.button
+                    onClick={() => setShowReview(!showReview)}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full mb-4 py-3 bg-purple-900/20 border border-purple-700/30 rounded-xl text-sm font-semibold text-purple-300 hover:bg-purple-900/30 hover:border-purple-500/50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Star size={15} /> Написать отзыв
+                  </motion.button>
+                )}
+
+                {/* Review form */}
+                <AnimatePresence>
+                  {showReview && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mb-5 overflow-hidden"
+                    >
+                      <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-text-secondary uppercase tracking-wider">Оценка:</span>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <button key={s} onClick={() => setRevRating(s)}>
+                                <Star size={20} className={`transition-colors ${s <= revRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setRevPositive(true)}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                              revPositive
+                                ? 'bg-green-900/30 border border-green-600/50 text-green-400'
+                                : 'bg-[#171425] border border-purple-900/20 text-text-secondary hover:text-white'
+                            }`}
+                          >
+                            <ThumbsUp size={14} /> Положительный
+                          </button>
+                          <button
+                            onClick={() => setRevPositive(false)}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                              !revPositive
+                                ? 'bg-red-900/30 border border-red-600/50 text-red-400'
+                                : 'bg-[#171425] border border-purple-900/20 text-text-secondary hover:text-white'
+                            }`}
+                          >
+                            <ThumbsDown size={14} /> Негативный
+                          </button>
+                        </div>
+
+                        <textarea
+                          value={revText}
+                          onChange={e => setRevText(e.target.value)}
+                          placeholder="Опишите ваш опыт..."
+                          rows={3}
+                          className="w-full px-3 py-2.5 rounded-xl bg-[#171425] border border-purple-900/30 text-white text-sm resize-none focus:border-purple-500/60 focus:outline-none transition-all"
+                        />
+
+                        {revMsg && (
+                          <p className={`text-xs ${revMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{revMsg}</p>
+                        )}
+
+                        <motion.button
+                          onClick={async () => {
+                            if (!me || !seller || !revText.trim()) return;
+                            setRevSending(true);
+                            setRevMsg(null);
+                            const { error } = await supabase.from('reviews').insert({
+                              user_id: me.id,
+                              target_user_id: seller.id,
+                              account_id: account.id,
+                              rating: revRating,
+                              positive: revPositive,
+                              comment: revText,
+                            });
+                            if (error) {
+                              setRevMsg('❌ Ошибка: ' + error.message);
+                            } else {
+                              setRevMsg('✅ Отзыв опубликован!');
+                              setMyReview(true);
+                              setShowReview(false);
+                              // Reload reviews
+                              const { data: r } = await supabase.from('reviews')
+                                .select('*')
+                                .eq('target_user_id', seller.id)
+                                .order('created_at', { ascending: false });
+                              if (r) {
+                                const authorIds = [...new Set(r.map((rv: any) => rv.user_id).filter(Boolean))];
+                                if (authorIds.length > 0) {
+                                  const { data: authors } = await supabase.from('users')
+                                    .select('id, username, avatar_url, custom_id').in('id', authorIds);
+                                  const aMap: Record<string, any> = {};
+                                  authors?.forEach((a: any) => { aMap[a.id] = a; });
+                                  r.forEach((rv: any) => { if (aMap[rv.user_id]) rv.author = aMap[rv.user_id]; });
+                                }
+                                setReviews(r);
+                              }
+                            }
+                            setRevSending(false);
+                          }}
+                          disabled={revSending || !revText.trim()}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                        >
+                          {revSending ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                          ) : (
+                            <><Send size={14} /> Опубликовать</>
+                          )}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Reviews list */}
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star size={32} className="mx-auto text-purple-700/40 mb-3" />
+                    <p className="text-sm text-text-secondary">Отзывов пока нет</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {reviews.slice(0, 10).map((rev: any, i: number) => (
+                      <motion.div
+                        key={rev.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        className={`rounded-xl p-4 border transition-all ${
+                          rev.positive
+                            ? 'bg-green-900/10 border-green-700/30'
+                            : 'bg-red-900/10 border-red-700/30'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-purple-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {rev.author?.avatar_url ? (
+                              <img src={rev.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-bold text-purple-300">
+                                {(rev.author?.username?.[0] || 'U').toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <UserLink
+                                userId={rev.user_id}
+                                username={rev.author?.username || rev.author?.custom_id}
+                                className="text-sm font-semibold text-white"
+                              />
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
+                                rev.positive
+                                  ? 'bg-green-900/30 text-green-400 border border-green-700/40'
+                                  : 'bg-red-900/30 text-red-400 border border-red-700/40'
+                              }`}>
+                                {rev.positive ? <><ThumbsUp size={9} /> Положительный</> : <><ThumbsDown size={9} /> Негативный</>}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} size={10} className={s <= (rev.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-700'} />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-sm text-text-secondary leading-relaxed">{rev.comment}</p>
+                            <p className="text-[10px] text-text-secondary mt-1.5">
+                              {new Date(rev.created_at).toLocaleDateString('ru-RU')}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'stats' && (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="p-5"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Рейтинг', value: sellerStats.rating.toFixed(1), icon: Star, color: 'text-yellow-400' },
+                    { label: 'Продаж', value: sellerStats.sales.toString(), icon: Package, color: 'text-purple-400' },
+                    { label: 'Позитивных', value: `${sellerStats.positive}%`, icon: ThumbsUp, color: 'text-green-400' },
+                    { label: 'Отзывов', value: sellerStats.reviewsCount.toString(), icon: MessageSquare, color: 'text-blue-400' },
+                  ].map(stat => (
+                    <div key={stat.label} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 text-center">
+                      <stat.icon size={20} className={`mx-auto mb-2 ${stat.color}`} />
+                      <p className="text-xl font-bold text-white">{stat.value}</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-1">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* ═══════════════════ PURCHASE SUCCESS MODAL ═══════════════════ */}
+      <AnimatePresence>
+        {showPurchaseModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+            onClick={() => {}}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 18, stiffness: 250 }}
+              className="bg-[#171425] border border-purple-900/30 rounded-2xl p-8 w-full max-w-md text-center shadow-[0_0_80px_rgba(139,92,246,0.2)]"
+              onClick={e => e.stopPropagation()}
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.15 }}
+                className="w-20 h-20 rounded-full bg-green-900/30 border-2 border-green-600/50 flex items-center justify-center mx-auto mb-5"
+              >
+                <Award size={40} className="text-green-400" />
+              </motion.div>
+
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-2xl font-bold text-white mb-2"
+              >
+                🎉 Поздравляем с покупкой!
+              </motion.h2>
+
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-sm text-text-secondary mb-2"
+              >
+                Вы успешно приобрели
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 mb-5"
+              >
+                <p className="text-sm font-semibold text-white truncate">{account.title}</p>
+                <p className="text-xs text-purple-300 mt-0.5">{convert(account.price).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} {symbol}</p>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.55 }}
+                className="text-xs text-text-secondary mb-5"
+              >
+                Перенаправляем в «Мои покупки»...
+              </motion.p>
+
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 2.5, delay: 0.6, ease: 'linear' }}
+                className="h-1 bg-purple-600 rounded-full mx-auto max-w-xs mb-5"
+                onAnimationComplete={() => {
+                  localStorage.setItem('highlight_purchase_account', account.id);
+                  setShowPurchaseModal(false);
+                  setCurrentPage('purchases');
+                }}
+              />
+
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                onClick={() => {
+                  localStorage.setItem('highlight_purchase_account', account.id);
+                  setShowPurchaseModal(false);
+                  setCurrentPage('purchases');
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+              >
+                <ShoppingBag size={16} /> Перейти в мои покупки
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════ DISPUTE MODAL ═══════════════════ */}
       <AnimatePresence>
