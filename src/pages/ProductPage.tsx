@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ShoppingCart, Zap, Heart, Shield, Star,
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
-  CheckCircle2 as CC2, AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X, Image, Paperclip
+  AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X,
+  Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -23,14 +24,219 @@ interface ProductPageProps {
 }
 
 const riskConfig = {
-  low:    { label: 'Низкий риск',  className: 'bg-green-900/20 border-green-700/40 text-green-400',  Icon: CheckCircle2,    desc: 'Аккаунт прошёл AI проверку. Минимальный риск блокировки.' },
-  medium: { label: 'Средний риск', className: 'bg-yellow-900/20 border-yellow-700/40 text-yellow-400', Icon: AlertTriangle,  desc: 'Есть некоторые факторы риска. Рекомендуем использовать осторожно.' },
-  high:   { label: 'Высокий риск', className: 'bg-red-900/20 border-red-700/40 text-red-400',          Icon: XCircle,        desc: 'Аккаунт имеет признаки возможной блокировки. Покупайте с осторожностью.' },
+  low:    { label: 'Низкий риск',  className: 'bg-green-900/20 border-green-700/40 text-green-400',   Icon: CheckCircle2,  desc: 'Аккаунт прошёл AI проверку. Минимальный риск блокировки.' },
+  medium: { label: 'Средний риск', className: 'bg-yellow-900/20 border-yellow-700/40 text-yellow-400', Icon: AlertTriangle, desc: 'Есть некоторые факторы риска. Рекомендуем использовать осторожно.' },
+  high:   { label: 'Высокий риск', className: 'bg-red-900/20 border-red-700/40 text-red-400',          Icon: XCircle,       desc: 'Аккаунт имеет признаки возможной блокировки. Покупайте с осторожностью.' },
 };
 
-const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25 МБ всего
+const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 const MAX_FILES = 4;
 
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} МБ`;
+};
+
+// ─── Fullscreen Image Viewer ───────────────────────────────────────────────
+const ImageViewer: React.FC<{
+  images: { url: string; name: string }[];
+  startIndex: number;
+  onClose: () => void;
+}> = ({ images, startIndex, onClose }) => {
+  const [idx, setIdx] = useState(startIndex);
+
+  const prev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIdx(i => (i - 1 + images.length) % images.length);
+  };
+  const next = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIdx(i => (i + 1) % images.length);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') setIdx(i => (i - 1 + images.length) % images.length);
+      if (e.key === 'ArrowRight') setIdx(i => (i + 1) % images.length);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [images.length, onClose]);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/95 z-[300] flex flex-col items-center justify-center"
+        onClick={onClose}
+      >
+        {/* Close */}
+        <motion.button
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-10"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </motion.button>
+
+        {/* Counter */}
+        {images.length > 1 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-white/60 bg-black/50 px-3 py-1 rounded-full">
+            {idx + 1} / {images.length}
+          </div>
+        )}
+
+        {/* Image */}
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.92 }}
+          transition={{ duration: 0.2 }}
+          className="relative max-w-[90vw] max-h-[80vh]"
+          onClick={e => e.stopPropagation()}
+        >
+          <img
+            src={images[idx].url}
+            alt={images[idx].name}
+            className="max-w-[90vw] max-h-[80vh] object-contain rounded-xl shadow-2xl"
+          />
+        </motion.div>
+
+        {/* Filename */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 text-xs text-white/50"
+        >
+          {images[idx].name}
+        </motion.p>
+
+        {/* Arrows */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={prev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={next}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </>
+        )}
+
+        {/* Thumbnails */}
+        {images.length > 1 && (
+          <div className="absolute bottom-4 flex gap-2" onClick={e => e.stopPropagation()}>
+            {images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                  i === idx ? 'border-purple-500' : 'border-white/20 opacity-50 hover:opacity-75'
+                }`}
+              >
+                <img src={img.url} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+// ─── File Attachment Component ─────────────────────────────────────────────
+const FileAttachRow: React.FC<{
+  files: File[];
+  onAdd: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (i: number) => void;
+  totalSize: number;
+}> = ({ files, onAdd, onRemove, totalSize }) => {
+  const pct = Math.round((totalSize / MAX_TOTAL_SIZE) * 100);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <label className="flex-1 cursor-pointer group">
+          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30 group-hover:border-purple-500/60 transition-all">
+            <Image size={15} />
+            <span>Фото ({files.filter(f => f.type.startsWith('image/')).length}/{MAX_FILES})</span>
+          </div>
+          <input type="file" multiple accept="image/*" onChange={onAdd} className="hidden" />
+        </label>
+        <label className="flex-1 cursor-pointer group">
+          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30 group-hover:border-purple-500/60 transition-all">
+            <Paperclip size={15} />
+            <span>Файлы ({files.length}/{MAX_FILES})</span>
+          </div>
+          <input type="file" multiple onChange={onAdd} className="hidden" />
+        </label>
+      </div>
+
+      {/* Size bar */}
+      <div>
+        <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+          <span>{formatBytes(totalSize)} / 25 МБ</span>
+          <span>{pct}%</span>
+        </div>
+        <div className="h-1 bg-purple-900/30 rounded-full overflow-hidden">
+          <motion.div
+            className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : pct > 60 ? 'bg-yellow-500' : 'bg-purple-500'}`}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      {/* File list */}
+      <AnimatePresence>
+        {files.map((f, i) => (
+          <motion.div
+            key={`${f.name}-${i}`}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-2 bg-[#0B0A12] border border-purple-900/20 px-3 py-2 rounded-lg"
+          >
+            {f.type.startsWith('image/') ? (
+              <img
+                src={URL.createObjectURL(f)}
+                alt={f.name}
+                className="w-8 h-8 rounded object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <Paperclip size={12} className="text-purple-400" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white truncate">{f.name}</p>
+              <p className="text-[10px] text-text-secondary">{formatBytes(f.size)}</p>
+            </div>
+            <button
+              onClick={() => onRemove(i)}
+              className="text-text-secondary hover:text-red-400 transition-colors flex-shrink-0"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ─── Main Component ────────────────────────────────────────────────────────
 const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAddToCart }) => {
   const [buying, setBuying] = useState(false);
   const [buyResult, setBuyResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -54,7 +260,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [chatMsg, setChatMsg] = useState('');
   const [checkingChanges, setCheckingChanges] = useState(false);
 
-  // Модалка создания тикета
+  // Dispute modal
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketCategory, setTicketCategory] = useState('Проблемы с аккаунтом');
   const [ticketSubject, setTicketSubject] = useState('');
@@ -63,8 +269,15 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [ticketCreated, setTicketCreated] = useState(false);
+  const [modalShake, setModalShake] = useState(false);
+
+  // Image viewer
+  const [viewerImages, setViewerImages] = useState<{ url: string; name: string }[] | null>(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const risk = riskConfig[account.riskLevel as keyof typeof riskConfig] || riskConfig.low;
+
+  const totalAttachSize = attachedFiles.reduce((s, f) => s + f.size, 0);
 
   useEffect(() => {
     const load = async () => {
@@ -112,9 +325,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
             .select('id, username, avatar_url, custom_id').in('id', authorIds);
           const aMap: Record<string, any> = {};
           authors?.forEach((a: any) => { aMap[a.id] = a; });
-          reviewsList.forEach((rv: any) => {
-            if (aMap[rv.user_id]) rv.author = aMap[rv.user_id];
-          });
+          reviewsList.forEach((rv: any) => { if (aMap[rv.user_id]) rv.author = aMap[rv.user_id]; });
         }
 
         let rating = Number(s?.rating) || 0;
@@ -130,12 +341,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
         const positivePct = reviewsList.length > 0 ? Math.round(positive / reviewsList.length * 100) : 0;
 
         setReviews(reviewsList);
-        setSellerStats({
-          sales: s?.sales || 0,
-          rating: rating,
-          positive: positivePct,
-          reviewsCount: count || reviewsList.length,
-        });
+        setSellerStats({ sales: s?.sales || 0, rating, positive: positivePct, reviewsCount: count || reviewsList.length });
       }
     };
     load();
@@ -148,7 +354,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
       const { data, error } = await supabase.rpc('purchase_account', { p_account_id: account.id });
       if (error) throw error;
       if (data?.ok) {
-        setBuyResult({ type: 'ok', text: '✅ Куплено! Аккаунт в \"Мои покупки\"' });
+        setBuyResult({ type: 'ok', text: '✅ Куплено! Аккаунт в "Мои покупки"' });
         setTimeout(() => setCurrentPage('purchases'), 1800);
       } else {
         const errMap: Record<string, string> = {
@@ -213,47 +419,44 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     setShowTicketModal(true);
   };
 
-  // Выбор файлов с общим ограничением 25 МБ
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
-    let currentTotalSize = attachedFiles.reduce((sum, f) => sum + f.size, 0);
+    let currentTotal = attachedFiles.reduce((s, f) => s + f.size, 0);
 
     for (const file of files) {
       if (attachedFiles.length + validFiles.length >= MAX_FILES) {
-        alert(`Можно прикрепить максимум ${MAX_FILES} файла`);
+        alert(`Максимум ${MAX_FILES} файла`);
         break;
       }
-
-      const newTotal = currentTotalSize + file.size;
-      if (newTotal > MAX_TOTAL_SIZE) {
-        alert(`Общий размер всех файлов не должен превышать 25 МБ`);
+      if (currentTotal + file.size > MAX_TOTAL_SIZE) {
+        alert('Общий размер файлов не должен превышать 25 МБ');
         continue;
       }
-
       validFiles.push(file);
-      currentTotalSize += file.size;
+      currentTotal += file.size;
     }
-
     setAttachedFiles(prev => [...prev, ...validFiles]);
+    e.target.value = '';
   };
 
-  const removeFile = (index: number) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  const removeFile = (i: number) => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i));
 
   const createTicket = async () => {
-    if (!me || !myOrder || !ticketSubject.trim()) return;
-
+    if (!me || !myOrder || !ticketSubject.trim()) {
+      setModalShake(true);
+      setTimeout(() => setModalShake(false), 500);
+      return;
+    }
     setCreatingTicket(true);
 
     let filesInfo = '';
     if (attachedFiles.length > 0) {
-      filesInfo = '\n\nПрикреплённые файлы:\n' + 
-        attachedFiles.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} МБ)`).join('\n');
+      filesInfo = '\n\nПрикреплённые файлы:\n' +
+        attachedFiles.map(f => `- ${f.name} (${formatBytes(f.size)})`).join('\n');
     }
 
-    const fullDescription = 
+    const fullDescription =
 `Товар: ${account.title}
 Цена: ${account.price} ₽
 
@@ -275,21 +478,18 @@ ${problemDescription || '—'}${filesInfo}`;
       });
 
       if (error) {
-        console.error('Ошибка создания тикета:', error);
         alert('Не удалось создать тикет.');
         return;
       }
 
       setTicketCreated(true);
-
       setTimeout(() => {
         setShowTicketModal(false);
         setTicketCreated(false);
         setCurrentPage('support');
-      }, 2000);
-
+      }, 2200);
     } catch (e: any) {
-      alert('Ошибка при создании тикета: ' + e.message);
+      alert('Ошибка: ' + e.message);
     } finally {
       setCreatingTicket(false);
     }
@@ -308,6 +508,15 @@ ${problemDescription || '—'}${filesInfo}`;
 
   const isAdmin = ['admin', 'owner', 'moderator'].includes(myRole);
 
+  // Shake animation variant
+  const shakeVariant = {
+    shake: {
+      x: [-8, 8, -6, 6, -4, 4, 0],
+      transition: { duration: 0.45 },
+    },
+    idle: { x: 0 },
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <motion.button
@@ -320,7 +529,7 @@ ${problemDescription || '—'}${filesInfo}`;
       </motion.button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ЛЕВАЯ КОЛОНКА */}
+        {/* LEFT */}
         <div className="lg:col-span-2 space-y-5">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
@@ -372,7 +581,8 @@ ${problemDescription || '—'}${filesInfo}`;
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {infoItems.map((item, i) => (
-                <motion.div key={item.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                <motion.div key={item.label}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                   className="bg-[#0B0A12] rounded-xl p-3 border border-purple-900/20 hover:border-purple-700/40 transition-colors">
                   <div className="flex items-center gap-2 mb-1.5">
                     <item.icon size={13} className="text-purple-400 flex-shrink-0" />
@@ -385,7 +595,7 @@ ${problemDescription || '—'}${filesInfo}`;
           </motion.div>
         </div>
 
-        {/* ПРАВАЯ КОЛОНКА */}
+        {/* RIGHT */}
         <div className="space-y-5">
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 lg:sticky lg:top-20">
@@ -399,15 +609,29 @@ ${problemDescription || '—'}${filesInfo}`;
             </div>
 
             <div className="space-y-3 mb-4">
-              {myOrder ? (
+              {myOrder && (
                 <div className="text-center p-3 bg-green-900/20 border border-green-700/30 rounded-xl text-sm text-green-400">
                   ✅ Куплено вами
                 </div>
-              ) : null}
+              )}
+
+              {buyResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`text-center p-3 rounded-xl text-sm ${
+                    buyResult.type === 'ok'
+                      ? 'bg-green-900/20 border border-green-700/30 text-green-400'
+                      : 'bg-red-900/20 border border-red-700/30 text-red-400'
+                  }`}
+                >
+                  {buyResult.text}
+                </motion.div>
+              )}
 
               <motion.button onClick={handleBuy} disabled={buying || !!myOrder}
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50">
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 transition-all">
                 <Zap size={18} />
                 {buying ? 'Покупка...' : 'Купить сейчас'}
               </motion.button>
@@ -419,21 +643,23 @@ ${problemDescription || '—'}${filesInfo}`;
               </motion.button>
 
               {myOrder && (
-                <button
+                <motion.button
                   onClick={openDisputeModal}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold 
-                             bg-red-900/20 border border-red-700/40 text-red-400 hover:bg-red-900/30 
-                             hover:border-red-600/60 transition-all shadow-[0_0_8px_rgba(239,68,68,0.15)]"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold
+                             bg-red-900/20 border border-red-700/40 text-red-400 hover:bg-red-900/30
+                             hover:border-red-600/60 transition-all shadow-[0_0_12px_rgba(239,68,68,0.12)]"
                 >
                   <AlertOctagon size={18} /> Открыть спор
-                </button>
+                </motion.button>
               )}
 
               {isAdmin && (
                 <button
                   onClick={checkAccountChanges}
                   disabled={checkingChanges}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold bg-blue-900/20 border border-blue-700/40 text-blue-400 hover:bg-blue-900/30 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold bg-blue-900/20 border border-blue-700/40 text-blue-400 hover:bg-blue-900/30 disabled:opacity-50 transition-all"
                 >
                   <RefreshCw size={16} className={checkingChanges ? 'animate-spin' : ''} />
                   Проверить изменения
@@ -443,9 +669,9 @@ ${problemDescription || '—'}${filesInfo}`;
 
             <div className="space-y-2 pt-4 border-t border-purple-900/20">
               {[
-                { icon: Shield, text: `${account.guaranteeHours || 24}ч гарантия`, sub: 'Возврат средств', color: 'text-green-400' },
-                { icon: Lock, text: 'Escrow защита', sub: 'Безопасная сделка', color: 'text-purple-300' },
-                { icon: CheckCircle2, text: 'Проверено AI', sub: 'Оценка риска', color: 'text-blue-400' },
+                { icon: Shield,       text: `${account.guaranteeHours || 24}ч гарантия`, sub: 'Возврат средств',  color: 'text-green-400'  },
+                { icon: Lock,         text: 'Escrow защита',                              sub: 'Безопасная сделка', color: 'text-purple-300' },
+                { icon: CheckCircle2, text: 'Проверено AI',                               sub: 'Оценка риска',      color: 'text-blue-400'   },
               ].map(item => (
                 <div key={item.text} className="flex items-center gap-3">
                   <item.icon size={16} className={item.color} />
@@ -460,134 +686,202 @@ ${problemDescription || '—'}${filesInfo}`;
         </div>
       </div>
 
-      {/* ==================== МОДАЛЬНОЕ ОКНО ТИКЕТА ==================== */}
-      {showTicketModal && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-white">Новый тикет</h3>
-              <button onClick={() => setShowTicketModal(false)} className="text-text-secondary hover:text-white">
-                <X size={20} />
-              </button>
-            </div>
+      {/* ═══════════════════ DISPUTE MODAL ═══════════════════ */}
+      <AnimatePresence>
+        {showTicketModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            onClick={() => !creatingTicket && setShowTicketModal(false)}
+          >
+            <motion.div
+              variants={shakeVariant}
+              animate={modalShake ? 'shake' : 'idle'}
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 16 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+              className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_0_60px_rgba(139,92,246,0.15)]"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Gradient header bar */}
+              <div className="h-1 w-full rounded-t-2xl bg-gradient-to-r from-red-600 via-purple-600 to-purple-800" />
 
-            {ticketCreated ? (
-              <div className="text-center py-8">
-                <CheckCircle2 size={48} className="mx-auto text-green-400 mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">Тикет успешно создан!</h3>
-                <p className="text-text-secondary">Перенаправляем в Поддержку...</p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
-                  <select
-                    value={ticketCategory}
-                    disabled
-                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm opacity-75 cursor-not-allowed"
-                  >
-                    <option value="Проблемы с аккаунтом">Проблемы с аккаунтом</option>
-                  </select>
+              <div className="p-7">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-900/30 border border-red-700/40 flex items-center justify-center">
+                      <AlertOctagon size={20} className="text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Открыть спор</h3>
+                      <p className="text-xs text-text-secondary mt-0.5">Опишите проблему как можно подробнее</p>
+                    </div>
+                  </div>
+                  {!creatingTicket && (
+                    <button
+                      onClick={() => setShowTicketModal(false)}
+                      className="p-1.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
                 </div>
 
-                <div className="mb-4">
-                  <label className="text-sm text-text-secondary mb-1.5 block">Тема</label>
-                  <input
-                    type="text"
-                    value={ticketSubject}
-                    onChange={(e) => setTicketSubject(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-sm text-text-secondary mb-2 block">Описание</label>
-                  <div className="bg-[#0B0A12] border border-purple-900/30 rounded-xl p-4 space-y-4 text-sm">
-
-                    <div>
-                      <span className="text-text-secondary text-xs">Товар</span>
-                      <p className="text-white font-medium mt-0.5">{account.title}</p>
-                    </div>
-
-                    <div>
-                      <span className="text-text-secondary text-xs">Цена</span>
-                      <p className="text-white font-medium mt-0.5">{account.price} ₽</p>
-                    </div>
-
-                    <div className="pt-2 border-t border-purple-900/20">
-                      <span className="text-text-secondary text-xs">Вопрос</span>
-                      <p className="text-white mt-1 text-sm">Вели ли вы общение ещё где-то кроме нашего сайта?</p>
-                    </div>
-
-                    <div>
-                      <span className="text-text-secondary text-xs">Ответ на вопрос</span>
-                      <textarea
-                        value={disputeAnswer}
-                        onChange={(e) => setDisputeAnswer(e.target.value)}
-                        placeholder="Ваш ответ..."
-                        rows={2}
-                        className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
+                <AnimatePresence mode="wait">
+                  {ticketCreated ? (
+                    /* ── Success state ── */
+                    <motion.div
+                      key="success"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-10 space-y-4"
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
+                        className="w-20 h-20 rounded-full bg-green-900/30 border border-green-700/40 flex items-center justify-center mx-auto"
+                      >
+                        <CheckCircle2 size={40} className="text-green-400" />
+                      </motion.div>
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                        <h3 className="text-xl font-bold text-white mb-2">Тикет создан!</h3>
+                        <p className="text-text-secondary text-sm">Перенаправляем в раздел Поддержки...</p>
+                      </motion.div>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 2, delay: 0.3 }}
+                        className="h-0.5 bg-gradient-to-r from-purple-600 to-green-500 rounded-full mx-auto max-w-xs"
                       />
-                    </div>
+                    </motion.div>
+                  ) : (
+                    /* ── Form ── */
+                    <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
 
-                    <div>
-                      <span className="text-text-secondary text-xs">Опишите проблему</span>
-                      <textarea
-                        value={problemDescription}
-                        onChange={(e) => setProblemDescription(e.target.value)}
-                        placeholder="Опишите ситуацию подробно..."
-                        rows={4}
-                        className="mt-1 w-full px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none"
-                      />
-                    </div>
-
-                    <div className="pt-3 border-t border-purple-900/20">
-                      <div className="flex gap-3 mb-2">
-                        <label className="flex-1 cursor-pointer">
-                          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                            <Image size={16} /> Фото ({attachedFiles.length}/{MAX_FILES})
-                          </div>
-                          <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
+                      {/* Category (disabled) */}
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary mb-1.5 block uppercase tracking-wider">
+                          Категория
                         </label>
-
-                        <label className="flex-1 cursor-pointer">
-                          <div className="flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 border border-purple-700/40 rounded-xl text-sm text-purple-300 hover:bg-purple-900/30">
-                            <Paperclip size={16} /> Файлы
-                          </div>
-                          <input type="file" multiple onChange={handleFileSelect} className="hidden" />
-                        </label>
+                        <div className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-purple-900/20 text-text-secondary text-sm flex items-center gap-2">
+                          <Lock size={13} className="text-purple-600" />
+                          Проблемы с аккаунтом
+                        </div>
                       </div>
 
-                      <p className="text-[10px] text-text-secondary text-center mb-2">
-                        Максимум {MAX_FILES} файла • Общий размер до 25 МБ
-                      </p>
+                      {/* Subject */}
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary mb-1.5 block uppercase tracking-wider">
+                          Тема
+                        </label>
+                        <input
+                          type="text"
+                          value={ticketSubject}
+                          onChange={e => setTicketSubject(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm focus:border-purple-500/60 focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all"
+                        />
+                      </div>
 
-                      {attachedFiles.length > 0 && (
-                        <div className="space-y-1">
-                          {attachedFiles.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between bg-[#171425] px-3 py-1.5 rounded-lg text-xs">
-                              <span className="truncate">{file.name}</span>
-                              <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">×</button>
-                            </div>
-                          ))}
+                      {/* Info card */}
+                      <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl overflow-hidden">
+                        {/* Product info */}
+                        <div className="p-4 border-b border-purple-900/20 grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Товар</p>
+                            <p className="text-sm text-white font-medium truncate">{account.title}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Цена</p>
+                            <p className="text-sm text-white font-medium">{account.price} ₽</p>
+                          </div>
                         </div>
-                      )}
-                    </div>
 
-                  </div>
-                </div>
+                        {/* Question */}
+                        <div className="p-4 border-b border-purple-900/20">
+                          <p className="text-xs text-purple-300 font-medium mb-2">
+                            Вели ли вы общение ещё где-то кроме нашего сайта?
+                          </p>
+                          <textarea
+                            value={disputeAnswer}
+                            onChange={e => setDisputeAnswer(e.target.value)}
+                            placeholder="Ваш ответ..."
+                            rows={2}
+                            className="w-full px-3 py-2.5 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none focus:border-purple-500/60 focus:outline-none transition-all"
+                          />
+                        </div>
 
-                <button
-                  onClick={createTicket}
-                  disabled={creatingTicket || !ticketSubject.trim()}
-                  className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold disabled:opacity-50"
-                >
-                  {creatingTicket ? 'Создаём...' : 'Создать тикет'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+                        {/* Problem */}
+                        <div className="p-4 border-b border-purple-900/20">
+                          <p className="text-xs text-text-secondary uppercase tracking-wider mb-2">Опишите проблему</p>
+                          <textarea
+                            value={problemDescription}
+                            onChange={e => setProblemDescription(e.target.value)}
+                            placeholder="Опишите ситуацию подробно..."
+                            rows={5}
+                            className="w-full px-3 py-2.5 rounded-lg bg-[#171425] border border-purple-900/30 text-white text-sm resize-none focus:border-purple-500/60 focus:outline-none transition-all"
+                          />
+                        </div>
+
+                        {/* Attachments */}
+                        <div className="p-4">
+                          <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-3">
+                            Прикрепить файлы
+                          </p>
+                          <FileAttachRow
+                            files={attachedFiles}
+                            onAdd={handleFileSelect}
+                            onRemove={removeFile}
+                            totalSize={totalAttachSize}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Submit */}
+                      <motion.button
+                        onClick={createTicket}
+                        disabled={creatingTicket || !ticketSubject.trim()}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full py-3.5 bg-gradient-to-r from-red-700 to-purple-700 hover:from-red-600 hover:to-purple-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50 transition-all shadow-[0_4px_20px_rgba(139,92,246,0.25)] flex items-center justify-center gap-2"
+                      >
+                        {creatingTicket ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                            />
+                            Создаём тикет...
+                          </>
+                        ) : (
+                          <>
+                            <AlertOctagon size={16} />
+                            Открыть спор
+                          </>
+                        )}
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Image viewer */}
+      {viewerImages && (
+        <ImageViewer
+          images={viewerImages}
+          startIndex={viewerIndex}
+          onClose={() => setViewerImages(null)}
+        />
       )}
     </div>
   );
