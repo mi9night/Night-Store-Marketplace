@@ -37,6 +37,8 @@ interface Ticket {
   attachments?: string;
   status: string;
   resolution?: string;
+  reporter_id?: string;
+  accused_id?: string | null;
   created_at: string;
 }
 
@@ -662,6 +664,25 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
         message:     reply.trim(),
         attachments: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null,
       });
+
+      // Send notification to the other party about new reply
+      const recipientId = me.id === ticket.reporter_id
+        ? (ticket as any).accused_id
+        : ticket.reporter_id;
+
+      if (recipientId && recipientId !== me.id) {
+        await supabase.from('notifications').insert({
+          user_id: recipientId,
+          type: 'dispute_reply',
+          title: 'Новый ответ в споре',
+          text: `Получен ответ по тикету: ${ticket.subject || 'Спор'}`,
+          link_type: 'support',
+          link_id: ticket.id,
+          is_read: false,
+          icon: '⚖️',
+        }).then(() => {}).catch(() => {});
+      }
+
       setReply(''); setReplyFiles([]); setPreviews(new Map()); setUploadPct(0);
       await fetchMessages();
     } finally { setSending(false); }

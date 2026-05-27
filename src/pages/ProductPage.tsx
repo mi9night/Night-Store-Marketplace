@@ -474,6 +474,7 @@ ${problemDescription || '—'}${filesInfo}`;
         description: fullDescription,
         target_type: 'account',
         target_id: account.id,
+        accused_id: (account.seller as any)?.id || null,
         status: 'open',
       });
 
@@ -707,8 +708,8 @@ ${problemDescription || '—'}${filesInfo}`;
               className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_0_60px_rgba(139,92,246,0.15)]"
               onClick={e => e.stopPropagation()}
             >
-              {/* Gradient header bar */}
-              <div className="h-1 w-full rounded-t-2xl bg-gradient-to-r from-red-600 via-purple-600 to-purple-800" />
+              {/* Header top line */}
+              <div className="h-0.5 w-full rounded-t-2xl bg-purple-600/40" />
 
               <div className="p-7">
                 {/* Header */}
@@ -757,7 +758,7 @@ ${problemDescription || '—'}${filesInfo}`;
                         initial={{ width: 0 }}
                         animate={{ width: '100%' }}
                         transition={{ duration: 2, delay: 0.3 }}
-                        className="h-0.5 bg-gradient-to-r from-purple-600 to-green-500 rounded-full mx-auto max-w-xs"
+                        className="h-0.5 bg-purple-600/60 rounded-full mx-auto max-w-xs"
                       />
                     </motion.div>
                   ) : (
@@ -848,7 +849,7 @@ ${problemDescription || '—'}${filesInfo}`;
                         disabled={creatingTicket || !ticketSubject.trim()}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-full py-3.5 bg-gradient-to-r from-red-700 to-purple-700 hover:from-red-600 hover:to-purple-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50 transition-all shadow-[0_4px_20px_rgba(139,92,246,0.25)] flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold text-sm disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                       >
                         {creatingTicket ? (
                           <>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge as RB } from './RoleBadge';
+import { UserLink } from './UserLink';
 
 type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats' | 'broadcast';
 
@@ -515,6 +516,8 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
   const [replyFiles, setReplyFiles]     = useState<File[]>([]);
   const [viewer, setViewer]             = useState<{ images: { src: string; name: string }[]; idx: number } | null>(null);
   const messagesEndRef                  = useRef<HTMLDivElement>(null);
+  const [reporterInfo, setReporterInfo] = useState<{ id: string; username: string } | null>(null);
+  const [accusedInfo, setAccusedInfo]   = useState<{ id: string; username: string } | null>(null);
 
   const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     open:        { label: 'Открыт',   cls: 'bg-blue-900/30 text-blue-400 border border-blue-700/30' },
@@ -542,7 +545,23 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
     setActiveTicket(t);
     setReply('');
     setReplyFiles([]);
+    setReporterInfo(null);
+    setAccusedInfo(null);
     await loadMessages(t.id);
+
+    // Load reporter info
+    if (t.reporter_id) {
+      const { data: rp } = await supabase.from('users')
+        .select('id, username, custom_id').eq('id', t.reporter_id).maybeSingle();
+      if (rp) setReporterInfo({ id: rp.id, username: rp.username || rp.custom_id || rp.id.slice(0, 8) });
+    }
+
+    // Load accused user info (target of the dispute)
+    if (t.accused_id) {
+      const { data: ac } = await supabase.from('users')
+        .select('id, username, custom_id').eq('id', t.accused_id).maybeSingle();
+      if (ac) setAccusedInfo({ id: ac.id, username: ac.username || ac.custom_id || ac.id.slice(0, 8) });
+    }
   };
 
   useEffect(() => {
@@ -591,6 +610,25 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
       sender_id: u.user?.id,
       message: reply + filesInfo,
     });
+
+    // Send notification to the other party about new reply
+    const senderId = u.user?.id;
+    const recipientId = senderId === activeTicket.reporter_id
+      ? activeTicket.accused_id
+      : activeTicket.reporter_id;
+
+    if (recipientId && recipientId !== senderId) {
+      await supabase.from('notifications').insert({
+        user_id: recipientId,
+        type: 'dispute_reply',
+        title: 'Новый ответ в споре',
+        text: `Получен ответ по тикету: ${activeTicket.subject || 'Спор'}`,
+        link_type: 'support',
+        link_id: activeTicket.id,
+        is_read: false,
+        icon: '⚖️',
+      }).then(() => {}).catch(() => {});
+    }
 
     setReply('');
     setReplyFiles([]);
@@ -672,6 +710,22 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
                 <span className="text-[10px] text-text-secondary uppercase tracking-wider">Цель жалобы</span>
                 <p className="text-white mt-0.5">{activeTicket.target_type || '—'}</p>
               </div>
+              {reporterInfo && (
+                <div>
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider">Отправитель</span>
+                  <div className="mt-0.5">
+                    <UserLink userId={reporterInfo.id} username={reporterInfo.username} className="text-sm text-purple-300 font-medium" />
+                  </div>
+                </div>
+              )}
+              {accusedInfo && (
+                <div>
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider">Ответчик</span>
+                  <div className="mt-0.5">
+                    <UserLink userId={accusedInfo.id} username={accusedInfo.username} className="text-sm text-red-400 font-medium" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}

@@ -34,7 +34,7 @@ interface Notif {
   type: string;
   title: string;
   text: string;
-  link_type?: 'account' | 'forum' | 'profile' | 'order' | null;
+  link_type?: 'account' | 'forum' | 'profile' | 'order' | 'support' | null;
   link_id?: string | null;
   is_read: boolean;
   created_at: string;
@@ -232,6 +232,7 @@ const Header: React.FC<HeaderProps> = ({
     } else if (notif.link_type === 'forum') setCurrentPage('forum');
     else if (notif.link_type === 'order') setCurrentPage('purchases');
     else if (notif.link_type === 'profile') setCurrentPage('profile');
+    else if (notif.link_type === 'support') setCurrentPage('support');
     setShowNotifications(false);
   };
 
@@ -308,6 +309,7 @@ const Header: React.FC<HeaderProps> = ({
     if (type === 'message') return '💬';
     if (type === 'system') return '⚙️';
     if (type === 'promo') return '🎁';
+    if (type === 'dispute_reply') return '⚖️';
     return '🔔';
   };
 
