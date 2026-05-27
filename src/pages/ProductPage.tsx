@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, ShoppingCart, ShoppingBag, Zap, Heart, Shield, Star,
+  ArrowLeft, ShoppingCart, Zap, Heart, Shield, Star,
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
   AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X,
   Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight,
-  ThumbsUp, ThumbsDown, Award
+  ThumbsUp, ThumbsDown, Award, ShoppingBag
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -598,6 +598,292 @@ ${problemDescription || '—'}${filesInfo}`;
               ))}
             </div>
           </motion.div>
+
+          {/* === Review block (if purchased) === */}
+          {myOrder && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+              className={`rounded-2xl p-5 border transition-colors ${
+                showReview && !revPositive
+                  ? 'bg-red-900/10 border-red-700/30'
+                  : 'bg-green-900/10 border-green-700/30'
+              }`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Star size={18} className="text-yellow-400 fill-yellow-400" />
+                <h3 className="text-sm font-semibold text-white">Вы купили этот аккаунт</h3>
+              </div>
+
+              {myReview ? (
+                <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      myReview.positive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                    }`}>
+                      {myReview.positive ? '👍 Положительный' : '👎 Отрицательный'}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={11} className={i < myReview.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                      ))}
+                    </div>
+                  </div>
+                  {myReview.text && <p className="text-sm text-white">{myReview.text}</p>}
+                  <p className="text-xs text-text-secondary mt-2">✅ Ваш отзыв опубликован</p>
+                </div>
+              ) : (
+                !showReview ? (
+                  <button onClick={() => setShowReview(true)}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold transition-all">
+                    ⭐ Оставить отзыв о продавце
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Оценка</label>
+                      <div className="flex gap-2">
+                        <button onClick={() => setRevPositive(true)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            revPositive ? 'bg-green-600 text-white' : 'bg-bg-secondary text-text-secondary'
+                          }`}>
+                          👍 Положительный
+                        </button>
+                        <button onClick={() => setRevPositive(false)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            !revPositive ? 'bg-red-600 text-white' : 'bg-bg-secondary text-text-secondary'
+                          }`}>
+                          👎 Отрицательный
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Звёзды</label>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n} onClick={() => setRevRating(n)}>
+                            <Star size={20} className={n <= revRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea value={revText} onChange={e => setRevText(e.target.value)}
+                      placeholder="Опишите ваш опыт..." rows={3}
+                      className="w-full px-3 py-2 rounded-lg bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none focus:border-purple-500/60 focus:outline-none transition-all" />
+
+                    {revMsg && (
+                      <div className={`text-xs p-2 rounded-lg ${revMsg.startsWith('✅') ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
+                        {revMsg}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowReview(false)}
+                        className="flex-1 py-2 bg-purple-900/20 text-white rounded-xl text-sm transition-all">Отмена</button>
+                      <motion.button
+                        onClick={async () => {
+                          if (!me || !seller || !revText.trim()) return;
+                          setRevSending(true);
+                          setRevMsg(null);
+                          try {
+                            const { data, error } = await supabase.rpc('leave_review', {
+                              p_account_id: account.id, p_rating: revRating, p_positive: revPositive, p_text: revText,
+                            });
+                            if (error) throw error;
+                            if (data?.ok) {
+                              setRevMsg('✅ Отзыв отправлен!');
+                              setMyReview({ rating: revRating, positive: revPositive, text: revText });
+                              setShowReview(false);
+                            } else {
+                              const errMap: Record<string, string> = {
+                                not_authenticated: 'Войдите в систему',
+                                no_order: 'Вы не покупали этот товар',
+                                already_reviewed: 'Вы уже оставляли отзыв на эту покупку',
+                              };
+                              setRevMsg('❌ ' + (errMap[data?.error] || data?.error));
+                            }
+                          } catch (e: any) {
+                            setRevMsg('❌ ' + e.message);
+                          } finally {
+                            setRevSending(false);
+                          }
+                        }}
+                        disabled={revSending}
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all">
+                        {revSending ? 'Отправка...' : 'Отправить'}
+                      </motion.button>
+                    </div>
+                  </div>
+                )
+              )}
+            </motion.div>
+          )}
+
+          {/* === Tabs: Reviews / Stats / History === */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="bg-[#171425] border border-purple-900/20 rounded-2xl overflow-hidden">
+            <div className="flex border-b border-purple-900/20">
+              {[
+                { id: 'reviews', label: 'Отзывы о продавце', count: reviews.length },
+                { id: 'stats',   label: 'Статистика', count: null },
+                { id: 'history', label: 'История', count: null },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-xs sm:text-sm font-medium transition-all border-b-2 ${
+                    activeTab === tab.id
+                      ? 'border-purple-500 text-purple-300 bg-purple-900/10'
+                      : 'border-transparent text-text-secondary hover:text-white'
+                  }`}>
+                  <span className="truncate">{tab.label}</span>
+                  {tab.count !== null && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-purple-900/30 rounded-full">{tab.count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-5">
+              {activeTab === 'reviews' && (() => {
+                // Rating distribution
+                const dist = [0, 0, 0, 0, 0];
+                reviews.forEach((r: any) => { if (r.rating >= 1 && r.rating <= 5) dist[r.rating - 1]++; });
+                const maxDist = Math.max(...dist, 1);
+                const avgRating = reviews.length > 0
+                  ? reviews.reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviews.length
+                  : 0;
+
+                return reviews.length === 0 ? (
+                  <div className="text-center py-8 text-text-secondary text-sm">
+                    Пока нет отзывов о продавце
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {/* Rating bar chart */}
+                    <div className="flex gap-6 items-start">
+                      <div className="flex flex-col items-center flex-shrink-0">
+                        <span className="text-4xl font-bold text-white">{avgRating.toFixed(1)}</span>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={13} className={s <= Math.round(avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-text-secondary mt-1">{reviews.length} отзывов</span>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        {[5,4,3,2,1].map(star => {
+                          const count = dist[star - 1];
+                          const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                          return (
+                            <div key={star} className="flex items-center gap-2">
+                              <span className="text-xs text-text-secondary w-3 text-right">{star}</span>
+                              <Star size={10} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                              <div className="flex-1 h-2 bg-[#0B0A12] rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${pct}%` }}
+                                  transition={{ duration: 0.6, delay: (5 - star) * 0.08 }}
+                                  className="h-full bg-purple-500 rounded-full"
+                                />
+                              </div>
+                              <span className="text-[10px] text-text-secondary w-8 text-right">{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Reviews list */}
+                    <div className="space-y-3 pt-3 border-t border-purple-900/20">
+                      {reviews.map((r: any) => {
+                        const canDel = ['moderator','admin','owner'].includes(myRole);
+                        return (
+                          <motion.div key={r.id}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`border rounded-xl p-3 ${
+                              r.positive
+                                ? 'bg-green-900/10 border-green-700/30'
+                                : 'bg-red-900/10 border-red-700/30'
+                            }`}>
+                            {/* Author row */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {r.author?.avatar_url ? (
+                                  <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-xs font-bold text-white">{(r.author?.username?.[0] || 'U').toUpperCase()}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <UserLink userId={r.author?.id || r.user_id} username={r.author?.username || 'Аноним'} className="text-sm font-semibold text-white" />
+                                  {r.rating && (
+                                    <div className="flex items-center gap-0.5 ml-1">
+                                      {Array.from({ length: 5 }).map((_, idx) => (
+                                        <Star key={idx} size={10}
+                                          className={idx < r.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-xs text-text-secondary flex-shrink-0">
+                                {new Date(r.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+
+                            {/* Review text */}
+                            {(r.text || r.comment) && <p className="text-sm text-white mb-2">{r.text || r.comment}</p>}
+
+                            {/* Product name + actions */}
+                            <div className="flex items-center gap-2 pt-2 border-t border-purple-900/20">
+                              {r.account_id && (
+                                <span className="text-[10px] text-text-secondary truncate">
+                                  📦 {account.title}
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+                                <ReportButton targetType="comment" targetId={r.id} targetName={'Отзыв: ' + ((r.text || r.comment || '').slice(0, 40))} />
+                                {canDel && (
+                                  <button onClick={async () => {
+                                    await supabase.from('reviews').delete().eq('id', r.id);
+                                    setReviews(prev => prev.filter((rv: any) => rv.id !== r.id));
+                                  }}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold transition-all">
+                                    <Trash2 size={11} /> Удалить
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {activeTab === 'stats' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { label: 'Просмотров', value: (account.views || 0).toLocaleString('ru-RU'), icon: Eye },
+                    { label: 'Продавец онлайн', value: '~1ч назад', icon: Clock },
+                    { label: 'Средняя цена', value: `${convert(account.price).toLocaleString('ru-RU', { maximumFractionDigits: currency === 'RUB' ? 0 : 2 })} ${symbol}`, icon: Tag },
+                  ].map(s => (
+                    <div key={s.label} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                      <s.icon size={14} className="text-purple-400 mb-2" />
+                      <p className="text-sm font-bold text-white">{s.value}</p>
+                      <p className="text-xs text-text-secondary">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'history' && (
+                <div className="text-center py-8 text-text-secondary text-sm">
+                  История изменений товара появится скоро
+                </div>
+              )}
+            </div>
+          </motion.div>
         </div>
 
         {/* RIGHT */}
@@ -688,305 +974,132 @@ ${problemDescription || '—'}${filesInfo}`;
               ))}
             </div>
           </motion.div>
+
+          {/* === Seller === */}
+          {seller && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
+              className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                <Users size={16} className="text-purple-400" /> Продавец
+              </h3>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {seller.avatar_url ? (
+                    <img src={seller.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-base font-bold text-white">
+                      {(seller.username?.[0] || account.seller?.username?.[0] || 'P').toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <UserLink userId={seller.id} username={seller.username || account.seller?.username} className="font-semibold text-white truncate" />
+                    {seller.verified && <CheckCircle2 size={14} className="text-blue-400" />}
+                    <RoleBadge user={seller} />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`flex items-center gap-1 text-[10px] font-medium ${
+                      seller.last_seen_at && (Date.now() - new Date(seller.last_seen_at).getTime()) < 5 * 60 * 1000
+                        ? 'text-green-400' : 'text-text-secondary'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        seller.last_seen_at && (Date.now() - new Date(seller.last_seen_at).getTime()) < 5 * 60 * 1000
+                          ? 'bg-green-400' : 'bg-gray-500'
+                      }`} />
+                      {seller.last_seen_at && (Date.now() - new Date(seller.last_seen_at).getTime()) < 5 * 60 * 1000
+                        ? 'Онлайн' : 'Оффлайн'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {[
+                  { label: 'Рейтинг',  value: sellerStats.rating > 0 ? `${sellerStats.rating.toFixed(1)}/5` : '—',  icon: '⭐' },
+                  { label: 'Положит.', value: sellerStats.positive + '%', icon: '👍' },
+                  { label: 'Продаж',   value: String(sellerStats.sales),  icon: '🛒' },
+                  { label: 'Ответ',    value: '~1ч', icon: '💬' },
+                ].map(stat => (
+                  <div key={stat.label} className="bg-[#0B0A12] rounded-xl p-2.5 border border-purple-900/20 text-center">
+                    <span className="text-sm">{stat.icon}</span>
+                    <p className="text-sm font-bold text-white mt-0.5">{stat.value}</p>
+                    <p className="text-[10px] text-text-secondary">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {seller.created_at && (
+                <p className="text-[10px] text-text-secondary mb-4">
+                  На сайте с {new Date(seller.created_at).toISOString().slice(0, 19).replace('T', 'T')}
+                </p>
+              )}
+
+              {/* Chat with seller */}
+              {!showChat ? (
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowChat(true)}
+                  disabled={!me || (seller.id === me?.id)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-purple-900/20 border border-purple-800/30 text-white hover:border-purple-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  <MessageSquare size={16} /> {seller.id === me?.id ? 'Это вы' : 'Написать продавцу'}
+                </motion.button>
+              ) : (
+                <div className="space-y-2">
+                  <textarea
+                    value={chatMsg}
+                    onChange={e => setChatMsg(e.target.value)}
+                    rows={3}
+                    placeholder="Сообщение продавцу..."
+                    className="w-full px-3 py-2 rounded-xl text-sm bg-[#0B0A12] border border-purple-900/30 text-white resize-none focus:border-purple-500/60 focus:outline-none transition-all"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowChat(false)} className="flex-1 py-2 bg-purple-900/20 text-white rounded-xl text-sm transition-all">
+                      Отмена
+                    </button>
+                    <button onClick={sendMessage} disabled={!chatMsg.trim()}
+                      className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1 disabled:opacity-50 transition-all">
+                      <Send size={12} /> Отправить
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* === Ban check === */}
+          {seller && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+              className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <Shield size={16} className="text-purple-400" /> Проверка на бан
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { label: 'VAC бан', value: seller.vac_ban },
+                  { label: 'Trade ban', value: seller.trade_ban },
+                  { label: 'Community ban', value: seller.community_ban },
+                  { label: 'Game ban', value: seller.game_ban },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center justify-between py-1.5">
+                    <span className="text-xs text-text-secondary">{item.label}</span>
+                    <span className={`text-xs font-semibold flex items-center gap-1 ${
+                      item.value ? 'text-red-400' : 'text-green-400'
+                    }`}>
+                      {item.value ? (
+                        <><span className="w-1.5 h-1.5 rounded-full bg-red-400" /> Да</>
+                      ) : (
+                        <><span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Нет</>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
-
-
-      {/* ═══════════════════ SELLER & REVIEWS ═══════════════════ */}
-      {seller && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-6 bg-[#171425] border border-purple-900/20 rounded-2xl overflow-hidden"
-        >
-          {/* Seller info */}
-          <div className="p-5 border-b border-purple-900/20">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {seller.avatar_url ? (
-                  <img src={seller.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-lg font-bold text-white">
-                    {(seller.username?.[0] || 'P').toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <UserLink userId={seller.id} username={seller.username || seller.email?.split('@')[0]} className="text-base font-semibold text-white" />
-                  {seller.verified && <CheckCircle2 size={14} className="text-blue-400" />}
-                  {seller.role && <RoleBadge role={seller.role} />}
-                  {seller.level && <LevelBadge level={seller.level} />}
-                </div>
-                <div className="flex items-center gap-4 mt-1 text-xs text-text-secondary">
-                  <span className="flex items-center gap-1"><Star size={11} className="text-yellow-400" /> {sellerStats.rating.toFixed(1)}</span>
-                  <span className="flex items-center gap-1"><Package size={11} /> {sellerStats.sales} продаж</span>
-                  <span className="flex items-center gap-1"><ThumbsUp size={11} className="text-green-400" /> {sellerStats.positive}%</span>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <motion.button
-                  onClick={() => setShowChat(true)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2.5 bg-purple-900/30 border border-purple-700/30 rounded-xl text-purple-300 hover:bg-purple-900/50 transition-all"
-                >
-                  <MessageSquare size={16} />
-                </motion.button>
-                <ReportButton targetType="user" targetId={seller.id} targetName={seller.username || 'Продавец'} />
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-purple-900/20">
-            {([
-              { id: 'reviews', label: `Отзывы (${sellerStats.reviewsCount})` },
-              { id: 'stats', label: 'Статистика' },
-            ] as const).map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 py-3 text-sm font-medium transition-all relative ${
-                  activeTab === tab.id ? 'text-white' : 'text-text-secondary hover:text-white'
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="product-tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"
-                    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <AnimatePresence mode="wait">
-            {activeTab === 'reviews' && (
-              <motion.div
-                key="reviews"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="p-5"
-              >
-                {/* Write review button */}
-                {myOrder && !myReview && (
-                  <motion.button
-                    onClick={() => setShowReview(!showReview)}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full mb-4 py-3 bg-purple-900/20 border border-purple-700/30 rounded-xl text-sm font-semibold text-purple-300 hover:bg-purple-900/30 hover:border-purple-500/50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Star size={15} /> Написать отзыв
-                  </motion.button>
-                )}
-
-                {/* Review form */}
-                <AnimatePresence>
-                  {showReview && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mb-5 overflow-hidden"
-                    >
-                      <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-text-secondary uppercase tracking-wider">Оценка:</span>
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map(s => (
-                              <button key={s} onClick={() => setRevRating(s)}>
-                                <Star size={20} className={`transition-colors ${s <= revRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setRevPositive(true)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                              revPositive
-                                ? 'bg-green-900/30 border border-green-600/50 text-green-400'
-                                : 'bg-[#171425] border border-purple-900/20 text-text-secondary hover:text-white'
-                            }`}
-                          >
-                            <ThumbsUp size={14} /> Положительный
-                          </button>
-                          <button
-                            onClick={() => setRevPositive(false)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                              !revPositive
-                                ? 'bg-red-900/30 border border-red-600/50 text-red-400'
-                                : 'bg-[#171425] border border-purple-900/20 text-text-secondary hover:text-white'
-                            }`}
-                          >
-                            <ThumbsDown size={14} /> Негативный
-                          </button>
-                        </div>
-
-                        <textarea
-                          value={revText}
-                          onChange={e => setRevText(e.target.value)}
-                          placeholder="Опишите ваш опыт..."
-                          rows={3}
-                          className="w-full px-3 py-2.5 rounded-xl bg-[#171425] border border-purple-900/30 text-white text-sm resize-none focus:border-purple-500/60 focus:outline-none transition-all"
-                        />
-
-                        {revMsg && (
-                          <p className={`text-xs ${revMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{revMsg}</p>
-                        )}
-
-                        <motion.button
-                          onClick={async () => {
-                            if (!me || !seller || !revText.trim()) return;
-                            setRevSending(true);
-                            setRevMsg(null);
-                            const { error } = await supabase.from('reviews').insert({
-                              user_id: me.id,
-                              target_user_id: seller.id,
-                              account_id: account.id,
-                              rating: revRating,
-                              positive: revPositive,
-                              comment: revText,
-                            });
-                            if (error) {
-                              setRevMsg('❌ Ошибка: ' + error.message);
-                            } else {
-                              setRevMsg('✅ Отзыв опубликован!');
-                              setMyReview(true);
-                              setShowReview(false);
-                              // Reload reviews
-                              const { data: r } = await supabase.from('reviews')
-                                .select('*')
-                                .eq('target_user_id', seller.id)
-                                .order('created_at', { ascending: false });
-                              if (r) {
-                                const authorIds = [...new Set(r.map((rv: any) => rv.user_id).filter(Boolean))];
-                                if (authorIds.length > 0) {
-                                  const { data: authors } = await supabase.from('users')
-                                    .select('id, username, avatar_url, custom_id').in('id', authorIds);
-                                  const aMap: Record<string, any> = {};
-                                  authors?.forEach((a: any) => { aMap[a.id] = a; });
-                                  r.forEach((rv: any) => { if (aMap[rv.user_id]) rv.author = aMap[rv.user_id]; });
-                                }
-                                setReviews(r);
-                              }
-                            }
-                            setRevSending(false);
-                          }}
-                          disabled={revSending || !revText.trim()}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                        >
-                          {revSending ? (
-                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-                          ) : (
-                            <><Send size={14} /> Опубликовать</>
-                          )}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Reviews list */}
-                {reviews.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Star size={32} className="mx-auto text-purple-700/40 mb-3" />
-                    <p className="text-sm text-text-secondary">Отзывов пока нет</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {reviews.slice(0, 10).map((rev: any, i: number) => (
-                      <motion.div
-                        key={rev.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04 }}
-                        className={`rounded-xl p-4 border transition-all ${
-                          rev.positive
-                            ? 'bg-green-900/10 border-green-700/30'
-                            : 'bg-red-900/10 border-red-700/30'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-purple-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            {rev.author?.avatar_url ? (
-                              <img src={rev.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-xs font-bold text-purple-300">
-                                {(rev.author?.username?.[0] || 'U').toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <UserLink
-                                userId={rev.user_id}
-                                username={rev.author?.username || rev.author?.custom_id}
-                                className="text-sm font-semibold text-white"
-                              />
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
-                                rev.positive
-                                  ? 'bg-green-900/30 text-green-400 border border-green-700/40'
-                                  : 'bg-red-900/30 text-red-400 border border-red-700/40'
-                              }`}>
-                                {rev.positive ? <><ThumbsUp size={9} /> Положительный</> : <><ThumbsDown size={9} /> Негативный</>}
-                              </span>
-                              <div className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map(s => (
-                                  <Star key={s} size={10} className={s <= (rev.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-700'} />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-sm text-text-secondary leading-relaxed">{rev.comment}</p>
-                            <p className="text-[10px] text-text-secondary mt-1.5">
-                              {new Date(rev.created_at).toLocaleDateString('ru-RU')}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {activeTab === 'stats' && (
-              <motion.div
-                key="stats"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="p-5"
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'Рейтинг', value: sellerStats.rating.toFixed(1), icon: Star, color: 'text-yellow-400' },
-                    { label: 'Продаж', value: sellerStats.sales.toString(), icon: Package, color: 'text-purple-400' },
-                    { label: 'Позитивных', value: `${sellerStats.positive}%`, icon: ThumbsUp, color: 'text-green-400' },
-                    { label: 'Отзывов', value: sellerStats.reviewsCount.toString(), icon: MessageSquare, color: 'text-blue-400' },
-                  ].map(stat => (
-                    <div key={stat.label} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 text-center">
-                      <stat.icon size={20} className={`mx-auto mb-2 ${stat.color}`} />
-                      <p className="text-xl font-bold text-white">{stat.value}</p>
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-1">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
 
       {/* ═══════════════════ PURCHASE SUCCESS MODAL ═══════════════════ */}
       <AnimatePresence>
@@ -996,7 +1109,6 @@ ${problemDescription || '—'}${filesInfo}`;
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
-            onClick={() => {}}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.8, y: 30 }}
