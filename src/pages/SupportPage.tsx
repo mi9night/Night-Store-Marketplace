@@ -382,16 +382,30 @@ const CreateTicketModal: React.FC<{
         .map(f => `${f.label}:\n${fieldValues[f.id] || '—'}`)
         .join('\n\n');
 
-      await supabase.from('tickets').insert({
-        reporter_id:  userId,
-        category:     selected.name,
-        category_id:  selected.id,
-        subject:      `${selected.icon} ${subjectField}`,
-        description:  descLines,
-        fields_data:  JSON.stringify(fieldValues),
-        attachments:  uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null,
-        status:       'open',
-      });
+  const { data, error } = await supabase
+  .from('tickets')
+  .insert({
+    reporter_id: userId,
+    category: selected.name,
+    category_id: selected.id,
+    subject: `${selected.icon} ${subjectField}`,
+    description: descLines,
+    fields_data: JSON.stringify(fieldValues),
+    attachments: uploadedUrls.length > 0
+      ? JSON.stringify(uploadedUrls)
+      : null,
+    status: 'open',
+  })
+  .select();
+
+if (error) {
+  console.error('Ticket insert error:', error);
+  alert('Ошибка создания тикета:\n' + error.message);
+  setSubmitting(false);
+  return;
+}
+
+console.log('Ticket created:', data);
 
       onCreated();
       onClose();
