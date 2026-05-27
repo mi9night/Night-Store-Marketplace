@@ -994,9 +994,9 @@ ${problemDescription || '—'}${filesInfo}`;
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap overflow-hidden">
                     <UserLink userId={seller.id} username={seller.username || account.seller?.username} className="font-semibold text-white truncate" />
-                    {seller.verified && <CheckCircle2 size={14} className="text-blue-400" />}
+                    {seller.verified && <CheckCircle2 size={14} className="text-blue-400 flex-shrink-0" />}
                     <RoleBadge user={seller} />
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
@@ -1016,15 +1016,15 @@ ${problemDescription || '—'}${filesInfo}`;
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4">
-                {[
-                  { label: 'Рейтинг',  value: sellerStats.rating > 0 ? `${sellerStats.rating.toFixed(1)}/5` : '—',  icon: '⭐' },
-                  { label: 'Положит.', value: sellerStats.positive + '%', icon: '👍' },
-                  { label: 'Продаж',   value: String(sellerStats.sales),  icon: '🛒' },
-                  { label: 'Ответ',    value: '~1ч', icon: '💬' },
-                ].map(stat => (
+                {([
+                  { label: 'Рейтинг',  value: sellerStats.rating > 0 ? `${sellerStats.rating.toFixed(1)}/5` : '—', Icon: Star },
+                  { label: 'Положит.', value: sellerStats.positive + '%', Icon: CheckCircle2 },
+                  { label: 'Продаж',   value: String(sellerStats.sales),  Icon: ShoppingCart },
+                  { label: 'Ответ',    value: '~1ч',                      Icon: MessageSquare },
+                ] as const).map(stat => (
                   <div key={stat.label} className="bg-[#0B0A12] rounded-xl p-2.5 border border-purple-900/20 text-center">
-                    <span className="text-sm">{stat.icon}</span>
-                    <p className="text-sm font-bold text-white mt-0.5">{stat.value}</p>
+                    <stat.Icon size={16} className="mx-auto mb-1 text-accent-soft" />
+                    <p className="text-sm font-bold text-white">{stat.value}</p>
                     <p className="text-[10px] text-text-secondary">{stat.label}</p>
                   </div>
                 ))}
