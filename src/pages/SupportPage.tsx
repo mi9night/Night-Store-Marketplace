@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Headset, Send, ChevronDown, Paperclip, Image, X,
   ChevronLeft, ChevronRight, FileText, ZoomIn, Plus,
-  AlertCircle, CheckCircle2, Clock, Lock
+  AlertCircle, Clock, Lock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -17,8 +17,12 @@ const formatBytes = (b: number) =>
 const isImageUrl = (url: string) =>
   /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/i.test(url);
 
+// Убирает старый текстовый формат вложений из description
+const cleanDescription = (desc: string) =>
+  (desc || '').replace(/\n\nПрикреплённые файлы:[\s\S]*$/, '').trim();
+
 const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
-  open:        { label: 'Открыт',   cls: 'bg-blue-900/30 text-blue-400 border border-blue-700/30',     icon: <Clock size={10} /> },
+  open:        { label: 'Открыт',   cls: 'bg-blue-900/30 text-blue-400 border border-blue-700/30',       icon: <Clock size={10} /> },
   in_progress: { label: 'В работе', cls: 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/30', icon: <AlertCircle size={10} /> },
   closed:      { label: 'Закрыт',   cls: 'bg-gray-900/40 text-gray-400 border border-gray-700/30',       icon: <Lock size={10} /> },
 };
@@ -73,14 +77,14 @@ const uploadFile = async (file: File, userId: string): Promise<string | null> =>
 
 /* ─── Image Viewer ──────────────────────────────────────────────────────── */
 const ImageViewer: React.FC<{ images: string[]; startIndex: number; onClose: () => void }> = ({ images, startIndex, onClose }) => {
-  const [idx, setIdx]     = useState(startIndex);
+  const [idx, setIdx]       = useState(startIndex);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') setIdx(i => (i - 1 + images.length) % images.length);
+      if (e.key === 'ArrowLeft')  setIdx(i => (i - 1 + images.length) % images.length);
       if (e.key === 'ArrowRight') setIdx(i => (i + 1) % images.length);
     };
     window.addEventListener('keydown', h);
@@ -122,7 +126,7 @@ const ImageViewer: React.FC<{ images: string[]; startIndex: number; onClose: () 
             className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white">
             <ChevronRight size={24} />
           </button>
-          <div className="absolute bottom-4 flex gap-2" onClick={e => e.stopPropagation()}>
+          <div className="absolute bottom-4 flex gap-2 flex-wrap justify-center max-w-sm" onClick={e => e.stopPropagation()}>
             {images.map((src, i) => (
               <button key={i} onClick={() => { setLoaded(false); setIdx(i); }}
                 className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${i === idx ? 'border-purple-500 scale-110' : 'border-white/20 opacity-50'}`}>
@@ -137,13 +141,20 @@ const ImageViewer: React.FC<{ images: string[]; startIndex: number; onClose: () 
 };
 
 /* ─── Attachments renderer ──────────────────────────────────────────────── */
-const AttachmentsView: React.FC<{ urls: string[]; onOpen: (urls: string[], idx: number) => void }> = ({ urls, onOpen }) => {
+const AttachmentsView: React.FC<{
+  urls: string[];
+  onOpen: (urls: string[], idx: number) => void;
+}> = ({ urls, onOpen }) => {
   const images = urls.filter(isImageUrl);
   const files  = urls.filter(u => !isImageUrl(u));
+
   return (
     <div className="space-y-2 mt-2">
       {images.length > 0 && (
-        <div className={`grid gap-1.5 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        <div className={`grid gap-1.5 ${
+          images.length === 1 ? 'grid-cols-1' :
+          images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+        }`}>
           {images.map((url, i) => (
             <motion.button key={i} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               onClick={() => onOpen(images, i)}
@@ -179,16 +190,18 @@ const FileAttachArea: React.FC<{
   onRemove: (i: number) => void;
   onOpenViewer: (urls: string[], idx: number) => void;
 }> = ({ files, previews, onAdd, onRemove, onOpenViewer }) => {
-  const totalSize = files.reduce((s, f) => s + f.size, 0);
-  const pct = Math.round((totalSize / MAX_TOTAL_SIZE) * 100);
+  const totalSize  = files.reduce((s, f) => s + f.size, 0);
+  const pct        = Math.round((totalSize / MAX_TOTAL_SIZE) * 100);
   const imgFiles   = files.filter(f => f.type.startsWith('image/'));
   const otherFiles = files.filter(f => !f.type.startsWith('image/'));
 
   if (files.length === 0) return null;
 
   return (
-    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-      className="space-y-2 p-3 bg-[#0B0A12] border border-purple-900/20 rounded-xl">
+    <motion.div
+      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+      className="space-y-2 p-3 bg-[#0B0A12] border border-purple-900/20 rounded-xl"
+    >
       {imgFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <AnimatePresence>
@@ -196,7 +209,9 @@ const FileAttachArea: React.FC<{
               const url     = previews.get(f.name + f.size) || '';
               const allUrls = imgFiles.map(rf => previews.get(rf.name + rf.size) || '');
               return (
-                <motion.div key={`${f.name}-${i}`} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="relative group">
+                <motion.div key={`${f.name}-${i}`}
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                  className="relative group">
                   <img src={url} onClick={() => onOpenViewer(allUrls, i)}
                     className="w-16 h-16 object-cover rounded-xl border border-purple-700/30 cursor-pointer hover:border-purple-500 transition-all" />
                   <button onClick={() => onRemove(files.indexOf(f))}
@@ -229,11 +244,66 @@ const FileAttachArea: React.FC<{
           <motion.div className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : 'bg-purple-600'}`}
             animate={{ width: `${pct}%` }} transition={{ duration: 0.3 }} />
         </div>
-        <p className="text-[10px] text-text-secondary mt-0.5 text-right">{formatBytes(totalSize)} / 25 МБ · {files.length}/{MAX_FILES}</p>
+        <p className="text-[10px] text-text-secondary mt-0.5 text-right">
+          {formatBytes(totalSize)} / 25 МБ · {files.length}/{MAX_FILES}
+        </p>
       </div>
     </motion.div>
   );
 };
+
+/* ─── Default categories ────────────────────────────────────────────────── */
+const DEFAULT_CATS: TicketCategory[] = [
+  {
+    id: 'support', name: 'Техническая поддержка', icon: '🛠',
+    description: 'Проблемы с сайтом или функциями',
+    fields: [
+      { id: 'desc', label: 'Опишите проблему', field_type: 'textarea', placeholder: 'Подробно опишите проблему...', required: true, sort_order: 0 },
+    ],
+  },
+  {
+    id: 'payment', name: 'Вопросы по оплате', icon: '💳',
+    description: 'Пополнение баланса, выплаты',
+    fields: [
+      { id: 'amount', label: 'Сумма',     field_type: 'input',    placeholder: 'Например: 1000 ₽',    required: true, sort_order: 0 },
+      { id: 'desc',   label: 'Описание',  field_type: 'textarea', placeholder: 'Опишите ситуацию...', required: true, sort_order: 1 },
+    ],
+  },
+  {
+    id: 'account', name: 'Проблемы с аккаунтом', icon: '👤',
+    description: 'Вход, настройки, безопасность',
+    fields: [
+      { id: 'desc', label: 'Опишите проблему', field_type: 'textarea', placeholder: 'Что случилось с аккаунтом?', required: true, sort_order: 0 },
+    ],
+  },
+  {
+    id: 'dispute', name: 'Спор по сделке', icon: '⚖️',
+    description: 'Претензии по купленному товару',
+    fields: [
+      { id: 'product',     label: 'Название товара',               field_type: 'input',    placeholder: 'Укажите товар',                required: true,  sort_order: 0 },
+      { id: 'seller',      label: 'Никнейм продавца',              field_type: 'input',    placeholder: 'Например: @username',           required: true,  sort_order: 1 },
+      { id: 'out_of_site', label: 'Вели ли вы общение вне сайта?', field_type: 'input',    placeholder: 'Да/Нет, если да — где',         required: false, sort_order: 2 },
+      { id: 'desc',        label: 'Опишите проблему',              field_type: 'textarea', placeholder: 'Подробно опишите ситуацию...',  required: true,  sort_order: 3 },
+    ],
+  },
+  {
+    id: 'report', name: 'Жалоба на пользователя', icon: '🚨',
+    description: 'Мошенничество, нарушение правил',
+    fields: [
+      { id: 'target',  label: 'На кого жалоба (никнейм)', field_type: 'input',    placeholder: 'Никнейм пользователя',        required: true, sort_order: 0 },
+      { id: 'reason',  label: 'Причина жалобы',           field_type: 'input',    placeholder: 'Мошенничество / спам / ...',  required: true, sort_order: 1 },
+      { id: 'desc',    label: 'Подробное описание',        field_type: 'textarea', placeholder: 'Опишите ситуацию подробно...', required: true, sort_order: 2 },
+    ],
+  },
+  {
+    id: 'other', name: 'Другое', icon: '💭',
+    description: 'Любой другой вопрос',
+    fields: [
+      { id: 'subject', label: 'Тема',    field_type: 'input',    placeholder: 'Кратко о чём',           required: true, sort_order: 0 },
+      { id: 'desc',    label: 'Детали',  field_type: 'textarea', placeholder: 'Расскажите подробнее...', required: true, sort_order: 1 },
+    ],
+  },
+];
 
 /* ─── Create Ticket Modal ───────────────────────────────────────────────── */
 const CreateTicketModal: React.FC<{
@@ -252,42 +322,15 @@ const CreateTicketModal: React.FC<{
   const [uploadPct, setUploadPct]     = useState(0);
   const [loadingCats, setLoadingCats] = useState(true);
 
-  // Дефолтные категории (если нет кастомных)
-  const DEFAULT_CATS: TicketCategory[] = [
-    { id: 'support',  name: 'Техническая поддержка', icon: '🛠', description: 'Проблемы с сайтом или функциями', fields: [
-      { id: 'desc', label: 'Опишите проблему', field_type: 'textarea', placeholder: 'Подробно опишите проблему...', required: true, sort_order: 0 },
-    ]},
-    { id: 'payment',  name: 'Вопросы по оплате',     icon: '💳', description: 'Пополнение баланса, выплаты', fields: [
-      { id: 'amount', label: 'Сумма',         field_type: 'input',    placeholder: 'Например: 1000 ₽',    required: true,  sort_order: 0 },
-      { id: 'desc',   label: 'Описание',      field_type: 'textarea', placeholder: 'Опишите ситуацию...', required: true,  sort_order: 1 },
-    ]},
-    { id: 'account',  name: 'Проблемы с аккаунтом',  icon: '👤', description: 'Вход, настройки, безопасность', fields: [
-      { id: 'desc', label: 'Опишите проблему', field_type: 'textarea', placeholder: 'Что случилось с аккаунтом?', required: true, sort_order: 0 },
-    ]},
-    { id: 'dispute',  name: 'Спор по сделке',         icon: '⚖️', description: 'Претензии по купленному товару', fields: [
-      { id: 'product',      label: 'Название товара',            field_type: 'input',    placeholder: 'Укажите товар',               required: true,  sort_order: 0 },
-      { id: 'seller',       label: 'Никнейм продавца',           field_type: 'input',    placeholder: 'Например: @username',         required: true,  sort_order: 1 },
-      { id: 'out_of_site',  label: 'Вели ли вы общение вне сайта?', field_type: 'input', placeholder: 'Да/Нет, если да — где',      required: false, sort_order: 2 },
-      { id: 'desc',         label: 'Опишите проблему',           field_type: 'textarea', placeholder: 'Подробно опишите ситуацию...', required: true, sort_order: 3 },
-    ]},
-    { id: 'report',   name: 'Жалоба на пользователя', icon: '🚨', description: 'Мошенничество, нарушение правил', fields: [
-      { id: 'target',  label: 'На кого жалоба (никнейм)', field_type: 'input',    placeholder: 'Никнейм пользователя',       required: true, sort_order: 0 },
-      { id: 'reason',  label: 'Причина жалобы',           field_type: 'input',    placeholder: 'Мошенничество / спам / ...',  required: true, sort_order: 1 },
-      { id: 'desc',    label: 'Подробное описание',        field_type: 'textarea', placeholder: 'Опишите ситуацию подробно...', required: true, sort_order: 2 },
-    ]},
-    { id: 'other',    name: 'Другое',                   icon: '💭', description: 'Любой другой вопрос', fields: [
-      { id: 'subject', label: 'Тема',    field_type: 'input',    placeholder: 'Кратко о чём',      required: true, sort_order: 0 },
-      { id: 'desc',    label: 'Детали', field_type: 'textarea', placeholder: 'Расскажите подробнее...', required: true, sort_order: 1 },
-    ]},
-  ];
-
   useEffect(() => {
     (async () => {
       setLoadingCats(true);
-      const { data: cats } = await supabase.from('ticket_categories').select('*').eq('is_active', true).order('sort_order');
+      const { data: cats } = await supabase
+        .from('ticket_categories').select('*').eq('is_active', true).order('sort_order');
       if (cats && cats.length > 0) {
         const withFields = await Promise.all(cats.map(async (c: any) => {
-          const { data: fields } = await supabase.from('ticket_category_fields').select('*').eq('category_id', c.id).order('sort_order');
+          const { data: fields } = await supabase
+            .from('ticket_category_fields').select('*').eq('category_id', c.id).order('sort_order');
           return { ...c, fields: fields || [] };
         }));
         setCategories(withFields);
@@ -300,8 +343,8 @@ const CreateTicketModal: React.FC<{
 
   const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files || []);
-    const cur = files.reduce((s, f) => s + f.size, 0);
-    let running = cur;
+    const cur      = files.reduce((s, f) => s + f.size, 0);
+    let running    = cur;
     const valid: File[] = [];
     for (const f of incoming) {
       if (files.length + valid.length >= MAX_FILES) break;
@@ -317,7 +360,6 @@ const CreateTicketModal: React.FC<{
 
   const handleSubmit = async () => {
     if (!selected) return;
-    // Проверка обязательных полей
     for (const field of selected.fields) {
       if (field.required && !fieldValues[field.id]?.trim()) {
         alert(`Заполните обязательное поле: ${field.label}`);
@@ -326,9 +368,7 @@ const CreateTicketModal: React.FC<{
     }
     setSubmitting(true);
     setUploadPct(0);
-
     try {
-      // Загружаем файлы
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const url = await uploadFile(files[i], userId);
@@ -336,9 +376,8 @@ const CreateTicketModal: React.FC<{
         setUploadPct(Math.round(((i + 1) / files.length) * 100));
       }
 
-      // Формируем subject и description
-      const subjectField = fieldValues['subject'] || fieldValues['product'] || fieldValues['reason'] || selected.name;
-      const descLines = selected.fields
+      const subjectField = fieldValues['subject'] || fieldValues['product'] || fieldValues['target'] || fieldValues['reason'] || selected.name;
+      const descLines    = selected.fields
         .filter(f => f.id !== 'subject')
         .map(f => `${f.label}:\n${fieldValues[f.id] || '—'}`)
         .join('\n\n');
@@ -379,7 +418,7 @@ const CreateTicketModal: React.FC<{
             onClick={e => e.stopPropagation()}
             className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_60px_rgba(139,92,246,0.2)]"
           >
-            {/* Modal header */}
+            {/* Header */}
             <div className="p-5 border-b border-purple-900/20 flex items-center gap-3 flex-shrink-0">
               {step === 'form' && (
                 <motion.button onClick={() => setStep('category')} whileHover={{ x: -2 }}
@@ -403,11 +442,12 @@ const CreateTicketModal: React.FC<{
               </button>
             </div>
 
+            {/* Body */}
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 {step === 'category' ? (
-                  /* ── Step 1: Category picker ── */
-                  <motion.div key="cat" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                  <motion.div key="cat"
+                    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                     className="p-5">
                     {loadingCats ? (
                       <div className="flex justify-center py-12">
@@ -439,11 +479,10 @@ const CreateTicketModal: React.FC<{
                     )}
                   </motion.div>
                 ) : (
-                  /* ── Step 2: Form ── */
-                  <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                  <motion.div key="form"
+                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                     className="p-5 space-y-4">
 
-                    {/* Dynamic fields */}
                     {selected?.fields.sort((a, b) => a.sort_order - b.sort_order).map(field => (
                       <div key={field.id}>
                         <label className="block text-sm font-medium text-white mb-1.5">
@@ -470,42 +509,38 @@ const CreateTicketModal: React.FC<{
                       </div>
                     ))}
 
-                    {/* File attachments */}
+                    {/* Attachments */}
                     <div>
                       <label className="block text-sm font-medium text-white mb-1.5">
                         Прикреплённые файлы
                         <span className="text-text-secondary font-normal ml-2">до {MAX_FILES} файлов, 25 МБ</span>
                       </label>
-
                       <AnimatePresence>
                         {files.length > 0 && (
                           <div className="mb-3">
                             <FileAttachArea files={files} previews={previews}
-                              onAdd={handleFileAdd} onRemove={i => setFiles(p => p.filter((_, j) => j !== i))}
+                              onAdd={handleFileAdd}
+                              onRemove={i => setFiles(p => p.filter((_, j) => j !== i))}
                               onOpenViewer={(urls, idx) => setViewer({ urls, idx })} />
                           </div>
                         )}
                       </AnimatePresence>
-
                       <div className="flex gap-2">
                         <label className="cursor-pointer flex-1">
                           <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-900/10 border border-purple-700/20 border-dashed hover:bg-purple-900/20 hover:border-purple-600/40 text-purple-400 text-sm transition-all">
-                            <Image size={15} />
-                            <span>Фото</span>
+                            <Image size={15} /><span>Фото</span>
                           </div>
                           <input type="file" multiple accept="image/*" onChange={handleFileAdd} className="hidden" />
                         </label>
                         <label className="cursor-pointer flex-1">
                           <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-900/10 border border-purple-700/20 border-dashed hover:bg-purple-900/20 hover:border-purple-600/40 text-purple-400 text-sm transition-all">
-                            <Paperclip size={15} />
-                            <span>Файл</span>
+                            <Paperclip size={15} /><span>Файл</span>
                           </div>
                           <input type="file" multiple onChange={handleFileAdd} className="hidden" />
                         </label>
                       </div>
                     </div>
 
-                    {/* Upload progress */}
                     <AnimatePresence>
                       {submitting && uploadPct > 0 && uploadPct < 100 && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -585,7 +620,8 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
 
   const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files || []);
-    let cur = totalSize; const valid: File[] = [];
+    let cur = totalSize;
+    const valid: File[] = [];
     for (const f of incoming) {
       if (replyFiles.length + valid.length >= MAX_FILES) break;
       if (cur + f.size > MAX_TOTAL_SIZE) continue;
@@ -624,12 +660,19 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
     try { return JSON.parse(m.attachments); } catch { return []; }
   };
 
+  // Поддержка и нового формата (JSON) и старого (текст в description)
   const ticketAtts = (): string[] => {
-    if (!ticket.attachments) return [];
-    try { return JSON.parse(ticket.attachments); } catch { return []; }
+    if (ticket.attachments) {
+      try { return JSON.parse(ticket.attachments); } catch {}
+    }
+    return [];
   };
 
   const st = STATUS_CONFIG[ticket.status] || STATUS_CONFIG['open'];
+
+  // Иконка из subject (первый символ/эмодзи)
+  const subjectIcon = ticket.subject?.match(/^(\p{Emoji}|\S+)\s/u)?.[1] || '💭';
+  const subjectText = ticket.subject?.replace(/^(\p{Emoji}|\S+)\s/u, '') || ticket.category;
 
   return (
     <>
@@ -639,13 +682,13 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
         {/* Header */}
         <button onClick={toggle} className="w-full p-4 text-left hover:bg-purple-900/5 transition-all">
           <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${open ? 'bg-purple-700/30' : 'bg-purple-900/20'}`}>
-              {ticket.subject?.split(' ')[0] || '💭'}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-all ${
+              open ? 'bg-purple-700/30' : 'bg-purple-900/20'
+            }`}>
+              {subjectIcon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
-                {ticket.subject?.replace(/^[\S]+\s/, '') || ticket.category}
-              </p>
+              <p className="text-sm font-semibold text-white truncate">{subjectText}</p>
               <p className="text-xs text-text-secondary mt-0.5">
                 #{ticket.id.slice(0, 8)} · {new Date(ticket.created_at).toLocaleString('ru-RU')}
               </p>
@@ -671,15 +714,20 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
             >
               <div className="px-5 pb-5 pt-1 bg-[#120F1E] space-y-4 border-t border-purple-900/20">
 
-                {/* Description */}
+                {/* Description block */}
                 <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 space-y-3">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium">Описание</p>
-                  <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+                  {/* ✅ Убираем старый текстовый формат вложений */}
+                  <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">
+                    {cleanDescription(ticket.description || '')}
+                  </p>
 
-                  {/* Ticket attachments */}
+                  {/* Ticket attachments (только реальные URL из JSON) */}
                   {ticketAtts().length > 0 && (
                     <div className="pt-2 border-t border-purple-900/20">
-                      <p className="text-xs text-text-secondary mb-2">📎 Прикреплённые файлы ({ticketAtts().length})</p>
+                      <p className="text-xs text-text-secondary mb-2">
+                        📎 Прикреплённые файлы ({ticketAtts().length})
+                      </p>
                       <AttachmentsView urls={ticketAtts()} onOpen={(urls, idx) => setViewer({ urls, idx })} />
                     </div>
                   )}
@@ -695,20 +743,31 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
                   ) : messages.length === 0 ? (
                     <p className="text-center text-text-secondary text-sm py-8">Ответов пока нет</p>
                   ) : (
-                    <div className="max-h-80 overflow-y-auto pr-1 space-y-2.5">
+                    <div className="max-h-80 overflow-y-auto pr-1 space-y-2.5 scroll-smooth">
                       <AnimatePresence>
                         {messages.map((m, i) => {
-                          const isMine = m.sender_id === me?.id;
-                          const atts   = getAtts(m);
-                          const hasText = m.message?.trim().length > 0;
+                          const isMine  = m.sender_id === me?.id;
+                          const atts    = getAtts(m);
+                          // Убираем старый формат из сообщений тоже
+                          const msgText = cleanDescription(m.message || '');
+                          const hasText = msgText.length > 0;
+
                           return (
-                            <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: i * 0.03 }} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                            <motion.div key={m.id}
+                              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.03 }}
+                              className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[80%] rounded-2xl text-sm overflow-hidden ${
-                                isMine ? 'bg-purple-700 text-white rounded-tr-sm' : 'bg-[#1E1A30] border border-purple-900/30 text-white rounded-tl-sm'
+                                isMine
+                                  ? 'bg-purple-700 text-white rounded-tr-sm'
+                                  : 'bg-[#1E1A30] border border-purple-900/30 text-white rounded-tl-sm'
                               }`}>
-                                {!isMine && <p className="px-3 pt-2 text-[10px] text-purple-300 font-bold">🛟 Поддержка</p>}
-                                {hasText && <p className="px-3 py-2 whitespace-pre-wrap break-words">{m.message}</p>}
+                                {!isMine && (
+                                  <p className="px-3 pt-2 text-[10px] text-purple-300 font-bold">🛟 Поддержка</p>
+                                )}
+                                {hasText && (
+                                  <p className="px-3 py-2 whitespace-pre-wrap break-words">{msgText}</p>
+                                )}
                                 {atts.length > 0 && (
                                   <div className={`${hasText ? 'px-2 pb-2' : 'p-2'}`}>
                                     <AttachmentsView urls={atts} onOpen={(urls, idx) => setViewer({ urls, idx })} />
@@ -732,14 +791,15 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
                   <div className="space-y-3 pt-2 border-t border-purple-900/20">
                     <AnimatePresence>
                       {replyFiles.length > 0 && (
-                        <FileAttachArea files={replyFiles} previews={previews}
+                        <FileAttachArea
+                          files={replyFiles} previews={previews}
                           onAdd={handleFileAdd}
                           onRemove={i => setReplyFiles(p => p.filter((_, j) => j !== i))}
-                          onOpenViewer={(urls, idx) => setViewer({ urls, idx })} />
+                          onOpenViewer={(urls, idx) => setViewer({ urls, idx })}
+                        />
                       )}
                     </AnimatePresence>
 
-                    {/* Upload progress */}
                     <AnimatePresence>
                       {sending && uploadPct > 0 && uploadPct < 100 && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -765,15 +825,19 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
                         </div>
                         <input type="file" multiple onChange={handleFileAdd} className="hidden" />
                       </label>
-                      <input value={reply} onChange={e => setReply(e.target.value)}
+                      <input
+                        value={reply} onChange={e => setReply(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
                         placeholder="Ответить..."
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm focus:border-purple-500/60 focus:outline-none transition-all" />
-                      <motion.button onClick={send} disabled={sending || (!reply.trim() && replyFiles.length === 0)}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm focus:border-purple-500/60 focus:outline-none transition-all"
+                      />
+                      <motion.button onClick={send}
+                        disabled={sending || (!reply.trim() && replyFiles.length === 0)}
                         whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         className="p-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl disabled:opacity-50 transition-all shadow-[0_0_12px_rgba(139,92,246,0.3)] flex-shrink-0">
                         {sending
-                          ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                          ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
                           : <Send size={16} />}
                       </motion.button>
                     </div>
@@ -786,7 +850,9 @@ const TicketItem: React.FC<{ ticket: Ticket; me: any }> = ({ ticket, me }) => {
                     <p className="text-xs text-gray-400">Тикет закрыт</p>
                     {ticket.resolution && (
                       <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${
-                        ticket.resolution === 'resolved' ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                        ticket.resolution === 'resolved'
+                          ? 'bg-green-900/30 text-green-400'
+                          : 'bg-red-900/30 text-red-400'
                       }`}>
                         {ticket.resolution === 'resolved' ? '✅ Решено' : '❌ Не решено'}
                       </span>
@@ -834,7 +900,6 @@ const SupportPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-purple-900/30 border border-purple-700/30 flex items-center justify-center">
           <Headset size={18} className="text-purple-400" />
@@ -849,12 +914,10 @@ const SupportPage: React.FC = () => {
         <motion.button onClick={() => setShowCreate(true)}
           whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           className="ml-auto flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold transition-all shadow-[0_0_16px_rgba(139,92,246,0.3)]">
-          <Plus size={15} />
-          Создать тикет
+          <Plus size={15} /> Создать тикет
         </motion.button>
       </motion.div>
 
-      {/* Content */}
       {loading ? (
         <div className="flex justify-center py-16">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -884,7 +947,6 @@ const SupportPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Create modal */}
       <AnimatePresence>
         {showCreate && me && (
           <CreateTicketModal
