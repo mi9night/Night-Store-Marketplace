@@ -889,7 +889,7 @@ ${problemDescription || '—'}${filesInfo}`;
         {/* RIGHT */}
         <div className="space-y-5">
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-            className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 lg:sticky lg:top-20">
+            className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 lg:sticky lg:top-20 relative z-10 overflow-hidden">
             <div className="mb-4">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-white">
@@ -978,7 +978,7 @@ ${problemDescription || '—'}${filesInfo}`;
           {/* === Seller === */}
           {seller && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-              className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
+              className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 overflow-hidden">
               <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                 <Users size={16} className="text-purple-400" /> Продавец
               </h3>
