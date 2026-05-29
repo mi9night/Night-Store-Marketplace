@@ -15,6 +15,8 @@ const NOTICE_ENABLED = true;
 const NOTICE_VERSION = 'v1';
 const STORAGE_KEY = `night_store_startup_notice_hidden_${NOTICE_VERSION}`;
 const SESSION_KEY = `night_store_startup_notice_seen_${NOTICE_VERSION}`;
+export const STARTUP_NOTICE_TRIGGER_KEY = `night_store_startup_notice_after_registration_${NOTICE_VERSION}`;
+export const STARTUP_NOTICE_EVENT = 'night-store-show-startup-notice';
 const COUNTDOWN_SECONDS = 10;
 
 // Если когда-нибудь захочешь автоматически отключить плашку по дате — укажи ISO-дату.
@@ -35,13 +37,28 @@ const StartupNotice: React.FC = () => {
     if (!NOTICE_ENABLED || isExpired) return;
     if (typeof window === 'undefined') return;
 
-    const hiddenForever = localStorage.getItem(STORAGE_KEY) === '1';
-    const hiddenThisSession = sessionStorage.getItem(SESSION_KEY) === '1';
+    const openNotice = () => {
+      const hiddenForever = localStorage.getItem(STORAGE_KEY) === '1';
+      if (hiddenForever) return;
 
-    if (!hiddenForever && !hiddenThisSession) {
-      const t = window.setTimeout(() => setVisible(true), 350);
+      localStorage.removeItem(STARTUP_NOTICE_TRIGGER_KEY);
+      sessionStorage.removeItem(STARTUP_NOTICE_TRIGGER_KEY);
+      setDontShowAgain(false);
+      setSecondsLeft(COUNTDOWN_SECONDS);
+      setVisible(true);
+    };
+
+    const shouldOpenAfterRegistration =
+      localStorage.getItem(STARTUP_NOTICE_TRIGGER_KEY) === '1' ||
+      sessionStorage.getItem(STARTUP_NOTICE_TRIGGER_KEY) === '1';
+
+    if (shouldOpenAfterRegistration) {
+      const t = window.setTimeout(openNotice, 350);
       return () => window.clearTimeout(t);
     }
+
+    window.addEventListener(STARTUP_NOTICE_EVENT, openNotice);
+    return () => window.removeEventListener(STARTUP_NOTICE_EVENT, openNotice);
   }, [isExpired]);
 
   useEffect(() => {
