@@ -143,27 +143,18 @@ export const applyFullTheme = (key: FullThemeKey) => {
   root.style.setProperty('--color-bg-card', t.bg3);
   root.style.setProperty('--color-text-primary', t.text);
   root.style.setProperty('--color-text-secondary', t.text2);
-  root.style.setProperty('--color-accent', t.accent);
-  root.style.setProperty('--color-accent-hover', t.hover);
-  root.style.setProperty('--color-accent-soft', t.soft);
 
   root.style.setProperty('--bg-primary', t.bg);
   root.style.setProperty('--bg-secondary', t.bg2);
   root.style.setProperty('--bg-card', t.bg3);
   root.style.setProperty('--text-primary', t.text);
   root.style.setProperty('--text-secondary', t.text2);
-  root.style.setProperty('--accent', t.accent);
-  root.style.setProperty('--accent-hover', t.hover);
-  root.style.setProperty('--accent-soft', t.soft);
 
   root.style.setProperty('--bg-primary-rgb', rgbString(t.bg));
   root.style.setProperty('--bg-secondary-rgb', rgbString(t.bg2));
   root.style.setProperty('--bg-card-rgb', rgbString(t.bg3));
   root.style.setProperty('--text-primary-rgb', rgbString(t.text));
   root.style.setProperty('--text-secondary-rgb', rgbString(t.text2));
-  root.style.setProperty('--accent-rgb', rgbString(t.accent));
-  root.style.setProperty('--accent-hover-rgb', rgbString(t.hover));
-  root.style.setProperty('--accent-soft-rgb', rgbString(t.soft));
 
   document.body.style.backgroundColor = t.bg;
   document.body.style.color = t.text;
@@ -237,56 +228,56 @@ export const applyFullTheme = (key: FullThemeKey) => {
     ${cssEscapeHexClass('to', '#1E1A30')} { --tw-gradient-to: ${t.bg3} var(--tw-gradient-to-position) !important; }
 
     /* Полное оформление должно перекрашивать старые purple-утилиты в выбранный акцент */
-    ${utilitySelectors('text')} { color: ${t.soft} !important; }
+    ${utilitySelectors('text')} { color: var(--accent-soft) !important; }
     ${variantSelectors('hover', 'text', ':hover')} { color: ${t.text} !important; }
-    ${utilitySelectors('border')} { border-color: ${rgba(t.accent, 0.28)} !important; }
-    ${variantSelectors('hover', 'border', ':hover')} { border-color: ${rgba(t.accent, 0.55)} !important; }
+    ${utilitySelectors('border')} { border-color: rgba(var(--accent-rgb), 0.28) !important; }
+    ${variantSelectors('hover', 'border', ':hover')} { border-color: rgba(var(--accent-rgb), 0.55) !important; }
     ${variantSelectors('focus', 'border', ':focus')},
-    ${variantSelectors('focus-within', 'border', ':focus-within')} { border-color: ${rgba(t.accent, 0.7)} !important; }
-    ${utilitySelectors('ring')} { --tw-ring-color: ${rgba(t.accent, 0.45)} !important; }
+    ${variantSelectors('focus-within', 'border', ':focus-within')} { border-color: rgba(var(--accent-rgb), 0.7) !important; }
+    ${utilitySelectors('ring')} { --tw-ring-color: rgba(var(--accent-rgb), 0.45) !important; }
 
-    ${utilitySelectors('bg')} { background-color: ${rgba(t.accent, 0.16)} !important; }
+    ${utilitySelectors('bg')} { background-color: rgba(var(--accent-rgb), 0.16) !important; }
     .bg-purple-500,
     .bg-purple-600,
     .bg-purple-700,
     .bg-purple-800,
     .bg-purple-900,
-    .bg-accent { background-color: ${t.accent} !important; }
+    .bg-accent { background-color: var(--accent) !important; }
     .hover\\:bg-purple-500:hover,
     .hover\\:bg-purple-600:hover,
     .hover\\:bg-purple-700:hover,
     .hover\\:bg-purple-800:hover,
     .hover\\:bg-purple-900:hover,
-    .hover\\:bg-accent-hover:hover { background-color: ${t.hover} !important; }
+    .hover\\:bg-accent-hover:hover { background-color: var(--accent-hover) !important; }
 
     ${utilitySelectors('from')} {
-      --tw-gradient-from: ${rgba(t.accent, 0.42)} var(--tw-gradient-from-position) !important;
-      --tw-gradient-to: ${rgba(t.accent, 0)} var(--tw-gradient-to-position) !important;
+      --tw-gradient-from: rgba(var(--accent-rgb), 0.42) var(--tw-gradient-from-position) !important;
+      --tw-gradient-to: rgba(var(--accent-rgb), 0) var(--tw-gradient-to-position) !important;
       --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
     }
     ${utilitySelectors('via')} {
-      --tw-gradient-via: ${rgba(t.accent, 0.2)} var(--tw-gradient-via-position) !important;
+      --tw-gradient-via: rgba(var(--accent-rgb), 0.2) var(--tw-gradient-via-position) !important;
       --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
     }
     ${utilitySelectors('to')} {
-      --tw-gradient-to: ${rgba(t.accent, 0.16)} var(--tw-gradient-to-position) !important;
+      --tw-gradient-to: rgba(var(--accent-rgb), 0.16) var(--tw-gradient-to-position) !important;
     }
 
     /* Тексты и стекло */
     .text-white { color: ${t.text} !important; }
     .glass {
       background: ${rgba(t.bg2, 0.84)} !important;
-      border-color: ${rgba(t.accent, 0.16)} !important;
+      border-color: rgba(var(--accent-rgb), 0.16) !important;
     }
     .dropdown,
     .notif-panel {
       background: ${t.bg2} !important;
-      border-color: ${rgba(t.accent, 0.24)} !important;
-      box-shadow: 0 20px 60px ${rgba('#000000', light ? 0.12 : 0.45)}, 0 0 40px ${rgba(t.accent, 0.08)} !important;
+      border-color: rgba(var(--accent-rgb), 0.24) !important;
+      box-shadow: 0 20px 60px ${rgba('#000000', light ? 0.12 : 0.45)}, 0 0 40px rgba(var(--accent-rgb), 0.08) !important;
     }
 
     .gradient-text {
-      background: linear-gradient(135deg, ${t.accent}, ${t.soft}, ${t.hover}) !important;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft), var(--accent-hover)) !important;
       -webkit-background-clip: text !important;
       -webkit-text-fill-color: transparent !important;
       background-clip: text !important;
@@ -295,14 +286,14 @@ export const applyFullTheme = (key: FullThemeKey) => {
     .btn-primary,
     .progress-bar,
     .chart-bar {
-      background: linear-gradient(135deg, ${t.accent}, ${t.hover}) !important;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
     }
 
     .glow-purple,
     .glow-purple-hover:hover,
     .glow-card:hover,
     .avatar-ring {
-      box-shadow: 0 0 24px ${rgba(t.accent, 0.28)}, 0 0 48px ${rgba(t.accent, 0.1)} !important;
+      box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.28), 0 0 48px rgba(var(--accent-rgb), 0.1) !important;
     }
 
     input,
@@ -310,19 +301,19 @@ export const applyFullTheme = (key: FullThemeKey) => {
     select {
       background-color: ${t.bg2} !important;
       color: ${t.text} !important;
-      border-color: ${rgba(t.accent, 0.24)} !important;
+      border-color: rgba(var(--accent-rgb), 0.24) !important;
     }
     input:focus,
     textarea:focus,
     select:focus {
-      border-color: ${t.accent} !important;
-      box-shadow: 0 0 0 2px ${rgba(t.accent, 0.16)} !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.16) !important;
     }
     ::placeholder { color: ${t.text2} !important; opacity: .72; }
-    ::selection { background: ${rgba(t.accent, 0.28)} !important; color: ${t.text} !important; }
+    ::selection { background: rgba(var(--accent-rgb), 0.28) !important; color: ${t.text} !important; }
     ::-webkit-scrollbar-track { background: ${t.bg2} !important; }
-    ::-webkit-scrollbar-thumb { background: ${t.accent} !important; }
-    ::-webkit-scrollbar-thumb:hover { background: ${t.hover} !important; }
+    ::-webkit-scrollbar-thumb { background: var(--accent) !important; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-hover) !important; }
 
     ${light ? `
       .bg-black\\/40,
@@ -336,7 +327,7 @@ export const applyFullTheme = (key: FullThemeKey) => {
       .border-white,
       .border-white\\/10,
       .border-white\\/20 {
-        border-color: ${rgba(t.accent, 0.24)} !important;
+        border-color: rgba(var(--accent-rgb), 0.24) !important;
       }
     ` : ''}
   `;
@@ -386,12 +377,10 @@ export const usePrivacy = () => {
   const setLiveFeedEnabled = (v: boolean) => { localStorage.setItem('live_feed_enabled', v ? '1' : '0'); setLFE(v); emit(); };
   const setTheme = (k: ThemeKey) => { localStorage.setItem('theme', k); setT(k); applyTheme(k); emit(); };
   const setFullTheme = (k: FullThemeKey) => {
-    // Полная тема должна выглядеть цельно: фон + карточки + текст + акцент.
-    // Поэтому при выборе полной темы синхронизируем и акцентную тему.
+    // Полная тема отвечает за фон, карточки и текст.
+    // Акценты остаются отдельной настройкой «Тема акцентного цвета».
     localStorage.setItem('full_theme', k);
-    localStorage.setItem('theme', k);
     setFT(k);
-    setT(k);
     applyFullTheme(k);
     emit();
   };

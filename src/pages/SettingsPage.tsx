@@ -582,10 +582,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         whileTap={{ scale: 0.98 }}
                         className="relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden group"
                         style={{
-                          background: `linear-gradient(135deg, ${ft.bg} 0%, ${ft.bg2} 52%, ${ft.bg3} 100%)`,
+                          background: `linear-gradient(135deg, ${ft.accent}18 0%, #171425 48%, #0B0A12 100%)`,
                           borderColor: isActive ? ft.accent : `${ft.accent}55`,
                           boxShadow: isActive ? `0 0 0 1px ${ft.accent}, 0 0 24px ${ft.accent}44` : `0 0 14px ${ft.accent}18`,
-                          color: ft.text,
+                          color: '#EAE6FF',
                         }}
                       >
                         <span
@@ -594,7 +594,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         />
                         <div className="relative flex items-center gap-2 min-w-0">
                           <ThemeLogo themeKey={k} color={ft.accent} active={isActive} />
-                          <span className="text-xs font-semibold truncate" style={{ color: ft.text }}>{ft.label}</span>
+                          <span className="text-xs font-semibold text-white truncate">{ft.label}</span>
                         </div>
                         <div className="relative flex items-center gap-1.5 mt-3">
                           {[ft.bg, ft.bg2, ft.bg3, ft.accent].map((c, i) => (
@@ -612,7 +612,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-text-secondary mt-3">💡 Меняет фон, цвет карточек, текст, бордеры и акцент по всему сайту</p>
+                <p className="text-[10px] text-text-secondary mt-3">💡 Меняет фон, цвет карточек, текст и поверхности сайта</p>
               </div>
 
               {/* === Тема оформления === */}
