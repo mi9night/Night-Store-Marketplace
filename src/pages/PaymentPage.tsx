@@ -254,29 +254,35 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
     if (numAmount > balance) { alert('Недостаточно средств'); return; }
     setSubmitting(true);
 
+    const cleanCard = cardNumber.replace(/\s/g, '');
+
     try {
-      const { data: tx, error } = await supabase.from('transactions').insert({
+      const { data: op, error } = await supabase.from('operations').insert({
         user_id: user.id,
         type: 'withdraw',
-        method: selectedMethod.id,
-        method_name: selectedMethod.name,
         amount: numAmount,
-        fee,
-        total: receive,
+        recipient: `Карта **** ${cleanCard.slice(-4)}`,
         status: 'pending',
         meta: {
+          method: selectedMethod.id,
+          method_name: selectedMethod.name,
+          fee,
+          total: receive,
           fee_percent: selectedMethod.fee,
-          card_number: cardNumber.replace(/\s/g, '').slice(-4), // only last 4 digits
-          card_holder: cardHolder,
-          bank_name: bankName,
-          full_card: cardNumber.replace(/\s/g, ''), // admin sees full
+          payout_amount: receive,
+          card_last4: cleanCard.slice(-4),
+          card_holder: cardHolder.trim(),
+          bank_name: bankName.trim(),
+          full_card: cleanCard,
+          user_payment_id: fullUserId || user?.id,
         },
       }).select().single();
 
       if (error) throw error;
-      setTxId(tx.id);
+      setTxId(op.id);
       setStep('done');
     } catch (e: any) {
+      console.error('Withdraw request error:', e);
       setStep('error');
     } finally {
       setSubmitting(false);

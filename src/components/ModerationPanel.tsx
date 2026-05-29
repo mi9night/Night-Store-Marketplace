@@ -1507,7 +1507,7 @@ const OperationsSection: React.FC = () => {
     setOps(data || []);
     const ids = [...new Set((data || []).map((o: any) => o.user_id).filter(Boolean))];
     if (ids.length > 0) {
-      const { data: users } = await supabase.from('users').select('id, username, email, custom_id').in('id', ids);
+      const { data: users } = await supabase.from('users').select('id, username, email, custom_id, balance').in('id', ids);
       const map: Record<string, any> = {};
       users?.forEach(u => { map[u.id] = u; });
       setUsersMap(map);
@@ -1517,9 +1517,40 @@ const OperationsSection: React.FC = () => {
 
   useEffect(() => { load(); }, [filter]);
 
+  const getMeta = (o: any) => {
+    if (!o?.meta) return {};
+    if (typeof o.meta === 'string') {
+      try { return JSON.parse(o.meta); } catch { return {}; }
+    }
+    return o.meta || {};
+  };
+
+  const maskCard = (card?: string) => {
+    const clean = String(card || '').replace(/\D/g, '');
+    if (!clean) return '—';
+    return clean.replace(/(.{4})/g, '$1 ').trim();
+  };
+
   const action = async (opId: string, act: 'approve' | 'reject' | 'rollback') => {
-    const { error } = await supabase.rpc('moderate_operation', { p_op_id: opId, p_action: act, p_note: note || null });
-    if (error) alert(error.message);
+    const { data, error } = await supabase.rpc('moderate_operation', { p_op_id: opId, p_action: act, p_note: note || null });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    if (data && data.ok === false) {
+      const errMap: Record<string, string> = {
+        insufficient_balance: 'Недостаточно средств на балансе пользователя для вывода',
+        operation_not_pending: 'Операция уже обработана',
+        operation_not_found: 'Операция не найдена',
+        recipient_not_found: 'Получатель не найден',
+        cannot_transfer_to_self: 'Нельзя перевести самому себе',
+        operation_cannot_rollback: 'Операцию нельзя откатить',
+        insufficient_balance_for_rollback: 'Недостаточно средств для отката пополнения',
+        recipient_has_insufficient_balance: 'У получателя недостаточно средств для отката',
+      };
+      alert(errMap[data.error] || data.error || 'Ошибка операции');
+      return;
+    }
     setNote(''); setOpening(null); load();
   };
 
@@ -1542,7 +1573,12 @@ const OperationsSection: React.FC = () => {
         <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-10 text-center text-text-secondary">Операций нет</div>
       ) : (
         <div className="space-y-2">
-          {ops.map((o, i) => (
+          {ops.map((o, i) => {
+            const meta = getMeta(o);
+            const user = usersMap[o.user_id] || {};
+            const isWithdraw = o.type === 'withdraw';
+            const payout = meta.payout_amount ?? meta.total;
+            return (
             <motion.div key={o.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
               className="bg-[#171425] border border-purple-900/20 rounded-xl p-3">
               <div className="flex items-center gap-3">
@@ -1562,6 +1598,27 @@ const OperationsSection: React.FC = () => {
                   o.status === 'pending' ? 'bg-yellow-900/30 text-yellow-400' : o.status === 'completed' ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
                 }`}>{o.status}{o.rolled_back && ' · откат'}</span>
               </div>
+
+              {isWithdraw && (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 space-y-1">
+                    <p className="text-[10px] uppercase tracking-wider text-text-secondary">Пользователь</p>
+                    <p className="text-white font-mono break-all">ID: {o.user_id}</p>
+                    <p className="text-text-secondary">
+                      {user.custom_id ? `#${user.custom_id}` : user.username || 'Без ника'}{user.email ? ` · ${user.email}` : ''}
+                    </p>
+                    <p className="text-text-secondary">Баланс: <span className="text-white font-semibold">{Number(user.balance || 0).toLocaleString('ru-RU')} ₽</span></p>
+                  </div>
+                  <div className="bg-[#0B0A12] border border-red-900/20 rounded-xl p-3 space-y-1">
+                    <p className="text-[10px] uppercase tracking-wider text-text-secondary">Данные карты</p>
+                    <p className="text-white font-mono">{maskCard(meta.full_card)}</p>
+                    <p className="text-text-secondary">Владелец: <span className="text-white">{meta.card_holder || '—'}</span></p>
+                    <p className="text-text-secondary">Банк: <span className="text-white">{meta.bank_name || '—'}</span></p>
+                    <p className="text-text-secondary">К выплате после комиссии: <span className="text-green-400 font-semibold">{Number(payout || Math.max(0, Number(o.amount || 0))).toLocaleString('ru-RU')} ₽</span></p>
+                  </div>
+                </div>
+              )}
+
               <AnimatePresence>
                 {opening === o.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-3 space-y-2">
@@ -1588,7 +1645,8 @@ const OperationsSection: React.FC = () => {
                 <button onClick={() => setOpening(o.id)} className="mt-2 text-xs text-purple-400 hover:underline">Действия →</button>
               )}
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
