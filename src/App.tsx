@@ -8,6 +8,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import UserProfileModal from './components/UserProfileModal';
 import LiveFeed from './components/LiveFeed';
+import StartupNotice from './components/StartupNotice';
 
 import AuthPage from './pages/AuthPage';
 import DiscordCallback from './pages/DiscordCallback';
@@ -290,6 +291,7 @@ const App: React.FC = () => {
         </>
       )}
 
+      {!authLoading && <StartupNotice />}
       <UserProfileModal />
     </div>
   );
