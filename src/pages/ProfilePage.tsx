@@ -15,6 +15,38 @@ import { UserLink } from '../components/UserLink';
 import LabelManager from '../components/LabelManager';
 import ReportButton from '../components/ReportButton';
 
+const sellerTierGradient: Record<number, string> = {
+  1: 'linear-gradient(90deg, #9CA3AF, #E5E7EB)',
+  2: 'linear-gradient(90deg, #92400E, #F59E0B)',
+  3: 'linear-gradient(90deg, #9CA3AF, #F3F4F6)',
+  4: 'linear-gradient(90deg, #EAB308, #FDE047)',
+  5: 'linear-gradient(90deg, #06B6D4, #67E8F9)',
+  6: 'linear-gradient(90deg, #8B5CF6, #EC4899)',
+};
+
+const xpLevelGradient = (level: number) => {
+  if (level >= 50) return 'linear-gradient(90deg, #EC4899, #8B5CF6, #6366F1)';
+  if (level >= 30) return 'linear-gradient(90deg, #8B5CF6, #EC4899)';
+  if (level >= 15) return 'linear-gradient(90deg, #6366F1, #A855F7)';
+  if (level >= 5) return 'linear-gradient(90deg, #10B981, #34D399)';
+  return 'linear-gradient(90deg, #7C3AED, #A855F7)';
+};
+
+const DiscordProfileLogo: React.FC<{ size?: number }> = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <rect width="48" height="48" rx="14" fill="url(#profile-discord-bg)" />
+    <path d="M17.1 16.4C19 15.6 20.5 15.3 22 15.2L22.6 16.5C23.5 16.4 24.5 16.4 25.5 16.5L26.1 15.2C27.7 15.3 29.2 15.6 31 16.4C33.4 20 34.1 23.5 33.8 26.9C31.8 28.4 29.8 29.2 27.9 29.7L26.7 27.8C27.3 27.6 27.9 27.3 28.4 27C25.6 28.3 22.5 28.3 19.7 27C20.2 27.4 20.8 27.6 21.4 27.8L20.2 29.7C18.2 29.2 16.2 28.4 14.2 26.9C13.8 22.9 14.9 19.5 17.1 16.4Z" fill="white" />
+    <path d="M20.8 24.4C21.7 24.4 22.4 23.6 22.4 22.7C22.4 21.7 21.7 21 20.8 21C19.9 21 19.2 21.7 19.2 22.7C19.2 23.6 19.9 24.4 20.8 24.4Z" fill="#5865F2" />
+    <path d="M27.2 24.4C28.1 24.4 28.8 23.6 28.8 22.7C28.8 21.7 28.1 21 27.2 21C26.3 21 25.6 21.7 25.6 22.7C25.6 23.6 26.3 24.4 27.2 24.4Z" fill="#5865F2" />
+    <defs>
+      <linearGradient id="profile-discord-bg" x1="6" y1="4" x2="44" y2="42" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#7C8CFF" />
+        <stop offset="1" stopColor="#4752C4" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 interface UserData {
   id: string;
   username?: string;
@@ -543,17 +575,22 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                       </span>
                     )}
                   </div>
-                  <div className="h-2.5 bg-purple-900/30 rounded-full overflow-hidden">
+                  <div className="relative h-3 rounded-full overflow-hidden border border-purple-900/30 bg-[#171425]">
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-purple-500/10 to-white/5" />
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 1.2, delay: 0.3 }}
-                      className={`h-full bg-gradient-to-r ${tier.color} ${tier.glow}`}
+                      animate={{ width: `${Math.max(3, pct)}%` }}
+                      transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
+                      className={`relative h-full rounded-full ${tier.glow}`}
+                      style={{
+                        background: sellerTierGradient[tier.id],
+                        boxShadow: tier.id >= 4 ? '0 0 18px rgba(168,85,247,.35)' : undefined,
+                      }}
                     />
                   </div>
                   <div className="flex justify-between mt-1.5">
                     <span className="text-[10px] text-text-secondary">{tier.label} ({sales} продаж)</span>
-                    {next && <span className="text-[10px] text-text-secondary">{next.label} ({next.min}+)</span>}
+                    <span className="text-[10px] text-text-secondary">{next ? `${next.label} (${next.min}+)` : 'Максимальный уровень'}</span>
                   </div>
                 </div>
               );
@@ -573,11 +610,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                          : lvl >= 5  ? 'shadow-[0_0_10px_rgba(34,197,94,0.4)]'
                          : '';
               const lvlIcon = lvl >= 50 ? '🌌' : lvl >= 30 ? '👑' : lvl >= 15 ? '💎' : lvl >= 5 ? '🌟' : '✨';
-              const lvlColor = lvl >= 50 ? 'from-pink-500 via-purple-500 to-indigo-500'
-                             : lvl >= 30 ? 'from-purple-500 to-pink-400'
-                             : lvl >= 15 ? 'from-indigo-500 to-purple-400'
-                             : lvl >= 5  ? 'from-green-500 to-emerald-400'
-                             : 'from-purple-700 to-purple-500';
               return (
                 <div className="bg-[#0B0A12] rounded-xl p-4 border border-purple-900/20">
                   <div className="flex items-center justify-between mb-2">
@@ -589,17 +621,24 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                       {xp} / {xpForNextLvl} XP
                     </span>
                   </div>
-                  <div className="h-2.5 bg-purple-900/30 rounded-full overflow-hidden">
+                  <div className="relative h-3 rounded-full overflow-hidden border border-purple-900/30 bg-[#171425]">
+                    <div className="absolute inset-y-0 left-1/4 w-px bg-black/20" />
+                    <div className="absolute inset-y-0 left-1/2 w-px bg-black/20" />
+                    <div className="absolute inset-y-0 left-3/4 w-px bg-black/20" />
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 1.2, delay: 0.4 }}
-                      className={`h-full bg-gradient-to-r ${lvlColor} ${glow}`}
+                      animate={{ width: `${Math.max(3, pct)}%` }}
+                      transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
+                      className={`relative h-full rounded-full ${glow}`}
+                      style={{
+                        background: xpLevelGradient(lvl),
+                        boxShadow: '0 0 18px rgba(168,85,247,.32)',
+                      }}
                     />
                   </div>
                   <div className="flex justify-between mt-1.5">
                     <span className="text-[10px] text-text-secondary">LVL {lvl}</span>
-                    <span className="text-[10px] text-text-secondary">До LVL {lvl + 1}: {xpForNextLvl - xp} XP</span>
+                    <span className="text-[10px] text-text-secondary">До LVL {lvl + 1}: {Math.max(0, xpForNextLvl - xp)} XP</span>
                   </div>
                 </div>
               );
@@ -887,9 +926,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               {profile?.discord_id ? (
                 <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
                   <div className="flex items-center gap-3">
-                    {/* Дискорд лого */}
-                    <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center text-2xl flex-shrink-0">
-                      💬
+                    {/* Discord logo */}
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_0_22px_rgba(88,101,242,0.22)]">
+                      <DiscordProfileLogo />
                     </div>
                     {/* Аватарка из Discord */}
                     {profile.discord_avatar && (
@@ -908,8 +947,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                     {/* Кнопка написать */}
                     <a href={`https://discord.com/users/${profile.discord_id}`}
                       target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-2 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg text-xs font-semibold whitespace-nowrap">
-                      <MessageSquare size={12} /> Написать
+                      className="flex items-center gap-1.5 px-3 py-2 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-[0_0_18px_rgba(88,101,242,0.2)]">
+                      <DiscordProfileLogo size={16} /> Написать
                     </a>
                   </div>
                 </div>
