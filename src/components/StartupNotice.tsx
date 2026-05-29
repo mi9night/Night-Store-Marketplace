@@ -15,7 +15,7 @@ const NOTICE_ENABLED = true;
 const NOTICE_VERSION = 'v1';
 const STORAGE_KEY = `night_store_startup_notice_hidden_${NOTICE_VERSION}`;
 const SESSION_KEY = `night_store_startup_notice_seen_${NOTICE_VERSION}`;
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 10;
 
 // Если когда-нибудь захочешь автоматически отключить плашку по дате — укажи ISO-дату.
 // Например: const NOTICE_EXPIRES_AT = '2026-12-31T23:59:59+03:00';
@@ -177,7 +177,7 @@ const StartupNotice: React.FC = () => {
                   whileTap={secondsLeft > 0 ? undefined : { scale: 0.97 }}
                   className="rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white shadow-[0_0_24px_rgba(168,85,247,0.25)] transition-all hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  {secondsLeft > 0 ? `ОК через ${secondsLeft}` : 'ОК, понятно'}
+                  {secondsLeft > 0 ? `ОК через ${secondsLeft}` : 'ОК'}
                 </motion.button>
               </div>
             </div>
