@@ -1,76 +1,69 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, AlertCircle, Plus } from 'lucide-react';
+import { Zap, Clock, Sparkles, SlidersHorizontal, ShieldCheck, WalletCards } from 'lucide-react';
+
+const plannedFeatures = [
+  { icon: SlidersHorizontal, title: 'Гибкие правила', desc: 'Категория, цена, риск, гарантия, продавец и фильтры' },
+  { icon: WalletCards, title: 'Баланс и лимиты', desc: 'Лимит на сделку, дневной лимит и резерв средств' },
+  { icon: ShieldCheck, title: 'Безопасная покупка', desc: 'Проверки перед покупкой и мгновенная остановка правил' },
+];
 
 const AutobuyPage: React.FC = () => {
-  const [autobuyRules, setAutobuyRules] = useState([
-    { id: '1', name: 'Автопокупка золотых аккаунтов', enabled: true, condition: 'Уровень: Золото', action: 'Покупка' },
-    { id: '2', name: 'Покупка при скидке > 20%', enabled: true, condition: 'Скидка: > 20%', action: 'Уведомление' },
-  ]);
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-6"
+        className="relative overflow-hidden bg-[#171425] border border-purple-900/20 rounded-2xl p-8 text-center"
       >
-        <Zap size={24} className="text-accent" />
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Автопокупки</h1>
-          <p className="text-text-secondary">Настройте правила для автоматической покупки аккаунтов при нужных условиях.</p>
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-transparent to-bg-primary pointer-events-none" />
+        <motion.div
+          aria-hidden="true"
+          animate={{ opacity: [0.2, 0.55, 0.2], scale: [1, 1.08, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-accent/20 blur-3xl"
+        />
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-2xl bg-purple-900/30 border border-purple-700/30 flex items-center justify-center mb-4 shadow-[0_0_24px_rgba(168,85,247,0.18)]">
+            <Zap size={30} className="text-accent-soft" />
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-900/20 border border-purple-700/30 text-purple-300 text-xs font-semibold mb-3">
+            <Clock size={13} /> Скоро будет
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Автопокупки</h1>
+          <p className="text-sm text-text-secondary max-w-xl">
+            Раздел автопокупок находится в разработке. Здесь появятся правила, которые смогут автоматически покупать подходящие аккаунты по заданным условиям.
+          </p>
         </div>
       </motion.div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {plannedFeatures.map((item, i) => (
+          <motion.div
+            key={item.title}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4 hover:border-purple-700/40 transition-all"
+          >
+            <item.icon size={20} className="text-accent-soft mb-3" />
+            <h3 className="text-sm font-semibold text-white mb-1">{item.title}</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">{item.desc}</p>
+          </motion.div>
+        ))}
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-bg-card border border-purple-900/20 rounded-2xl p-6 space-y-5"
+        transition={{ delay: 0.18 }}
+        className="bg-purple-900/10 border border-purple-700/25 rounded-2xl p-4 flex items-start gap-3"
       >
-        <div className="bg-bg-primary border border-purple-900/20 rounded-2xl p-4 flex items-start gap-4">
-          <AlertCircle size={20} className="text-accent-soft mt-1" />
-          <div>
-            <p className="text-sm font-semibold text-text-primary">Требуется верификация</p>
-            <p className="text-xs text-text-secondary">Для использования автопокупок необходимо пройти верификацию профиля и иметь баланс не менее 1000₽.</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {autobuyRules.map(rule => (
-            <motion.div
-              key={rule.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col gap-3 p-4 bg-bg-primary rounded-2xl border border-purple-900/20"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{rule.name}</p>
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-text-secondary">
-                    <span>Условие: {rule.condition}</span>
-                    <span>Действие: {rule.action}</span>
-                  </div>
-                </div>
-                <div
-                  onClick={() => setAutobuyRules(prev => prev.map(item => item.id === rule.id ? { ...item, enabled: !item.enabled } : item))}
-                  className={`w-10 h-5 rounded-full transition-all cursor-pointer relative ${rule.enabled ? 'bg-accent' : 'bg-purple-900/40'}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${rule.enabled ? 'left-5' : 'left-0.5'}`} />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button className="btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2">
-            <Plus size={16} />
-            Создать новое правило
-          </button>
-          <button className="btn-primary px-4 py-3 rounded-xl text-sm font-semibold">
-            Сохранить изменения
-          </button>
-        </div>
+        <Sparkles size={18} className="text-accent-soft mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-text-secondary">
+          Пока функция не запущена, мы скрыли тестовые правила, чтобы не создавать ощущение, что автопокупка уже выполняет реальные покупки.
+        </p>
       </motion.div>
     </div>
   );
