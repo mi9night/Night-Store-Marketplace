@@ -412,26 +412,26 @@ const Header: React.FC<HeaderProps> = ({
 
                     {!balAction ? (
                       <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: 'deposit',  label: 'Пополнить', icon: Plus,            color: 'text-green-400' },
-                          { id: 'withdraw', label: 'Вывести',   icon: ArrowDownLeft,   color: 'text-red-400' },
-                          { id: 'transfer', label: 'Перевести', icon: ArrowLeftRight,  color: 'text-purple-300' },
-                        ].map(b => (
-                          <button key={b.id} onClick={() => { setBalAction(b.id as any); setBalResult(null); setBalAmount(''); }}
-                            className="flex flex-col items-center gap-1.5 p-3 bg-bg-secondary rounded-xl border border-purple-900/20 hover:border-purple-700/50">
-                            <b.icon size={16} className={b.color} />
-                            <span className="text-[10px] text-white font-semibold">{b.label}</span>
-                          </button>
-                        ))}
+                        <button onClick={() => { setShowBalance(false); setCurrentPage('payment' as any, 'deposit'); }}
+                          className="flex flex-col items-center gap-1.5 p-3 bg-bg-secondary rounded-xl border border-purple-900/20 hover:border-green-700/50">
+                          <Plus size={16} className="text-green-400" />
+                          <span className="text-[10px] text-white font-semibold">Пополнить</span>
+                        </button>
+                        <button onClick={() => { setShowBalance(false); setCurrentPage('payment' as any, 'withdraw'); }}
+                          className="flex flex-col items-center gap-1.5 p-3 bg-bg-secondary rounded-xl border border-purple-900/20 hover:border-red-700/50">
+                          <ArrowDownLeft size={16} className="text-red-400" />
+                          <span className="text-[10px] text-white font-semibold">Вывести</span>
+                        </button>
+                        <button onClick={() => { setBalAction('transfer'); setBalResult(null); setBalAmount(''); }}
+                          className="flex flex-col items-center gap-1.5 p-3 bg-bg-secondary rounded-xl border border-purple-900/20 hover:border-purple-700/50">
+                          <ArrowLeftRight size={16} className="text-purple-300" />
+                          <span className="text-[10px] text-white font-semibold">Перевести</span>
+                        </button>
                       </div>
                     ) : (
                       <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold text-white">
-                            {balAction === 'deposit' && '➕ Пополнить'}
-                            {balAction === 'withdraw' && '➖ Вывести'}
-                            {balAction === 'transfer' && '↔️ Перевести'}
-                          </h4>
+                          <h4 className="text-xs font-semibold text-white">↔️ Перевести</h4>
                           <button onClick={() => setBalAction(null)} className="text-text-secondary hover:text-white">
                             <X size={14} />
                           </button>
@@ -439,14 +439,10 @@ const Header: React.FC<HeaderProps> = ({
                         <input type="number" value={balAmount} onChange={e => setBalAmount(e.target.value)}
                           placeholder="Сумма ₽"
                           className="w-full px-3 py-2 mb-2 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
-                        {balAction === 'transfer' && (
-                          <>
-                            <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
-                              placeholder="Email, ник или ID"
-                              className="w-full px-3 py-2 mb-1 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
-                            <p className="text-[10px] text-text-secondary mb-2">💡 Можно ввести email, никнейм или #ID получателя</p>
-                          </>
-                        )}
+                        <input type="text" value={balRecipient} onChange={e => setBalRecipient(e.target.value)}
+                          placeholder="Email, ник или ID"
+                          className="w-full px-3 py-2 mb-1 rounded-lg text-sm bg-bg-card border border-purple-900/30 text-white" />
+                        <p className="text-[10px] text-text-secondary mb-2">💡 Можно ввести email, никнейм или #ID получателя</p>
                         {balResult && (
                           <div className={`text-xs mb-2 p-2 rounded-lg flex items-start gap-2 ${
                             balResult.type === 'ok' ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'

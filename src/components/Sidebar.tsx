@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setCurrentPage('payment' as any); onClose(); }}
+            onClick={() => { setCurrentPage('payment' as any, 'deposit'); onClose(); }}
             className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
           >
             <Plus size={14} className="text-success" />
@@ -161,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setCurrentPage('payment' as any); onClose(); }}
+            onClick={() => { setCurrentPage('payment' as any, 'withdraw'); onClose(); }}
             className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
           >
             <ArrowDownLeft size={14} className="text-error" />

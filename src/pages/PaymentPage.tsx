@@ -31,7 +31,6 @@ const DEPOSIT_METHODS: PaymentMethod[] = [
   { id: 'sbp',          name: 'СБП',                fee: 6,    minAmount: 10,    icon: '🏦', color: 'border-blue-500/40',     type: 'deposit', region: 'RU', popular: true },
   { id: 'donatx',       name: 'DonatX',             fee: 8,    minAmount: 100,   icon: '💜', color: 'border-purple-500/40',   type: 'deposit', popular: true },
   { id: 'donationalerts',name: 'DonationAlerts',    fee: 12,   minAmount: 10,    icon: '🔔', color: 'border-orange-500/40',   type: 'deposit' },
-  { id: 'crypto',       name: 'Криптовалюта',       fee: 0,    minAmount: 4,     icon: '₿',  color: 'border-yellow-500/40',   type: 'deposit' },
   { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: '💳', color: 'border-green-500/40',    type: 'deposit', region: 'RU' },
   { id: 'card_world',   name: 'Карта мира',         fee: 12,   minAmount: 1000,  icon: '🌍', color: 'border-cyan-500/40',     type: 'deposit' },
 ];
@@ -57,6 +56,11 @@ interface Props {
 
 const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
   const [mode, setMode] = useState<Mode>(initialMode || 'select');
+  
+  // If initialMode changes (from sidebar buttons), update mode
+  useEffect(() => {
+    if (initialMode) setMode(initialMode);
+  }, [initialMode]);
   const [step, setStep] = useState<Step>('method');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [amount, setAmount] = useState('');
@@ -65,6 +69,8 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [txId, setTxId] = useState<string | null>(null);
+  const [userDisplay, setUserDisplay] = useState('');
+  const [fullUserId, setFullUserId] = useState('');
 
   // Withdraw fields
   const [cardNumber, setCardNumber] = useState('');
@@ -81,7 +87,11 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
         const { data: profile } = await supabase.from('users')
           .select('balance, custom_id, username')
           .eq('id', u.user.id).maybeSingle();
-        if (profile) setBalance(profile.balance || 0);
+        if (profile) {
+          setBalance(profile.balance || 0);
+          setUserDisplay(profile.custom_id || profile.username || u.user.id.slice(0, 8));
+          setFullUserId(profile.custom_id || u.user.id);
+        }
       }
     })();
   }, []);
@@ -90,10 +100,10 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
   const fee = selectedMethod ? Math.round(numAmount * selectedMethod.fee / 100) : 0;
   const total = mode === 'deposit' ? numAmount + fee : numAmount;
   const receive = mode === 'withdraw' ? numAmount - fee : numAmount;
-  const userId = user?.id?.slice(0, 8) || '—';
+
 
   const copyUserId = () => {
-    navigator.clipboard.writeText(user?.id || '');
+    navigator.clipboard.writeText(fullUserId || user?.id || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -301,10 +311,10 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
             {/* User ID (for deposit) */}
             {mode === 'deposit' && (
               <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
-                <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Ваш User ID</p>
+                <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Ваш ID для оплаты</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white font-mono text-sm truncate">
-                    {user?.id || '—'}
+                    {fullUserId || user?.id || '—'}
                   </code>
                   <motion.button onClick={copyUserId}
                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -466,7 +476,7 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
               </div>
               <div className="flex items-center gap-2">
                 <code className="flex-1 px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white font-mono text-sm truncate">
-                  {user?.id}
+                  {fullUserId || user?.id}
                 </code>
                 <motion.button onClick={copyUserId}
                   whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}

@@ -76,6 +76,7 @@ const App: React.FC = () => {
   }, []);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'deposit' | 'withdraw' | undefined>(undefined);
 
   useEffect(() => {
 
@@ -100,8 +101,13 @@ const App: React.FC = () => {
 
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
-      // Если переходим на profile через навигацию (сайдбар, шапка) — сбрасываем чужой
       if (page === 'profile') setViewedProfileId(null);
+      // Handle payment modes
+      if (filter === 'deposit' || filter === 'withdraw') {
+        setPaymentMode(filter as 'deposit' | 'withdraw');
+      } else if (page !== ('payment' as any)) {
+        setPaymentMode(undefined);
+      }
       setCurrentPage(page);
       setForumFilter(filter);
       setIsMobileMenuOpen(false);
@@ -272,7 +278,7 @@ const App: React.FC = () => {
                   {currentPage === 'autobuy' && <AutobuyPage />}
                   {currentPage === 'rates' && <RatesPage />}
                   {currentPage === 'api' && <ApiPage />}
-                  {currentPage === ('payment' as any) && <PaymentPage setCurrentPage={handleSetPage} />}
+                  {currentPage === ('payment' as any) && <PaymentPage initialMode={paymentMode} setCurrentPage={handleSetPage} />}
 
                 </motion.div>
               </AnimatePresence>
