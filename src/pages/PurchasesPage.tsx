@@ -32,7 +32,6 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
   const [checking, setChecking] = useState<Record<string, boolean>>({});
   const [checkResults, setCheckResults] = useState<Record<string, any>>({});
   const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {

@@ -584,6 +584,7 @@ ${problemDescription || '—'}${filesInfo}`;
     'Пароль от врем. почты', 'original_email_error', 'temp_email_error',
     'original_email_server', 'epic_email_provided', 'ea_email_provided',
     'ubi_email_provided', 'rockstar_email_provided',
+    'steam_id_resolved', 'uuid', 'skin_url',
     '_note', '_checker', '_verified_by_api',
     '_error', '_bans_error', 'persona_name', 'profile_url', 'avatar_url',
     'steam_id', 'account_created', 'profile_state',
@@ -657,6 +658,37 @@ ${problemDescription || '—'}${filesInfo}`;
     friends_count:   { label: 'Друзей',            icon: Users },
     original_email_verified: { label: 'Родная почта',   icon: Mail },
     temp_email_verified:     { label: 'Врем. почта',    icon: Mail },
+
+    // ── Bot auto-filled fields (Steam) ──────────────────────────
+    vac_bans_count:  { label: 'VAC банов',         icon: Shield },
+    game_bans_count: { label: 'Game банов',        icon: Shield },
+    days_since_last_ban: { label: 'Дней с бана',   icon: Clock },
+    cs2_hours_total: { label: 'CS2 часов',         icon: Gamepad2 },
+    cs2_hours_2weeks:{ label: 'CS2 за 2 нед.',     icon: Clock },
+
+    // ── Bot auto-filled (Roblox) ────────────────────────────────
+    display_name:    { label: 'Имя Roblox',        icon: Users },
+    followers_count: { label: 'Подписчиков',       icon: Users },
+
+    // ── Bot auto-filled (Discord) ───────────────────────────────
+    global_name:     { label: 'Имя',               icon: Users },
+    nitro_status:    { label: 'Nitro',             icon: Zap },
+    banner:          { label: 'Баннер',            icon: Star },
+
+    // ── Bot auto-filled (Minecraft) ─────────────────────────────
+    current_name:    { label: 'Ник MC',            icon: Users },
+
+    // ── Bot auto-filled (Telegram) ──────────────────────────────
+    members_count:   { label: 'Участников',        icon: Users },
+    account_active:  { label: 'Аккаунт активен',   icon: CheckCircle2 },
+    tg_title:        { label: 'Название',          icon: Tag },
+    type:            { label: 'Тип',               icon: Tag },
+
+    // ── Subscription / VPN ──────────────────────────────────────
+    devices_count:   { label: 'Устройств',         icon: Users },
+
+    // ── WoT / Wargaming ─────────────────────────────────────────
+    max_tier_tank:   { label: 'Макс. тир',         icon: Shield },
   };
 
   // ─── Format value for display ─────────────────────────────────────────
@@ -1389,7 +1421,7 @@ ${problemDescription || '—'}${filesInfo}`;
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.8, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={modalShake ? "shake" : { opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 18, stiffness: 250 }}
               className="bg-[#171425] border border-purple-900/30 rounded-2xl p-8 w-full max-w-md text-center shadow-[0_0_80px_rgba(139,92,246,0.2)]"
@@ -1486,9 +1518,8 @@ ${problemDescription || '—'}${filesInfo}`;
           >
             <motion.div
               variants={shakeVariant}
-              animate={modalShake ? 'shake' : 'idle'}
               initial={{ opacity: 0, scale: 0.92, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={modalShake ? "shake" : { opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 16 }}
               transition={{ type: 'spring', damping: 22, stiffness: 300 }}
               className="bg-[#171425] border border-purple-900/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_0_60px_rgba(139,92,246,0.15)]"
