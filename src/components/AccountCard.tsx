@@ -12,6 +12,7 @@ import { UserLink } from './UserLink';
 import LabelManager from './LabelManager';
 import { useCurrency } from '../lib/CurrencyContext';
 import { supabase } from '../lib/supabase';
+import { categories } from '../data/mockData';
 
 interface AccountCardProps {
   account: Account;
@@ -27,17 +28,10 @@ const riskConfig = {
   high: { label: 'Высокий', Icon: XCircle, cls: 'bg-red-900/30 border border-red-700/40 text-red-400' },
 };
 
-const categoryIcon = (cat: string): string => {
-  const c = (cat || '').toLowerCase();
-  if (c.includes('steam')) return '🎮';
-  if (c.includes('cs')) return '🔫';
-  if (c.includes('epic')) return '⚡';
-  if (c.includes('fortnite')) return '🏗️';
-  if (c.includes('gta')) return '🚗';
-  if (c.includes('discord')) return '💬';
-  if (c.includes('vpn')) return '🔒';
-  if (c.includes('soft')) return '💻';
-  return '📦';
+// Get category icon + name from mockData categories
+const getCategoryInfo = (cat: string) => {
+  const found = categories.find(c => c.id === cat);
+  return { icon: found?.icon || '📦', name: found?.name || cat || 'Другое' };
 };
 
 const AccountCard: React.FC<AccountCardProps> = ({
@@ -47,8 +41,8 @@ const AccountCard: React.FC<AccountCardProps> = ({
   const [me, setMe] = useState<string | null>(null);
   const { convert, symbol, currency } = useCurrency();
   const risk = riskConfig[account?.riskLevel as keyof typeof riskConfig] || riskConfig.low;
+  const catInfo = getCategoryInfo(account?.category);
 
-  // Узнаём, в избранном ли (даже свои товары)
   useEffect(() => {
     const init = async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -94,9 +88,9 @@ const AccountCard: React.FC<AccountCardProps> = ({
       onClick={() => { onSelect(account); setCurrentPage('product'); }}
       className="w-full h-full flex flex-col bg-[#171425] border border-purple-900/20 hover:border-purple-700/50 rounded-2xl cursor-pointer relative overflow-hidden group transition-all hover:shadow-[0_0_30px_rgba(138,43,226,0.2)]"
     >
-      {/* === Превью сверху === */}
+      {/* === Banner with category icon === */}
       <div className="relative w-full h-32 bg-gradient-to-br from-purple-900/40 via-purple-800/20 to-purple-900/10 flex items-center justify-center flex-shrink-0 border-b border-purple-900/20">
-        <span className="text-6xl">{categoryIcon(account?.category)}</span>
+        <span className="text-6xl group-hover:scale-110 transition-transform duration-300">{catInfo.icon}</span>
 
         {discount > 0 && (
           <div className="absolute top-2 left-2">
@@ -115,14 +109,15 @@ const AccountCard: React.FC<AccountCardProps> = ({
           <Heart size={16} className={`transition-all ${isFav ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
         </motion.button>
 
-        <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider font-bold text-white bg-black/50 backdrop-blur px-2 py-1 rounded-full">
-          {account?.category || 'другое'}
+        <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wider font-bold text-white bg-black/50 backdrop-blur px-2 py-1 rounded-full flex items-center gap-1">
+          <span className="text-xs">{catInfo.icon}</span>
+          {catInfo.name}
         </span>
       </div>
 
-      {/* === Контент === */}
+      {/* === Content === */}
       <div className="flex-1 p-3 flex flex-col">
-        {/* Бейджи */}
+        {/* Badges */}
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {account?.escrow && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 bg-purple-900/40 border border-purple-700/40 text-purple-300 font-semibold">
@@ -139,7 +134,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           )}
         </div>
 
-        {/* Название */}
+        {/* Title */}
         <h3 className="text-sm font-semibold text-white line-clamp-2 leading-snug group-hover:text-purple-300 transition-colors mb-2 min-h-[2.5rem]">
           {account?.title || 'Без названия'}
         </h3>
@@ -148,13 +143,13 @@ const AccountCard: React.FC<AccountCardProps> = ({
           <LabelManager targetType="account" targetId={account.id} small />
         </div>
 
-        {/* Доп. инфа */}
+        {/* Extra info */}
         <div className="text-xs text-text-secondary mb-2 space-y-0.5">
           {account?.country && <div>📍 {account.country}</div>}
-          {account?.gamesCount != null && account.gamesCount > 0 && <div>🎮 {account.gamesCount} игр</div>}
+          {account?.gamesCount != null && account.gamesCount > 0 && <div>{catInfo.icon} {account.gamesCount} игр</div>}
         </div>
 
-        {/* Продавец */}
+        {/* Seller */}
         {account?.seller && (
           <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-purple-900/20">
             <div className="w-5 h-5 rounded-md bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -179,7 +174,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           </div>
         )}
 
-        {/* Цена + кнопки */}
+        {/* Price + buttons */}
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
             <div className="flex items-baseline gap-1">

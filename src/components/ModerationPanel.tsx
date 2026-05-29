@@ -805,6 +805,26 @@ const TicketsSection: React.FC<{ onNavigate?: Props['onNavigate'] }> = ({ onNavi
             ))}
           </div>
 
+          {/* Validate account button */}
+          {activeTicket.target_type === 'account' && activeTicket.target_id && (
+            <div className="px-4 pb-2">
+              <motion.button
+                onClick={async () => {
+                  await supabase.from('accounts').update({
+                    validation_status: 'recheck_pending',
+                  }).eq('id', activeTicket.target_id);
+                  alert('\u{1f504} Проверка запущена! Бот перепроверит аккаунт.');
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold bg-blue-900/20 border border-blue-700/30 text-blue-400 hover:bg-blue-900/40 transition-all"
+              >
+                <Shield size={13} />
+                Проверить аккаунт ботом
+              </motion.button>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="p-5 bg-[#120F1E] space-y-4">
             <div className="max-h-80 overflow-y-auto pr-1 space-y-2.5 scroll-smooth">

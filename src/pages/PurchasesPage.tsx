@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag, Clock, CheckCircle2, Package, Shield,
-  Download, Copy, Eye, EyeOff, X
+  Download, Copy, Eye, EyeOff, X, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
@@ -29,6 +29,9 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState<number>(Date.now());
   const [revealedData, setRevealedData] = useState<Record<string, boolean>>({});
+  const [checking, setChecking] = useState<Record<string, boolean>>({});
+  const [checkResults, setCheckResults] = useState<Record<string, any>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +106,71 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
     const ss = Math.floor((left % 60000) / 1000);
     const text = days > 0 ? `${days}д ${hh}ч ${mm}м` : hh > 0 ? `${hh}ч ${mm}м ${ss}с` : `${mm}м ${ss}с`;
     return { active: true, pct, left, hours, text };
+  };
+
+  // Check account changes via bot
+  const checkChanges = async (order: Order) => {
+    if (!order.account_id) return;
+    setChecking(prev => ({ ...prev, [order.id]: true }));
+
+    try {
+      // Trigger recheck
+      await supabase.from('accounts').update({
+        validation_status: 'recheck_pending',
+      }).eq('id', order.account_id);
+
+      // Poll for result
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        const { data: val } = await supabase
+          .from('account_validations')
+          .select('*')
+          .eq('account_id', order.account_id)
+          .maybeSingle();
+
+        if (val && val.checked_at && new Date(val.checked_at).getTime() > Date.now() - 60000) {
+          clearInterval(poll);
+          setChecking(prev => ({ ...prev, [order.id]: false }));
+
+          // Get latest history with changes
+          const { data: hist } = await supabase
+            .from('validation_history')
+            .select('*')
+            .eq('account_id', order.account_id)
+            .order('checked_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          setCheckResults(prev => ({
+            ...prev,
+            [order.id]: {
+              status: val.status,
+              checked_at: val.checked_at,
+              has_changes: hist?.has_changes || false,
+              changes: hist?.changes || [],
+              severity: hist?.changes_severity || 'none',
+              vac_ban: val.vac_ban,
+              trade_ban: val.trade_ban,
+              level: val.level,
+              hours_played: val.hours_played,
+              games_count: val.games_count,
+            },
+          }));
+        }
+
+        if (attempts > 30) {
+          clearInterval(poll);
+          setChecking(prev => ({ ...prev, [order.id]: false }));
+          setCheckResults(prev => ({
+            ...prev,
+            [order.id]: { status: 'timeout', has_changes: false, changes: [] },
+          }));
+        }
+      }, 2000);
+    } catch {
+      setChecking(prev => ({ ...prev, [order.id]: false }));
+    }
   };
 
   return (
@@ -216,6 +284,80 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
                     <span className="text-xs text-text-secondary">Гарантия истекла ({guar.hours}ч)</span>
                   </div>
                 )}
+
+                {/* Check changes button */}
+                <div className="mt-3 flex gap-2">
+                  <motion.button
+                    onClick={() => checkChanges(o)}
+                    disabled={!!checking[o.id]}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-800/30 text-purple-300 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={checking[o.id] ? 'animate-spin' : ''} />
+                    {checking[o.id] ? 'Проверяем...' : 'Проверить изменения'}
+                  </motion.button>
+                </div>
+
+                {/* Check results */}
+                <AnimatePresence>
+                  {checkResults[o.id] && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className={`mt-3 p-3 rounded-xl border ${
+                        checkResults[o.id].status === 'timeout'
+                          ? 'bg-yellow-900/10 border-yellow-700/30'
+                          : checkResults[o.id].has_changes
+                            ? checkResults[o.id].severity === 'critical'
+                              ? 'bg-red-900/10 border-red-700/30'
+                              : 'bg-yellow-900/10 border-yellow-700/30'
+                            : 'bg-green-900/10 border-green-700/30'
+                      }`}>
+                        {checkResults[o.id].status === 'timeout' ? (
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} className="text-yellow-400" />
+                            <span className="text-xs text-yellow-400">Проверка занимает больше времени. Результат появится позже.</span>
+                          </div>
+                        ) : checkResults[o.id].has_changes ? (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertTriangle size={14} className={checkResults[o.id].severity === 'critical' ? 'text-red-400' : 'text-yellow-400'} />
+                              <span className={`text-xs font-semibold ${checkResults[o.id].severity === 'critical' ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {checkResults[o.id].severity === 'critical' ? '⛔ Критические изменения!' : '⚠️ Обнаружены изменения'}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {(checkResults[o.id].changes || []).map((ch: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-[10px]">
+                                  <span className="text-text-secondary">{ch.field}</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-red-400 line-through">{String(ch.old ?? '—')}</span>
+                                    <span className="text-text-secondary">→</span>
+                                    <span className="text-green-400">{String(ch.new ?? '—')}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={14} className="text-green-400" />
+                            <span className="text-xs text-green-400">✅ Всё в порядке — изменений не обнаружено</span>
+                          </div>
+                        )}
+                        {checkResults[o.id].checked_at && (
+                          <p className="text-[10px] text-text-secondary mt-1.5">
+                            Проверено: {new Date(checkResults[o.id].checked_at).toLocaleString('ru-RU')}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Кнопка получить данные */}
                 <button

@@ -581,7 +581,10 @@ ${problemDescription || '—'}${filesInfo}`;
     'tiktok_username', 'instagram_username',
     'supercell_tag', 'Логин', 'Пароль', 'login', 'password',
     'Родная почта', 'Временная почта', 'Пароль от почты',
-    'Пароль от врем. почты', '_note', '_checker', '_verified_by_api',
+    'Пароль от врем. почты', 'original_email_error', 'temp_email_error',
+    'original_email_server', 'epic_email_provided', 'ea_email_provided',
+    'ubi_email_provided', 'rockstar_email_provided',
+    '_note', '_checker', '_verified_by_api',
     '_error', '_bans_error', 'persona_name', 'profile_url', 'avatar_url',
     'steam_id', 'account_created', 'profile_state',
   ]);
@@ -652,6 +655,8 @@ ${problemDescription || '—'}${filesInfo}`;
     account_age_days:{ label: 'Возраст акк.',      icon: Clock },
     days_remaining:  { label: 'Осталось дней',     icon: Clock },
     friends_count:   { label: 'Друзей',            icon: Users },
+    original_email_verified: { label: 'Родная почта',   icon: Mail },
+    temp_email_verified:     { label: 'Врем. почта',    icon: Mail },
   };
 
   // ─── Format value for display ─────────────────────────────────────────
