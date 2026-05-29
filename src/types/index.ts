@@ -30,6 +30,7 @@ export interface Account {
   soldCount: number;
   views: number;
   inventory?: InventoryItem[];
+  accountData?: Record<string, any>;
 }
 
 export interface AccountTag {

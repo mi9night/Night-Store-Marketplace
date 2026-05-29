@@ -50,6 +50,7 @@ export function dbToAccount(row: any): Account {
     isFavorite: false,
     soldCount: 0,
     views: row.views || 0,
+    accountData: row.data || {},
   };
 }
 

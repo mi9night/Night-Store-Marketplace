@@ -5,7 +5,7 @@ import {
   Clock, MapPin, Gamepad2, Mail, CheckCircle2, AlertTriangle,
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
   AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X,
-  Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight,
+  Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight, Crown,
   ThumbsUp, ThumbsDown, Award, ShoppingBag
 } from 'lucide-react';
 import { Account } from '../types';
@@ -556,16 +556,145 @@ ${problemDescription || '—'}${filesInfo}`;
     }
   };
 
-  const infoItems = [
-    { icon: Clock,    label: 'Последний вход',  value: account.lastLogin || '—' },
-    { icon: MapPin,   label: 'Страна',          value: account.country || '—' },
-    ...(account.gamesCount ? [{ icon: Gamepad2, label: 'Игр', value: `${account.gamesCount}` }] : []),
-    { icon: Mail,     label: 'Родная почта',    value: account.hasOriginalEmail ? 'Есть ✅' : 'Нет ❌' },
-    { icon: Mail,     label: 'Временная почта', value: account.hasTempEmail ? 'Есть ✅' : 'Нет ❌' },
-    { icon: Shield,   label: 'Гарантия',        value: account.guarantee ? `${account.guaranteeHours}ч` : 'Нет' },
-    { icon: Lock,     label: 'Escrow',          value: account.escrow ? 'Активна' : 'Нет' },
-    { icon: Eye,      label: 'Просмотров',      value: (account.views || 0).toLocaleString('ru-RU') },
-  ];
+  // ─── Hidden fields (never show to buyers) ──────────────────────────────
+  const HIDDEN_FIELDS = new Set([
+    'steam_id', 'steamid', 'steamId', 'discord_id', 'discordId',
+    'minecraft_username', 'roblox_username', 'telegram_username',
+    'epic_email', 'ea_email', 'ubi_email', 'rockstar_email',
+    'mihoyo_uid', 'wot_nickname', 'wg_nickname',
+    'tiktok_username', 'instagram_username',
+    'supercell_tag', 'Логин', 'Пароль', 'login', 'password',
+    'Родная почта', 'Временная почта', 'Пароль от почты',
+    'Пароль от врем. почты', '_note', '_checker', '_verified_by_api',
+    '_error', '_bans_error', 'persona_name', 'profile_url', 'avatar_url',
+    'steam_id', 'account_created', 'profile_state',
+  ]);
+
+  // ─── Label mapping for display ────────────────────────────────────────
+  const FIELD_LABELS: Record<string, { label: string; icon: any }> = {
+    games_count:     { label: 'Игры',              icon: Gamepad2 },
+    hours_played:    { label: 'Часов',             icon: Clock },
+    hours:           { label: 'Часов',             icon: Clock },
+    level:           { label: 'Уровень',           icon: Star },
+    rank:            { label: 'Ранг',              icon: Shield },
+    prime:           { label: 'Prime',             icon: CheckCircle2 },
+    skins_count:     { label: 'Скинов',            icon: Package },
+    og_skins:        { label: 'OG Скины',          icon: Star },
+    vbucks:          { label: 'V-Bucks',           icon: Zap },
+    battle_pass:     { label: 'Battle Pass',       icon: Shield },
+    robux:           { label: 'Robux',             icon: Zap },
+    premium:         { label: 'Premium',           icon: Crown },
+    tg_premium:      { label: 'TG Premium',        icon: Crown },
+    limiteds:        { label: 'Limiteds',          icon: Star },
+    nitro:           { label: 'Nitro',             icon: Zap },
+    nitro_until:     { label: 'Nitro до',          icon: Clock },
+    badges:          { label: 'Бейджи',            icon: Star },
+    servers:         { label: 'Серверов',           icon: Users },
+    followers:       { label: 'Подписчики',        icon: Users },
+    following:       { label: 'Подписки',          icon: Users },
+    likes:           { label: 'Лайки',             icon: Heart },
+    posts:           { label: 'Постов',            icon: MessageSquare },
+    videos:          { label: 'Видео',             icon: Eye },
+    verified:        { label: 'Верификация',       icon: CheckCircle2 },
+    monetization:    { label: 'Монетизация',       icon: Zap },
+    subscribers:     { label: 'Подписчики',        icon: Users },
+    tg_stars:        { label: 'TG Stars',          icon: Star },
+    tg_type:         { label: 'Тип',               icon: Tag },
+    tg_theme:        { label: 'Тематика',          icon: Tag },
+    ai_service:      { label: 'Сервис',            icon: Zap },
+    nn_service:      { label: 'Нейросеть',         icon: Zap },
+    plan_type:       { label: 'Подписка',          icon: Shield },
+    expires:         { label: 'Действует до',       icon: Clock },
+    subscription_expires: { label: 'Действует до', icon: Clock },
+    subscription_active:  { label: 'Подписка',     icon: CheckCircle2 },
+    api_access:      { label: 'Доступ к API',      icon: Lock },
+    credits:         { label: 'Кредиты',           icon: Zap },
+    vpn_provider:    { label: 'Провайдер',         icon: Shield },
+    devices:         { label: 'Устройств',         icon: Users },
+    simultaneous:    { label: 'Подключений',       icon: Users },
+    battles:         { label: 'Боёв',              icon: Shield },
+    winrate:         { label: 'Винрейт',           icon: Star },
+    max_tier:        { label: 'Макс. тир',         icon: Shield },
+    trophies:        { label: 'Трофеи',            icon: Star },
+    sc_game:         { label: 'Игра',              icon: Gamepad2 },
+    edition:         { label: 'Издание',           icon: Package },
+    cape:            { label: 'Плащ',              icon: Star },
+    optifine:        { label: 'OptiFine',          icon: Star },
+    gta_level:       { label: 'Уровень GTA',       icon: Star },
+    gta_money:       { label: 'Деньги GTA',        icon: Zap },
+    rdr_level:       { label: 'Уровень RDR2',      icon: Star },
+    ea_play:         { label: 'EA Play',            icon: Zap },
+    apex_level:      { label: 'Уровень Apex',      icon: Star },
+    r6_rank:         { label: 'Ранг R6',            icon: Shield },
+    ar_level:        { label: 'AR / Уровень',       icon: Star },
+    five_star:       { label: '5★ персонажей',     icon: Star },
+    primogems:       { label: 'Примогемы',         icon: Zap },
+    server:          { label: 'Сервер',            icon: MapPin },
+    mhy_game:        { label: 'Игра',              icon: Gamepad2 },
+    wot_server:      { label: 'Сервер',            icon: MapPin },
+    region:          { label: 'Регион',            icon: MapPin },
+    account_age_days:{ label: 'Возраст акк.',      icon: Clock },
+    days_remaining:  { label: 'Осталось дней',     icon: Clock },
+    friends_count:   { label: 'Друзей',            icon: Users },
+  };
+
+  // ─── Format value for display ─────────────────────────────────────────
+  const formatFieldValue = (key: string, val: any): string => {
+    if (val === true) return 'Есть ✅';
+    if (val === false) return 'Нет ❌';
+    if (val === null || val === undefined || val === '') return '—';
+    if (key === 'account_age_days' && typeof val === 'number') return `${val} дн.`;
+    if (key === 'days_remaining' && typeof val === 'number') return `${val} дн.`;
+    if (key === 'winrate') return `${val}%`;
+    if (typeof val === 'number') return val.toLocaleString('ru-RU');
+    return String(val);
+  };
+
+  // ─── Build dynamic info items ─────────────────────────────────────────
+  const accountData = (account as any).accountData || {};
+  const validationData = validation?.checked_data || {};
+
+  // Merge: validation data takes priority (it's verified), then account seller data
+  const mergedData = { ...accountData, ...validationData };
+
+  const dynamicItems: { icon: any; label: string; value: string }[] = [];
+
+  // Always show these base fields
+  if (account.gamesCount || mergedData.games_count) {
+    dynamicItems.push({ icon: Gamepad2, label: 'Игры', value: String(mergedData.games_count || account.gamesCount || '—') });
+  }
+  dynamicItems.push({ icon: Mail, label: 'Родная почта', value: account.hasOriginalEmail ? 'Есть ✅' : 'Нет ❌' });
+  dynamicItems.push({ icon: Mail, label: 'Временная почта', value: account.hasTempEmail ? 'Есть ✅' : 'Нет ❌' });
+  dynamicItems.push({ icon: Shield, label: 'Гарантия', value: account.guarantee ? `${account.guaranteeHours}ч` : 'Только при покупке' });
+  dynamicItems.push({ icon: Lock, label: 'Escrow', value: account.escrow ? 'Активна' : 'Нет' });
+  dynamicItems.push({ icon: Eye, label: 'Просмотров', value: (account.views || 0).toLocaleString('ru-RU') });
+
+  // Add category-specific fields from data (filter hidden)
+  Object.entries(mergedData).forEach(([key, val]) => {
+    if (HIDDEN_FIELDS.has(key)) return;
+    if (key.startsWith('_')) return;
+    if (val === null || val === undefined || val === '') return;
+
+    // Skip already added
+    if (key === 'games_count' && (account.gamesCount || dynamicItems.some(d => d.label === 'Игры'))) return;
+
+    const fieldInfo = FIELD_LABELS[key];
+    if (fieldInfo) {
+      dynamicItems.push({
+        icon: fieldInfo.icon,
+        label: fieldInfo.label,
+        value: formatFieldValue(key, val),
+      });
+    }
+  });
+
+  // Deduplicate by label
+  const seenLabels = new Set<string>();
+  const infoItems = dynamicItems.filter(item => {
+    if (seenLabels.has(item.label)) return false;
+    seenLabels.add(item.label);
+    return true;
+  });
 
   const isAdmin = ['admin', 'owner', 'moderator'].includes(myRole);
 
