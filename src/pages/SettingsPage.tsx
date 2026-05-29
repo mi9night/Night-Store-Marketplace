@@ -574,6 +574,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                   {(Object.keys(FULL_THEMES) as FullThemeKey[]).map(k => {
                     const ft = FULL_THEMES[k];
                     const isActive = fullTheme === k;
+                    const previewAccent = k === 'amoled' ? ft.soft : ft.accent;
                     return (
                       <motion.button
                         key={k}
@@ -583,21 +584,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         className="relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden group"
                         style={{
                           background: `linear-gradient(135deg, ${ft.accent}18 0%, #171425 48%, #0B0A12 100%)`,
-                          borderColor: isActive ? ft.accent : `${ft.accent}55`,
-                          boxShadow: isActive ? `0 0 0 1px ${ft.accent}, 0 0 24px ${ft.accent}44` : `0 0 14px ${ft.accent}18`,
+                          borderColor: isActive ? previewAccent : `${previewAccent}55`,
+                          boxShadow: isActive ? `0 0 0 1px ${previewAccent}, 0 0 24px ${previewAccent}44` : `0 0 14px ${previewAccent}18`,
                           color: '#EAE6FF',
                         }}
                       >
                         <span
                           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                          style={{ background: `radial-gradient(circle at 20% 0%, ${ft.accent}22, transparent 46%)` }}
+                          style={{ background: `radial-gradient(circle at 20% 0%, ${previewAccent}22, transparent 46%)` }}
                         />
                         <div className="relative flex items-center gap-2 min-w-0">
-                          <ThemeLogo themeKey={k} color={ft.accent} active={isActive} />
+                          <ThemeLogo themeKey={k} color={previewAccent} active={isActive} />
                           <span className="text-xs font-semibold text-white truncate">{ft.label}</span>
                         </div>
                         <div className="relative flex items-center gap-1.5 mt-3">
-                          {[ft.bg, ft.bg2, ft.bg3, ft.accent].map((c, i) => (
+                          {[ft.bg, ft.bg2, ft.bg3, previewAccent].map((c, i) => (
                             <span
                               key={`${k}-${c}-${i}`}
                               className="h-2.5 flex-1 rounded-full border border-white/10"
@@ -606,7 +607,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                           ))}
                         </div>
                         {isActive && (
-                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: ft.accent, boxShadow: `0 0 12px ${ft.accent}` }} />
+                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: previewAccent, boxShadow: `0 0 12px ${previewAccent}` }} />
                         )}
                       </motion.button>
                     );
@@ -625,6 +626,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                   {(Object.keys(THEMES) as ThemeKey[]).map(k => {
                     const t = THEMES[k];
                     const isActive = theme === k;
+                    const previewAccent = k === 'amoled' ? t.soft : t.accent;
                     return (
                       <motion.button
                         key={k}
@@ -633,17 +635,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                         whileTap={{ scale: 0.98 }}
                         className="relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden group"
                         style={{
-                          background: `linear-gradient(135deg, ${t.accent}22, ${t.soft}10)`,
-                          borderColor: isActive ? t.accent : `${t.accent}55`,
-                          boxShadow: isActive ? `0 0 0 1px ${t.accent}, 0 0 24px ${t.accent}44` : `0 0 14px ${t.accent}16`,
+                          background: `linear-gradient(135deg, ${previewAccent}22, ${t.soft}10)`,
+                          borderColor: isActive ? previewAccent : `${previewAccent}55`,
+                          boxShadow: isActive ? `0 0 0 1px ${previewAccent}, 0 0 24px ${previewAccent}44` : `0 0 14px ${previewAccent}16`,
                         }}
                       >
                         <span
                           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                          style={{ background: `radial-gradient(circle at 20% 0%, ${t.accent}24, transparent 48%)` }}
+                          style={{ background: `radial-gradient(circle at 20% 0%, ${previewAccent}24, transparent 48%)` }}
                         />
                         <div className="relative flex items-center gap-2 min-w-0">
-                          <ThemeLogo themeKey={k as FullThemeKey} color={t.accent} active={isActive} />
+                          <ThemeLogo themeKey={k as FullThemeKey} color={previewAccent} active={isActive} />
                           <span className="text-xs font-semibold text-white truncate">{t.label}</span>
                         </div>
                         <div className="relative flex items-center gap-1.5 mt-3">
@@ -656,7 +658,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                           ))}
                         </div>
                         {isActive && (
-                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: t.accent, boxShadow: `0 0 12px ${t.accent}` }} />
+                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: previewAccent, boxShadow: `0 0 12px ${previewAccent}` }} />
                         )}
                       </motion.button>
                     );

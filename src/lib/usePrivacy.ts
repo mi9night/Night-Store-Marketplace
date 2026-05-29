@@ -21,11 +21,11 @@ const COLOR_PALETTE = {
               bg: '#1A0E00', bg2: '#22140A', bg3: '#2C1C10', text: '#FFF4E0', text2: '#B89878' },
   emerald:  { label: 'Emerald',    accent: '#059669', hover: '#10B981', soft: '#34D399',
               bg: '#06160F', bg2: '#0A1E16', bg3: '#0F2820', text: '#E6FFF5', text2: '#94B5A8' },
-  amoled:   { label: 'AMOLED',     accent: '#A855F7', hover: '#C084FC', soft: '#D8B4FE',
+  amoled:   { label: 'AMOLED',     accent: '#111827', hover: '#1F2937', soft: '#CBD5E1',
               bg: '#000000', bg2: '#080808', bg3: '#121212', text: '#FFFFFF', text2: '#9CA3AF' },
   graphite: { label: 'Graphite',   accent: '#A78BFA', hover: '#C4B5FD', soft: '#DDD6FE',
               bg: '#1A1A1A', bg2: '#222222', bg3: '#2A2A2A', text: '#F5F5F5', text2: '#A0A0A0' },
-  navy:     { label: '🌊 Navy',       accent: '#3B82F6', hover: '#60A5FA', soft: '#93C5FD',
+  navy:     { label: 'Navy',       accent: '#3B82F6', hover: '#60A5FA', soft: '#93C5FD',
               bg: '#0A1228', bg2: '#0F1838', bg3: '#152048', text: '#E0EAFF', text2: '#94A3B8' },
   mint:     { label: 'Mint',       accent: '#14B8A6', hover: '#2DD4BF', soft: '#5EEAD4',
               bg: '#0A1A14', bg2: '#0E241D', bg3: '#142E26', text: '#E0FFF4', text2: '#94B8AB' },
@@ -85,6 +85,24 @@ const rgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const isLightColor = (hex: string): boolean => {
+  const { r, g, b } = hexToRgb(hex);
+  return ((r * 299 + g * 587 + b * 114) / 1000) > 170;
+};
+
+const getAccentMeta = (key: ThemeKey, accent: string) => {
+  const light = isLightColor(accent);
+  const amoled = key === 'amoled';
+
+  return {
+    mode: light ? 'light' : amoled ? 'amoled' : 'color',
+    contrast: light ? '#111827' : '#FFFFFF',
+    // Для AMOLED solid-кнопки тёмные, но мягкие подсветки должны быть видимыми на чёрном фоне.
+    alphaSource: amoled ? '#FFFFFF' : accent,
+    solidBorder: light ? 'rgba(17, 24, 39, 0.18)' : amoled ? 'rgba(255, 255, 255, 0.18)' : `rgba(${rgbString(accent)}, 0.45)`,
+  };
+};
+
 const cssEscapeHexClass = (prefix: 'bg' | 'from' | 'via' | 'to' | 'border', hex: string) =>
   `.${prefix}-\\[\\${hex.toUpperCase()}\\], .${prefix}-\\[\\${hex.toLowerCase()}\\]`;
 
@@ -105,6 +123,10 @@ export const applyTheme = (key: ThemeKey) => {
   const t = THEMES[key];
   if (!t) return;
   const root = document.documentElement;
+  const meta = getAccentMeta(key, t.accent);
+
+  root.dataset.accentTheme = key;
+  root.dataset.accentMode = meta.mode;
 
   root.style.setProperty('--color-accent', t.accent);
   root.style.setProperty('--color-accent-hover', t.hover);
@@ -112,9 +134,11 @@ export const applyTheme = (key: ThemeKey) => {
   root.style.setProperty('--accent', t.accent);
   root.style.setProperty('--accent-hover', t.hover);
   root.style.setProperty('--accent-soft', t.soft);
-  root.style.setProperty('--accent-rgb', rgbString(t.accent));
+  root.style.setProperty('--accent-rgb', rgbString(meta.alphaSource));
   root.style.setProperty('--accent-hover-rgb', rgbString(t.hover));
   root.style.setProperty('--accent-soft-rgb', rgbString(t.soft));
+  root.style.setProperty('--accent-contrast', meta.contrast);
+  root.style.setProperty('--accent-solid-border', meta.solidBorder);
 };
 
 // Определяем, светлая ли тема (по фону)
@@ -242,7 +266,10 @@ export const applyFullTheme = (key: FullThemeKey) => {
     .bg-purple-700,
     .bg-purple-800,
     .bg-purple-900,
-    .bg-accent { background-color: var(--accent) !important; }
+    .bg-accent {
+      background-color: var(--accent) !important;
+      border-color: var(--accent-solid-border) !important;
+    }
     .hover\\:bg-purple-500:hover,
     .hover\\:bg-purple-600:hover,
     .hover\\:bg-purple-700:hover,
@@ -265,6 +292,58 @@ export const applyFullTheme = (key: FullThemeKey) => {
 
     /* Тексты и стекло */
     .text-white { color: ${t.text} !important; }
+
+    .bg-accent.text-white,
+    .bg-purple-500.text-white,
+    .bg-purple-600.text-white,
+    .bg-purple-700.text-white,
+    .bg-purple-800.text-white,
+    .bg-purple-900.text-white,
+    button.bg-accent,
+    button.bg-purple-500,
+    button.bg-purple-600,
+    button.bg-purple-700,
+    button.bg-purple-800,
+    button.bg-purple-900 {
+      color: var(--accent-contrast) !important;
+    }
+
+    .bg-accent > .bg-white,
+    .bg-purple-500 > .bg-white,
+    .bg-purple-600 > .bg-white,
+    .bg-purple-700 > .bg-white,
+    .bg-purple-800 > .bg-white,
+    .bg-purple-900 > .bg-white {
+      background-color: var(--accent-contrast) !important;
+    }
+
+    :root[data-accent-mode="light"] .bg-accent,
+    :root[data-accent-mode="light"] .bg-purple-500,
+    :root[data-accent-mode="light"] .bg-purple-600,
+    :root[data-accent-mode="light"] .bg-purple-700,
+    :root[data-accent-mode="light"] .bg-purple-800,
+    :root[data-accent-mode="light"] .bg-purple-900 {
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, .12), 0 0 18px rgba(255, 255, 255, .16) !important;
+    }
+
+    :root[data-accent-mode="amoled"] .bg-accent,
+    :root[data-accent-mode="amoled"] .bg-purple-500,
+    :root[data-accent-mode="amoled"] .bg-purple-600,
+    :root[data-accent-mode="amoled"] .bg-purple-700,
+    :root[data-accent-mode="amoled"] .bg-purple-800,
+    :root[data-accent-mode="amoled"] .bg-purple-900 {
+      background: linear-gradient(135deg, #1F2937, #020617) !important;
+      border-color: rgba(255, 255, 255, .2) !important;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 0 22px rgba(255,255,255,.08) !important;
+      color: #FFFFFF !important;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"],
+    .accent-purple-500 {
+      accent-color: var(--accent) !important;
+    }
+
     .glass {
       background: ${rgba(t.bg2, 0.84)} !important;
       border-color: rgba(var(--accent-rgb), 0.16) !important;
@@ -336,7 +415,7 @@ export const applyFullTheme = (key: FullThemeKey) => {
 export const applyStoredAppearance = () => {
   if (typeof window === 'undefined') return;
   const savedFullTheme = (localStorage.getItem('full_theme') as FullThemeKey) || 'night';
-  const savedTheme = (localStorage.getItem('theme') as ThemeKey) || savedFullTheme;
+  const savedTheme = (localStorage.getItem('theme') as ThemeKey) || 'night';
   applyFullTheme(savedFullTheme);
   applyTheme(savedTheme);
 };
