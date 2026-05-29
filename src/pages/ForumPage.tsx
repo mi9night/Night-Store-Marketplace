@@ -6,6 +6,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
+import { fetchActivePunishment, formatPunishmentDate } from '../lib/moderation';
 
 interface ForumPageProps {
   filter?: string | null;
@@ -151,6 +152,12 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) {
         setCreateError('Войдите в систему');
+        return;
+      }
+
+      const mute = await fetchActivePunishment(u.user.id, 'mute');
+      if (mute) {
+        setCreateError(`У вас мут до ${formatPunishmentDate(mute.ends_at)}. Создание тем временно недоступно.`);
         return;
       }
 

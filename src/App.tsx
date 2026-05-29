@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Ban, Clock, LogOut, ShieldAlert } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { dbToAccount } from './lib/db';
 import { useUserNav } from './lib/UserNavContext';
@@ -35,11 +36,41 @@ import PaymentPage from './pages/PaymentPage';
 
 import type { Page } from './types/pages';
 import { Account } from './types';
+import { formatPunishmentDate, isPunishmentActive, Punishment } from './lib/moderation';
+
+const BanLockScreen: React.FC<{ ban: Punishment }> = ({ ban }) => {
+  const signOut = async () => { await supabase.auth.signOut(); };
+  return (
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, y: 20, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+        className="relative overflow-hidden bg-[#171425] border border-red-800/40 rounded-3xl p-7 max-w-xl w-full text-center shadow-[0_0_80px_rgba(239,68,68,0.16)]">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-transparent to-bg-primary pointer-events-none" />
+        <div className="relative z-10">
+          <div className="w-20 h-20 rounded-3xl bg-red-900/30 border border-red-700/40 flex items-center justify-center mx-auto mb-5 shadow-[0_0_28px_rgba(239,68,68,0.22)]">
+            <ShieldAlert size={42} className="text-red-400" />
+          </div>
+          <h1 className="text-2xl font-black text-white mb-2">Аккаунт заблокирован</h1>
+          <p className="text-sm text-text-secondary mb-5">Пока действует бан, пользоваться сайтом нельзя.</p>
+          <div className="bg-[#0B0A12] border border-red-900/30 rounded-2xl p-4 text-left space-y-3 mb-5">
+            <div className="flex items-start gap-3"><Ban size={16} className="text-red-400 mt-0.5" /><div><p className="text-xs text-text-secondary">Причина</p><p className="text-sm text-white">{ban.reason || 'Без причины'}</p></div></div>
+            <div className="flex items-start gap-3"><Clock size={16} className="text-yellow-400 mt-0.5" /><div><p className="text-xs text-text-secondary">Срок</p><p className="text-sm text-white">до {formatPunishmentDate(ban.ends_at)}</p></div></div>
+            <div><p className="text-xs text-text-secondary">Выдал</p><p className="text-sm text-white">{ban.moderator_name || 'Модератор'}</p></div>
+            {ban.created_at && <div><p className="text-xs text-text-secondary">Дата выдачи</p><p className="text-sm text-white">{new Date(ban.created_at).toLocaleString('ru-RU')}</p></div>}
+          </div>
+          <button onClick={signOut} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all">
+            <LogOut size={16} /> Выйти из аккаунта
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
 
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [activeBan, setActiveBan] = useState<Punishment | null>(null);
 
   const [currentPage, setCurrentPage] = useState<Page>('market');
   const [forumFilter, setForumFilter] = useState<string | null>(null);
@@ -78,12 +109,27 @@ const App: React.FC = () => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
   const [paymentMode, setPaymentMode] = useState<'deposit' | 'withdraw' | undefined>(undefined);
+  const loadActiveBan = useCallback(async (userId?: string | null) => {
+    if (!userId) { setActiveBan(null); return; }
+    const { data } = await supabase
+      .from('bans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', 'ban')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    const ban = (data || []).find((b: any) => isPunishmentActive(b));
+    setActiveBan(ban || null);
+  }, []);
+
 
   useEffect(() => {
 
     const init = async () => {
       const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
+      const currentUser = data.session?.user ?? null;
+      setUser(currentUser);
+      await loadActiveBan(currentUser?.id);
       setAuthLoading(false);
     };
 
@@ -92,13 +138,15 @@ const App: React.FC = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      loadActiveBan(currentUser?.id);
       setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
 
-  }, []);
+  }, [loadActiveBan]);
 
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
@@ -173,7 +221,11 @@ const App: React.FC = () => {
         <AuthPage />
       )}
 
-      {!authLoading && user && (
+      {!authLoading && user && activeBan && (
+        <BanLockScreen ban={activeBan} />
+      )}
+
+      {!authLoading && user && !activeBan && (
         <>
           <Header
             currentPage={currentPage}

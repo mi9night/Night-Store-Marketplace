@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { fetchActivePunishment, formatPunishmentDate } from '../lib/moderation';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Category field configs — what each category asks from seller
@@ -329,6 +330,13 @@ const SellPage: React.FC = () => {
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { setError('Войдите в систему'); setSubmitting(false); return; }
+
+      const mute = await fetchActivePunishment(u.user.id, 'mute');
+      if (mute) {
+        setError(`У вас мут до ${formatPunishmentDate(mute.ends_at)}. Причина: ${mute.reason || 'Без причины'}`);
+        setSubmitting(false);
+        return;
+      }
 
       const dataObj: Record<string, any> = {};
 

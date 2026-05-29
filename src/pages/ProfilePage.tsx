@@ -14,6 +14,8 @@ import BadgeTooltip from '../components/BadgeTooltip';
 import { UserLink } from '../components/UserLink';
 import LabelManager from '../components/LabelManager';
 import ReportButton from '../components/ReportButton';
+import PunishmentBadge from '../components/PunishmentBadge';
+import { fetchActivePunishment, formatPunishmentDate } from '../lib/moderation';
 
 const sellerTierGradient: Record<number, string> = {
   1: 'linear-gradient(90deg, #9CA3AF, #E5E7EB)',
@@ -100,6 +102,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   const [reviews, setReviews] = useState<any[]>([]);
   const [topics, setTopics] = useState<any[]>([]);
   const [bans, setBans] = useState<any[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const [showEdit, setShowEdit] = useState(false);
   const [editBio, setEditBio] = useState('');
@@ -188,6 +191,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
         setTopics(topRes.data || []);
         setBans(banRes.data || []);
 
+        if (viewedProfileId && viewedProfileId !== u.user.id) {
+          const { data: bl } = await supabase.from('user_blacklist')
+            .select('id')
+            .eq('blocker_id', u.user.id)
+            .eq('blocked_id', viewedProfileId)
+            .maybeSingle();
+          setIsBlocked(!!bl);
+        } else {
+          setIsBlocked(false);
+        }
+
         // Подгружаем авторов комментариев и голоса
         const wc = wallRes.data || [];
         if (wc.length > 0) {
@@ -261,6 +275,12 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     const targetId = viewedProfileId || user.id;
     setSendingWall(true);
     try {
+      const mute = await fetchActivePunishment(user.id, 'mute');
+      if (mute) {
+        alert(`У вас мут до ${formatPunishmentDate(mute.ends_at)}. Комментарии временно недоступны.`);
+        return;
+      }
+
       // Загрузка фото
       const urls: string[] = [];
       for (const f of wallImages) {
@@ -301,6 +321,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     await supabase.rpc('toggle_forum_vote', {
       p_target_type: 'profile_comment', p_target_id: commentId, p_vote: v,
     });
+  };
+
+  const toggleBlacklist = async () => {
+    if (!user || !viewedProfileId || viewedProfileId === user.id) return;
+    if (isBlocked) {
+      await supabase.from('user_blacklist').delete().eq('blocker_id', user.id).eq('blocked_id', viewedProfileId);
+      setIsBlocked(false);
+    } else {
+      await supabase.from('user_blacklist').insert({ blocker_id: user.id, blocked_id: viewedProfileId });
+      setIsBlocked(true);
+    }
   };
 
   /* ============ Загрузка аватарки/баннера ============ */
@@ -380,6 +411,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
   ];
 
   const activeBan = bans.find(b => b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
+  const activeMute = bans.find(b => b.type === 'mute' && b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
+  const warnCount = bans.filter(b => b.type === 'warn').length;
+  const lastWarn = bans.filter(b => b.type === 'warn')[0];
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -472,6 +506,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 {profile?.discord_verified && <VerifiedBadge type="discord" size={18} discordName={profile?.discord_username} />}
                 <RoleBadge user={profile} />
                 <LevelBadge level={profile?.level || 1} />
+                {activeBan && <PunishmentBadge type="ban" punishment={activeBan} compact />}
+                {activeMute && <PunishmentBadge type="mute" punishment={activeMute} compact />}
+                {warnCount > 0 && <PunishmentBadge type="warn" punishment={lastWarn} count={Math.min(warnCount, 3)} compact />}
                 {/* XP-уровень (LVL по xp) */}
                 {(() => {
                   const xp = profile?.xp || 0;
@@ -512,18 +549,24 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
 
             {/* Кнопка ЛС для чужого профиля */}
             {!isOwnProfile && user && profile && user.id !== profile.id && (
-              <button onClick={async () => {
-                const msg = prompt('Сообщение для ' + (profile.username || 'пользователя') + ':');
-                if (msg && msg.trim()) {
-                  await supabase.from('messages').insert({
-                    sender_id: user.id, receiver_id: profile.id, text: msg.trim(), is_read: false,
-                  });
-                  alert('✅ Отправлено!');
-                }
-              }}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold flex-shrink-0">
-                <MessageSquare size={14} /> Написать
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                <button onClick={async () => {
+                  const msg = prompt('Сообщение для ' + (profile.username || 'пользователя') + ':');
+                  if (msg && msg.trim()) {
+                    await supabase.from('messages').insert({
+                      sender_id: user.id, receiver_id: profile.id, text: msg.trim(), is_read: false,
+                    });
+                    alert('✅ Отправлено!');
+                  }
+                }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold">
+                  <MessageSquare size={14} /> Написать
+                </button>
+                <button onClick={toggleBlacklist}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${isBlocked ? 'bg-red-900/30 border-red-700/40 text-red-400' : 'bg-purple-900/20 border-purple-700/30 text-purple-300 hover:bg-purple-900/40'}`}>
+                  <Ban size={14} /> {isBlocked ? 'В ЧС' : 'В ЧС'}
+                </button>
+              </div>
             )}
           </div>
 
