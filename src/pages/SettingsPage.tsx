@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Shield, Bell, Palette, Key, CreditCard,
-  Eye, EyeOff, Save, X, Clock, Check, AlertCircle, Camera, Image
-, Link2 } from 'lucide-react';
+  Eye, EyeOff, Save, X, Clock, Check, AlertCircle, Camera, Image,
+  Link2, Moon, Crown, Flower2, Waves, TreePine, Droplet,
+  Flame, Heart, Circle, Sun, Leaf, CircleDot, Sparkles
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../lib/CurrencyContext';
 import { usePrivacy, THEMES, ThemeKey, FULL_THEMES, FullThemeKey } from '../lib/usePrivacy';
@@ -17,6 +19,39 @@ type ActionType = 'username' | 'email' | 'password' | 'custom_id' | null;
 interface SettingsPageProps {
   onNavigate?: (page: any, payload?: any) => void;
 }
+
+const THEME_ICONS: Record<FullThemeKey, React.ElementType> = {
+  night: Moon,
+  midnight: Sparkles,
+  royal: Crown,
+  sakura: Flower2,
+  ocean: Waves,
+  forest: TreePine,
+  crimson: Droplet,
+  amber: Flame,
+  emerald: Heart,
+  amoled: CircleDot,
+  graphite: Circle,
+  navy: Waves,
+  mint: Leaf,
+  light: Sun,
+};
+
+const ThemeLogo: React.FC<{ themeKey: FullThemeKey; color: string; active?: boolean }> = ({ themeKey, color, active }) => {
+  const Icon = THEME_ICONS[themeKey] || Palette;
+  return (
+    <span
+      className={`relative flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${active ? 'scale-105' : ''}`}
+      style={{
+        background: `linear-gradient(135deg, ${color}26, ${color}10)`,
+        borderColor: `${color}66`,
+        boxShadow: active ? `0 0 18px ${color}55` : `0 0 12px ${color}22`,
+      }}
+    >
+      <Icon size={16} style={{ color }} strokeWidth={2.2} />
+    </span>
+  );
+};
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const [activeSection, setActiveSection] = useState(() => {
@@ -530,51 +565,104 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
               <h3 className="text-base font-semibold text-white">Внешний вид</h3>
 
               {/* === ПОЛНАЯ ТЕМА (фон) === */}
-              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <p className="text-sm font-medium text-white mb-3">🖼️ Полное оформление сайта</p>
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4 overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <Palette size={16} className="text-accent" />
+                  <p className="text-sm font-medium text-white">Полное оформление сайта</p>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(Object.keys(FULL_THEMES) as FullThemeKey[]).map(k => {
                     const ft = FULL_THEMES[k];
                     const isActive = fullTheme === k;
                     return (
-                      <button key={k} onClick={() => setFullTheme(k)}
-                        className={`p-3 rounded-xl border-2 transition-all text-left ${
-                          isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
-                        }`}
-                        style={{ background: `linear-gradient(135deg, ${ft.accent}30, ${ft.accent}10)` }}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg" style={{ background: ft.accent }} />
-                          <span className="text-xs font-semibold text-white">{ft.label}</span>
+                      <motion.button
+                        key={k}
+                        onClick={() => setFullTheme(k)}
+                        whileHover={{ y: -2, scale: 1.015 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden group"
+                        style={{
+                          background: `linear-gradient(135deg, ${ft.bg} 0%, ${ft.bg2} 52%, ${ft.bg3} 100%)`,
+                          borderColor: isActive ? ft.accent : `${ft.accent}55`,
+                          boxShadow: isActive ? `0 0 0 1px ${ft.accent}, 0 0 24px ${ft.accent}44` : `0 0 14px ${ft.accent}18`,
+                          color: ft.text,
+                        }}
+                      >
+                        <span
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                          style={{ background: `radial-gradient(circle at 20% 0%, ${ft.accent}22, transparent 46%)` }}
+                        />
+                        <div className="relative flex items-center gap-2 min-w-0">
+                          <ThemeLogo themeKey={k} color={ft.accent} active={isActive} />
+                          <span className="text-xs font-semibold truncate" style={{ color: ft.text }}>{ft.label}</span>
                         </div>
-                      </button>
+                        <div className="relative flex items-center gap-1.5 mt-3">
+                          {[ft.bg, ft.bg2, ft.bg3, ft.accent].map((c, i) => (
+                            <span
+                              key={`${k}-${c}-${i}`}
+                              className="h-2.5 flex-1 rounded-full border border-white/10"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        {isActive && (
+                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: ft.accent, boxShadow: `0 0 12px ${ft.accent}` }} />
+                        )}
+                      </motion.button>
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-text-secondary mt-2">💡 Меняет фон, цвет карточек и текста по всему сайту</p>
+                <p className="text-[10px] text-text-secondary mt-3">💡 Меняет фон, цвет карточек, текст, бордеры и акцент по всему сайту</p>
               </div>
 
               {/* === Тема оформления === */}
-              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
-                <p className="text-sm font-medium text-white mb-3">🎨 Тема акцентного цвета</p>
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4 overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <Palette size={16} className="text-accent" />
+                  <p className="text-sm font-medium text-white">Тема акцентного цвета</p>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(Object.keys(THEMES) as ThemeKey[]).map(k => {
                     const t = THEMES[k];
                     const isActive = theme === k;
                     return (
-                      <button key={k} onClick={() => setTheme(k)}
-                        className={`p-3 rounded-xl border-2 transition-all text-left ${
-                          isActive ? 'border-white scale-105' : 'border-purple-900/30 hover:border-purple-700/50'
-                        }`}
-                        style={{ background: `linear-gradient(135deg, ${t.accent}30, ${t.soft}10)` }}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg" style={{ background: t.accent }} />
-                          <span className="text-xs font-semibold text-white">{t.label}</span>
+                      <motion.button
+                        key={k}
+                        onClick={() => setTheme(k)}
+                        whileHover={{ y: -2, scale: 1.015 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden group"
+                        style={{
+                          background: `linear-gradient(135deg, ${t.accent}22, ${t.soft}10)`,
+                          borderColor: isActive ? t.accent : `${t.accent}55`,
+                          boxShadow: isActive ? `0 0 0 1px ${t.accent}, 0 0 24px ${t.accent}44` : `0 0 14px ${t.accent}16`,
+                        }}
+                      >
+                        <span
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                          style={{ background: `radial-gradient(circle at 20% 0%, ${t.accent}24, transparent 48%)` }}
+                        />
+                        <div className="relative flex items-center gap-2 min-w-0">
+                          <ThemeLogo themeKey={k as FullThemeKey} color={t.accent} active={isActive} />
+                          <span className="text-xs font-semibold text-white truncate">{t.label}</span>
                         </div>
-                      </button>
+                        <div className="relative flex items-center gap-1.5 mt-3">
+                          {[t.accent, t.hover, t.soft].map((c, i) => (
+                            <span
+                              key={`${k}-${c}-${i}`}
+                              className="h-2.5 flex-1 rounded-full border border-white/10"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        {isActive && (
+                          <span className="absolute right-2 top-2 w-2 h-2 rounded-full" style={{ backgroundColor: t.accent, boxShadow: `0 0 12px ${t.accent}` }} />
+                        )}
+                      </motion.button>
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-text-secondary mt-2">💡 Меняет фиолетовый акцент на выбранный цвет по всему сайту</p>
+                <p className="text-[10px] text-text-secondary mt-3">💡 Меняет акцентные кнопки, подсветки, hover, бордеры и градиенты</p>
               </div>
 
               {/* === Свечение === */}
