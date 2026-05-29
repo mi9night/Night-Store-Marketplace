@@ -4,13 +4,14 @@ import {
   Shield, Users, Package, Receipt, Ticket, BarChart3,
   Search, Ban, CheckCircle2, Trash2, Edit3, ArrowRight, X,
   Crown, Settings as SettingsIcon, Megaphone, Send,
-  Image, Paperclip, ChevronLeft, ChevronRight, FileText, ZoomIn
+  Image, Paperclip, ChevronLeft, ChevronRight, FileText, ZoomIn,
+  ScanSearch, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge as RB } from './RoleBadge';
 import { UserLink } from './UserLink';
 
-type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats' | 'broadcast';
+type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats' | 'broadcast' | 'validation';
 
 interface Props {
   onNavigate?: (page: 'forum' | 'product' | 'profile' | 'topic', payload?: any) => void;
@@ -442,6 +443,7 @@ const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
     { id: 'products',   label: 'Товары',       icon: Package },
     { id: 'broadcast',  label: 'Рассылка',     icon: Megaphone },
     { id: 'stats',      label: 'Статистика',   icon: BarChart3 },
+    { id: 'validation', label: 'Валидация',   icon: ScanSearch },
   ];
 
   return (
@@ -495,6 +497,7 @@ const ModerationPanel: React.FC<Props> = ({ onNavigate }) => {
           {section === 'operations' && <OperationsSection />}
           {section === 'products'   && <ProductsSection onNavigate={onNavigate} />}
           {section === 'stats'      && <StatsSection />}
+          {section === 'validation' && <ValidationSection />}
           {section === 'broadcast'  && <BroadcastSection />}
         </motion.div>
       </AnimatePresence>
@@ -1908,6 +1911,225 @@ const BroadcastSection: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. VALIDATION
+══════════════════════════════════════════════════════════════════════════ */
+const ValidationSection: React.FC = () => {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [validating, setValidating] = useState<string | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [stats, setStats] = useState({ total: 0, valid: 0, changed: 0, error: 0, unchecked: 0 });
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('accounts')
+      .select('id, title, category, status, validation_status, last_validated_at, validation_severity, validation_changes')
+      .order('last_validated_at', { ascending: true, nullsFirst: true })
+      .limit(100);
+
+    const list = data || [];
+    setAccounts(list);
+
+    setStats({
+      total: list.length,
+      valid: list.filter(a => a.validation_status === 'valid').length,
+      changed: list.filter(a => a.validation_status === 'changed').length,
+      error: list.filter(a => a.validation_status === 'error').length,
+      unchecked: list.filter(a => !a.validation_status || a.validation_status === 'unchecked').length,
+    });
+
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const triggerRecheck = async (accountId: string) => {
+    setValidating(accountId);
+    await supabase.from('accounts').update({
+      validation_status: 'recheck_pending',
+    }).eq('id', accountId);
+
+    // Poll for completion
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      const { data: acc } = await supabase
+        .from('accounts')
+        .select('validation_status')
+        .eq('id', accountId)
+        .maybeSingle();
+
+      if (acc && acc.validation_status !== 'recheck_pending') {
+        clearInterval(poll);
+        setValidating(null);
+        load();
+      }
+      if (attempts > 20) {
+        clearInterval(poll);
+        setValidating(null);
+        load();
+      }
+    }, 1500);
+  };
+
+  const bulkValidateAll = async () => {
+    setBulkRunning(true);
+    const unchecked = accounts.filter(a => !a.validation_status || a.validation_status === 'unchecked');
+    for (const acc of unchecked.slice(0, 20)) {
+      await supabase.from('accounts').update({
+        validation_status: 'recheck_pending',
+      }).eq('id', acc.id);
+    }
+    setTimeout(() => {
+      setBulkRunning(false);
+      load();
+    }, 5000);
+  };
+
+  const filtered = filter === 'all'
+    ? accounts
+    : accounts.filter(a =>
+        filter === 'unchecked'
+          ? (!a.validation_status || a.validation_status === 'unchecked')
+          : a.validation_status === filter
+      );
+
+  const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+    valid:           { label: '✅ Проверен',  cls: 'bg-green-900/30 text-green-400 border border-green-700/30' },
+    changed:         { label: '⚠️ Изменён',  cls: 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/30' },
+    error:           { label: '❌ Ошибка',    cls: 'bg-red-900/30 text-red-400 border border-red-700/30' },
+    recheck_pending: { label: '🔄 Проверка',  cls: 'bg-blue-900/30 text-blue-400 border border-blue-700/30' },
+    unchecked:       { label: '⏳ Ожидание',  cls: 'bg-gray-900/30 text-gray-400 border border-gray-700/30' },
+    no_config:       { label: '⚙️ Нет API',   cls: 'bg-purple-900/30 text-purple-300 border border-purple-700/30' },
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {[
+          { label: 'Всего',      value: stats.total,     color: 'text-white' },
+          { label: 'Проверены',  value: stats.valid,     color: 'text-green-400' },
+          { label: 'Изменены',   value: stats.changed,   color: 'text-yellow-400' },
+          { label: 'Ошибки',     value: stats.error,     color: 'text-red-400' },
+          { label: 'Ожидают',    value: stats.unchecked,  color: 'text-gray-400' },
+        ].map(s => (
+          <div key={s.label} className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3 text-center">
+            <p className={`text-lg font-bold \${s.color}`}>{s.value}</p>
+            <p className="text-[10px] text-text-secondary">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters + bulk action */}
+      <div className="flex gap-2 flex-wrap items-center">
+        {[
+          { id: 'all',       label: 'Все' },
+          { id: 'valid',     label: '✅ Проверены' },
+          { id: 'changed',   label: '⚠️ Изменены' },
+          { id: 'error',     label: '❌ Ошибки' },
+          { id: 'unchecked', label: '⏳ Ожидают' },
+        ].map(f => (
+          <motion.button key={f.id} onClick={() => setFilter(f.id)}
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all \${
+              filter === f.id
+                ? 'bg-purple-600 text-white shadow-[0_0_10px_rgba(139,92,246,0.4)]'
+                : 'bg-[#171425] text-text-secondary border border-purple-900/20 hover:border-purple-700/40'
+            }`}>{f.label}</motion.button>
+        ))}
+
+        <motion.button onClick={bulkValidateAll} disabled={bulkRunning || stats.unchecked === 0}
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 flex items-center gap-1.5 transition-all">
+          <RefreshCw size={12} className={bulkRunning ? 'animate-spin' : ''} />
+          {bulkRunning ? 'Проверка...' : `Проверить все (\${stats.unchecked})`}
+        </motion.button>
+      </div>
+
+      {/* Account list */}
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-6 h-6 border-2 border-purple-700 border-t-purple-400 rounded-full" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-text-secondary text-sm py-8">Нет аккаунтов</p>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((acc, i) => {
+            const st = STATUS_BADGE[acc.validation_status || 'unchecked'] || STATUS_BADGE['unchecked'];
+            const severity = acc.validation_severity;
+            const changes = acc.validation_changes || [];
+            const isChecking = validating === acc.id || acc.validation_status === 'recheck_pending';
+
+            return (
+              <motion.div key={acc.id}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}
+                className={`bg-[#171425] border rounded-xl p-3 transition-all \${
+                  severity === 'critical'
+                    ? 'border-red-700/40 shadow-[0_0_12px_rgba(239,68,68,0.1)]'
+                    : 'border-purple-900/20 hover:border-purple-700/40'
+                }`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-medium text-white truncate">{acc.title}</p>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap \${st.cls}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-text-secondary">
+                      <span className="bg-purple-900/20 px-1.5 py-0.5 rounded text-purple-300">{acc.category}</span>
+                      {acc.last_validated_at && (
+                        <span>{new Date(acc.last_validated_at).toLocaleString('ru-RU')}</span>
+                      )}
+                      {changes.length > 0 && (
+                        <span className="text-yellow-400 flex items-center gap-0.5">
+                          <AlertTriangle size={9} /> {changes.length} изм.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <motion.button
+                    onClick={() => triggerRecheck(acc.id)}
+                    disabled={isChecking}
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    className="p-2 rounded-lg bg-purple-900/20 border border-purple-700/30 text-purple-300 hover:bg-purple-900/40 disabled:opacity-50 transition-all flex-shrink-0"
+                  >
+                    <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
+                  </motion.button>
+                </div>
+
+                {/* Show changes if any */}
+                {changes.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-purple-900/20 flex flex-wrap gap-1.5">
+                    {changes.map((ch: any, ci: number) => (
+                      <span key={ci} className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium \${
+                        ch.severity === 'critical'
+                          ? 'bg-red-900/30 text-red-400 border border-red-700/30'
+                          : ch.severity === 'warning'
+                            ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/30'
+                            : 'bg-blue-900/30 text-blue-400 border border-blue-700/30'
+                      }`}>
+                        {ch.field}: {String(ch.old ?? '—')} → {String(ch.new ?? '—')}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

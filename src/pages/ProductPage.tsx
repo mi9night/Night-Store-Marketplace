@@ -275,6 +275,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   // Purchase success modal
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
+  // Validation data
+  const [validation, setValidation] = useState<any>(null);
+  const [validationHistory, setValidationHistory] = useState<any[]>([]);
+  const [validating, setValidating] = useState(false);
+
   // Image viewer
   const [viewerImages, setViewerImages] = useState<{ url: string; name: string }[] | null>(null);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -347,6 +352,22 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
         setReviews(reviewsList);
         setSellerStats({ sales: s?.sales || 0, rating, positive: positivePct, reviewsCount: count || reviewsList.length });
       }
+
+      // Load validation data
+      const { data: val } = await supabase
+        .from('account_validations')
+        .select('*')
+        .eq('account_id', account.id)
+        .maybeSingle();
+      if (val) setValidation(val);
+
+      const { data: valHist } = await supabase
+        .from('validation_history')
+        .select('*')
+        .eq('account_id', account.id)
+        .order('checked_at', { ascending: false })
+        .limit(5);
+      if (valHist) setValidationHistory(valHist);
     };
     load();
   }, [account.id]);
@@ -403,10 +424,45 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
 
   const checkAccountChanges = async () => {
     setCheckingChanges(true);
-    setTimeout(() => {
-      alert(`Проверка изменений аккаунта #${account.id.slice(0, 8)}\n\n(Здесь будет результат проверки почты и пароля)`);
+    try {
+      // Trigger recheck by setting status
+      await supabase.from('accounts').update({
+        validation_status: 'recheck_pending',
+      }).eq('id', account.id);
+
+      // Poll for result (bot will pick it up via realtime)
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        const { data: val } = await supabase
+          .from('account_validations')
+          .select('*')
+          .eq('account_id', account.id)
+          .maybeSingle();
+
+        if (val && val.checked_at && new Date(val.checked_at).getTime() > Date.now() - 30000) {
+          clearInterval(poll);
+          setValidation(val);
+          setCheckingChanges(false);
+
+          // Reload history
+          const { data: hist } = await supabase
+            .from('validation_history')
+            .select('*')
+            .eq('account_id', account.id)
+            .order('checked_at', { ascending: false })
+            .limit(5);
+          if (hist) setValidationHistory(hist);
+        }
+
+        if (attempts > 20) {
+          clearInterval(poll);
+          setCheckingChanges(false);
+        }
+      }, 1500);
+    } catch {
       setCheckingChanges(false);
-    }, 700);
+    }
   };
 
   const openDisputeModal = () => {
@@ -946,16 +1002,7 @@ ${problemDescription || '—'}${filesInfo}`;
                 </motion.button>
               )}
 
-              {isAdmin && (
-                <button
-                  onClick={checkAccountChanges}
-                  disabled={checkingChanges}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold bg-blue-900/20 border border-blue-700/40 text-blue-400 hover:bg-blue-900/30 disabled:opacity-50 transition-all"
-                >
-                  <RefreshCw size={16} className={checkingChanges ? 'animate-spin' : ''} />
-                  Проверить изменения
-                </button>
-              )}
+
             </div>
 
             <div className="space-y-2 pt-4 border-t border-purple-900/20">
@@ -1068,36 +1115,116 @@ ${problemDescription || '—'}${filesInfo}`;
             </motion.div>
           )}
 
-          {/* === Ban check === */}
-          {seller && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <Shield size={16} className="text-purple-400" /> Проверка на бан
+          {/* === Validation Status === */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+            className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5 overflow-hidden">
+
+            {/* Header + status */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Shield size={16} className="text-purple-400" /> Проверка аккаунта
               </h3>
-              <div className="space-y-2">
-                {[
-                  { label: 'VAC бан', value: seller.vac_ban },
-                  { label: 'Trade ban', value: seller.trade_ban },
-                  { label: 'Community ban', value: seller.community_ban },
-                  { label: 'Game ban', value: seller.game_ban },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between py-1.5">
-                    <span className="text-xs text-text-secondary">{item.label}</span>
-                    <span className={`text-xs font-semibold flex items-center gap-1 ${
-                      item.value ? 'text-red-400' : 'text-green-400'
-                    }`}>
-                      {item.value ? (
-                        <><span className="w-1.5 h-1.5 rounded-full bg-red-400" /> Да</>
-                      ) : (
-                        <><span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Нет</>
-                      )}
-                    </span>
+              {validation && (
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                  validation.status === 'valid'   ? 'bg-green-900/30 text-green-400 border border-green-700/30' :
+                  validation.status === 'changed' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/30' :
+                  validation.status === 'error'   ? 'bg-red-900/30 text-red-400 border border-red-700/30' :
+                                                     'bg-purple-900/30 text-purple-300 border border-purple-700/30'
+                }`}>
+                  {validation.status === 'valid' ? '✅ Проверен' :
+                   validation.status === 'changed' ? '⚠️ Изменён' :
+                   validation.status === 'error' ? '❌ Ошибка' : '⏳ Ожидание'}
+                </span>
+              )}
+            </div>
+
+            {/* Ban checks */}
+            <div className="space-y-1.5 mb-3">
+              {[
+                { label: 'VAC бан',       value: validation?.vac_ban },
+                { label: 'Trade ban',     value: validation?.trade_ban },
+                { label: 'Community ban', value: validation?.community_ban },
+                { label: 'Game ban',      value: validation?.game_ban },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between py-1">
+                  <span className="text-xs text-text-secondary">{item.label}</span>
+                  <span className={`text-xs font-semibold flex items-center gap-1 ${
+                    item.value ? 'text-red-400' : 'text-green-400'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.value ? 'bg-red-400' : 'bg-green-400'}`} />
+                    {item.value ? 'Да' : 'Нет'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Extra info from validation */}
+            {validation?.checked_data && (
+              <div className="space-y-1.5 mb-3 pt-2 border-t border-purple-900/20">
+                {validation.level != null && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-xs text-text-secondary">Уровень</span>
+                    <span className="text-xs font-semibold text-white">{validation.level}</span>
+                  </div>
+                )}
+                {validation.hours_played != null && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-xs text-text-secondary">Часов</span>
+                    <span className="text-xs font-semibold text-white">{validation.hours_played.toLocaleString('ru-RU')}</span>
+                  </div>
+                )}
+                {validation.games_count != null && (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-xs text-text-secondary">Игр</span>
+                    <span className="text-xs font-semibold text-white">{validation.games_count}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Changes diff */}
+            {validationHistory.length > 0 && validationHistory[0].has_changes && (
+              <div className="mb-3 p-2.5 bg-yellow-900/10 border border-yellow-700/30 rounded-xl">
+                <p className="text-[10px] text-yellow-400 font-semibold uppercase tracking-wider mb-1.5">⚠️ Обнаружены изменения</p>
+                {(validationHistory[0].changes || []).map((ch: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-0.5">
+                    <span className="text-[10px] text-text-secondary">{ch.field}</span>
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <span className="text-red-400 line-through">{String(ch.old ?? '—')}</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="text-green-400">{String(ch.new ?? '—')}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-            </motion.div>
-          )}
+            )}
+
+            {/* Last checked */}
+            {validation?.checked_at && (
+              <p className="text-[10px] text-text-secondary mb-3">
+                Проверен: {new Date(validation.checked_at).toLocaleString('ru-RU')}
+                {validation.check_duration_ms && ` · ${validation.check_duration_ms}мс`}
+              </p>
+            )}
+
+            {!validation && (
+              <p className="text-[10px] text-text-secondary mb-3">Ещё не проверен ботом</p>
+            )}
+
+            {/* Admin: manual recheck button */}
+            {isAdmin && (
+              <motion.button
+                onClick={checkAccountChanges}
+                disabled={checkingChanges}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold bg-purple-900/20 border border-purple-700/30 text-purple-300 hover:bg-purple-900/30 hover:border-purple-500/50 disabled:opacity-50 transition-all"
+              >
+                <RefreshCw size={13} className={checkingChanges ? 'animate-spin' : ''} />
+                {checkingChanges ? 'Проверка...' : 'Перепроверить'}
+              </motion.button>
+            )}
+          </motion.div>
         </div>
       </div>
 
