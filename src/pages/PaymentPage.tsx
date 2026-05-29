@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, ArrowDownLeft, ArrowLeft, Copy, CheckCircle2, AlertCircle,
-  CreditCard, Globe, ExternalLink, Headset, Clock, BellRing, Sparkles
+  CreditCard, Globe, ExternalLink, Headset, Clock, Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -82,19 +82,20 @@ const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ method, large = f
           transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -right-3 -top-3 w-9 h-9 rounded-full bg-purple-400/30 blur-xl"
         />
-        <svg width={iconSize + 10} height={iconSize + 10} viewBox="0 0 42 42" fill="none" className="relative z-10">
-          <path d="M21 4.5L35.5 21L21 37.5L6.5 21L21 4.5Z" fill="url(#donatx-main)" stroke="rgba(255,255,255,.38)" strokeWidth="1.5" />
-          <path d="M21 11L29 21L21 31L13 21L21 11Z" fill="rgba(11,10,18,.72)" stroke="rgba(255,255,255,.22)" />
-          <path d="M16.2 20.9H21.6C24.4 20.9 26.1 19.45 26.1 17.15C26.1 14.85 24.4 13.45 21.6 13.45H16.2V28.55H20.05V23.95H21.35L25.05 28.55H29.45L25.05 23.25C25.95 22.78 26.58 21.98 26.92 20.9H30.1V18.25H26.95" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={iconSize + 12} height={iconSize + 12} viewBox="0 0 44 44" fill="none" className="relative z-10">
+          <path d="M22 4.5L37.5 13.5V30.5L22 39.5L6.5 30.5V13.5L22 4.5Z" fill="url(#donatx-main)" stroke="rgba(255,255,255,.34)" strokeWidth="1.4" />
+          <path d="M14 13.5L22 21.5L30 13.5" stroke="rgba(255,255,255,.9)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M14 30.5L22 22.5L30 30.5" stroke="rgba(255,255,255,.9)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16.5 11L22 16.5L27.5 11" stroke="#E9D5FF" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+          <path d="M16.5 33L22 27.5L27.5 33" stroke="#E9D5FF" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
           <defs>
-            <linearGradient id="donatx-main" x1="6.5" y1="4.5" x2="37" y2="34" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#A855F7" />
-              <stop offset="0.55" stopColor="#7C3AED" />
-              <stop offset="1" stopColor="#EC4899" />
+            <linearGradient id="donatx-main" x1="7" y1="5" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#C084FC" />
+              <stop offset="0.48" stopColor="#8B5CF6" />
+              <stop offset="1" stopColor="#5B21B6" />
             </linearGradient>
           </defs>
         </svg>
-        <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/80 tracking-tight">DX</span>
       </motion.div>
     );
   }
@@ -112,11 +113,23 @@ const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ method, large = f
           transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute inset-x-2 top-2 h-px bg-gradient-to-r from-transparent via-orange-200/80 to-transparent"
         />
-        <div className="relative z-10 w-8 h-8 rounded-full bg-orange-500/20 border border-orange-200/25 flex items-center justify-center">
-          <BellRing size={iconSize} className="text-orange-300 drop-shadow-[0_0_14px_rgba(251,146,60,0.4)]" />
-          <Sparkles size={large ? 11 : 8} className="absolute -right-1 -top-1 text-yellow-200" />
+        <div className="relative z-10 flex items-center justify-center">
+          <svg width={iconSize + 12} height={iconSize + 12} viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="16" fill="url(#da-main)" stroke="rgba(255,255,255,.32)" strokeWidth="1.5" />
+            <path d="M15.5 22.5C15.5 18.25 18.1 15.25 22 15.25C25.9 15.25 28.5 18.25 28.5 22.5V25.8L31 28.4H13L15.5 25.8V22.5Z" stroke="#FFF7D6" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M19.2 30.2C19.8 31.35 20.75 32 22 32C23.25 32 24.2 31.35 24.8 30.2" stroke="#FFF7D6" strokeWidth="2.2" strokeLinecap="round" />
+            <path d="M12 17.5C13 14.9 15.05 12.85 17.6 11.8" stroke="#FFE08A" strokeWidth="1.8" strokeLinecap="round" opacity="0.95" />
+            <path d="M32 17.5C31 14.9 28.95 12.85 26.4 11.8" stroke="#FFE08A" strokeWidth="1.8" strokeLinecap="round" opacity="0.95" />
+            <defs>
+              <linearGradient id="da-main" x1="10" y1="8" x2="35" y2="35" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#FFD166" />
+                <stop offset="0.55" stopColor="#F59E0B" />
+                <stop offset="1" stopColor="#B45309" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <Sparkles size={large ? 11 : 8} className="absolute -right-1 -top-1 text-yellow-100" />
         </div>
-        <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/80 tracking-tight">DA</span>
       </motion.div>
     );
   }
@@ -129,7 +142,6 @@ const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ method, large = f
         title={method.name}
       >
         <Globe size={iconSize + 3} className="text-cyan-300 relative z-10" />
-        <CreditCard size={large ? 24 : 17} className="absolute right-2 bottom-2 text-white/70" />
       </motion.div>
     );
   }
@@ -141,7 +153,6 @@ const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ method, large = f
       title={method.name}
     >
       <CreditCard size={iconSize + 3} className="text-green-300 relative z-10" />
-      <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/75 tracking-tight">RU</span>
     </motion.div>
   );
 };
@@ -390,11 +401,6 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
                       </p>
                     </div>
                   </div>
-                  {m.region && (
-                    <span className="mt-2 inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-purple-900/30 text-purple-300 border border-purple-700/30">
-                      {m.region}
-                    </span>
-                  )}
                 </motion.button>
               ))}
             </div>
