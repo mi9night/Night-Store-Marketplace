@@ -337,6 +337,22 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
           reviewsList.forEach((rv: any) => { if (aMap[rv.user_id]) rv.author = aMap[rv.user_id]; });
         }
 
+        // Load account info for each review (title + price)
+        const reviewAccountIds = [...new Set(reviewsList.map((rv: any) => rv.account_id).filter(Boolean))];
+        if (reviewAccountIds.length > 0) {
+          const { data: accs } = await supabase.from('accounts')
+            .select('id, title, price, category').in('id', reviewAccountIds);
+          const accMap: Record<string, any> = {};
+          accs?.forEach((a: any) => { accMap[a.id] = a; });
+          reviewsList.forEach((rv: any) => {
+            if (rv.account_id && accMap[rv.account_id]) {
+              rv.account_title = accMap[rv.account_id].title;
+              rv.account_price = accMap[rv.account_id].price;
+              rv.account_category = accMap[rv.account_id].category;
+            }
+          });
+        }
+
         let rating = Number(s?.rating) || 0;
         if (rating === 0 && reviewsList.length > 0) {
           const withRating = reviewsList.filter((r: any) => r.rating);
@@ -1018,11 +1034,11 @@ ${problemDescription || '—'}${filesInfo}`;
                             {/* Review text */}
                             {(r.text || r.comment) && <p className="text-sm text-white mb-2">{r.text || r.comment}</p>}
 
-                            {/* Product name + actions */}
+                            {/* Product name + price */}
                             <div className="flex items-center gap-2 pt-2 border-t border-purple-900/20">
-                              {r.account_id && (
-                                <span className="text-[10px] text-text-secondary truncate">
-                                  📦 {account.title}
+                              {(r.account_title || r.account_id) && (
+                                <span className="text-[10px] text-text-secondary truncate max-w-[60%]">
+                                  📦 {r.account_title || 'Аккаунт'}{r.account_price ? ` · ${Number(r.account_price).toLocaleString('ru-RU')} ₽` : ''}
                                 </span>
                               )}
                               <div className="flex items-center gap-1 ml-auto flex-shrink-0">
