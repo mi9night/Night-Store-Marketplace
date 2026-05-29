@@ -25,13 +25,14 @@ interface PaymentMethod {
   region?: string;
   popular?: boolean;
   link?: string;     // payment link (will be configured)
+  disabled?: boolean; // coming soon
 }
 
 const DEPOSIT_METHODS: PaymentMethod[] = [
   { id: 'donatx',       name: 'DonatX',             fee: 8,    minAmount: 100,   icon: '💜', color: 'border-purple-500/40',   type: 'deposit', popular: true },
   { id: 'donationalerts',name: 'DonationAlerts',    fee: 12,   minAmount: 10,    icon: '🔔', color: 'border-orange-500/40',   type: 'deposit' },
-  { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: '💳', color: 'border-green-500/40',    type: 'deposit', region: 'RU' },
-  { id: 'card_world',   name: 'Карта мира',         fee: 12,   minAmount: 1000,  icon: '🌍', color: 'border-cyan-500/40',     type: 'deposit' },
+  { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: '💳', color: 'border-green-500/40',    type: 'deposit', region: 'RU', disabled: true },
+  { id: 'card_world',   name: 'Карта мира',         fee: 12,   minAmount: 1000,  icon: '🌍', color: 'border-cyan-500/40',     type: 'deposit', disabled: true },
 ];
 
 const WITHDRAW_METHODS: PaymentMethod[] = [
@@ -260,12 +261,19 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => { setSelectedMethod(m); setStep('amount'); }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`bg-[#171425] border ${m.color} rounded-xl p-4 text-left transition-all hover:bg-purple-900/10 relative overflow-hidden`}
+                  onClick={() => { if (!m.disabled) { setSelectedMethod(m); setStep('amount'); } }}
+                  whileHover={{ scale: m.disabled ? 1 : 1.02 }}
+                  whileTap={{ scale: m.disabled ? 1 : 0.98 }}
+                  className={`bg-[#171425] border ${m.color} rounded-xl p-4 text-left transition-all relative overflow-hidden ${
+                    m.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-900/10 cursor-pointer'
+                  }`}
                 >
-                  {m.popular && (
+                  {m.disabled && (
+                    <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-700 text-gray-300 font-bold">
+                      Скоро
+                    </span>
+                  )}
+                  {m.popular && !m.disabled && (
                     <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full bg-purple-600 text-white font-bold">
                       Популярное
                     </span>
