@@ -11,7 +11,9 @@ import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
 import GiveawayCard from '../components/GiveawayCard';
 import LabelManager from '../components/LabelManager';
+import BlockedContent from '../components/BlockedContent';
 import type { Page } from '../types/pages';
+import { fetchActivePunishment, formatPunishmentDate } from '../lib/moderation';
 
 interface Props {
   topicId: string;
@@ -49,6 +51,8 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const [me, setMe] = useState<any>(null);
   const [myProfile, setMyProfile] = useState<any>(null);
   const [myVotes, setMyVotes] = useState<Record<string, number>>({});
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [showBlockedTopic, setShowBlockedTopic] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [commentImages, setCommentImages] = useState<File[]>([]);
@@ -103,6 +107,14 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
       const map: Record<string, number> = {};
       votes?.forEach(v => { map[`${v.target_type}:${v.target_id}`] = v.vote; });
       setMyVotes(map);
+
+      const { data: bl } = await supabase
+        .from('user_blacklist')
+        .select('blocked_id')
+        .eq('blocker_id', u.user.id);
+      setBlockedIds((bl || []).map((x: any) => x.blocked_id));
+    } else {
+      setBlockedIds([]);
     }
     setLoading(false);
     await supabase.rpc('bump_topic_view', { p_topic_id: topicId });
@@ -151,6 +163,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     if ((!newComment.trim() && commentImages.length === 0) || !me) return;
     setSending(true);
     try {
+      const mute = await fetchActivePunishment(me.id, 'mute');
+      if (mute) {
+        alert(`У вас мут до ${formatPunishmentDate(mute.ends_at)}. Комментарии временно недоступны.`);
+        return;
+      }
+
       const imgUrls = commentImages.length > 0 ? await uploadImages(commentImages) : [];
       const name = myProfile?.username || me.email?.split('@')[0] || 'User';
       await supabase.from('forum_comments').insert({
@@ -208,10 +226,22 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
 
   const topicVote = myVotes[`topic:${topic.id}`];
   const catColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
+  const topicBlocked = !!me && topic.author_id !== me.id && blockedIds.includes(topic.author_id);
 
   // Группируем комменты по parent_id
   const topLevel = comments.filter(c => !c.parent_id);
   const repliesOf = (id: string) => comments.filter(c => c.parent_id === id);
+  const isAdmin = ['admin', 'owner'].includes(myProfile?.role || '');
+
+  const togglePin = async () => {
+    if (!isAdmin) return;
+    const { error } = await supabase.from('forum_topics').update({ is_pinned: !topic.is_pinned }).eq('id', topic.id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setTopic({ ...topic, is_pinned: !topic.is_pinned });
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -258,9 +288,18 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         )}
 
         {topic.content && (
-          <div className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-4 p-4 bg-[#0B0A12] rounded-xl border border-purple-900/20">
-            {topic.content}
-          </div>
+          topicBlocked && !showBlockedTopic ? (
+            <BlockedContent label="Тема от пользователя из вашего чёрного списка" className="mb-4" />
+          ) : (
+            <div className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-4 p-4 bg-[#0B0A12] rounded-xl border border-purple-900/20">
+              {topic.content}
+            </div>
+          )
+        )}
+        {topicBlocked && !showBlockedTopic && topic.content && (
+          <button onClick={() => setShowBlockedTopic(true)} className="mb-4 text-xs text-purple-400 hover:underline">
+            Показать содержимое темы
+          </button>
         )}
 
         {/* Фото темы */}
@@ -291,6 +330,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             <span className="flex items-center gap-1"><Eye size={12} /> {topic.views || 0}</span>
             <span className="flex items-center gap-1"><MessageSquare size={12} /> {comments.length}</span>
             <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} />
+            {isAdmin && (
+              <button onClick={togglePin}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${topic.is_pinned ? 'bg-purple-600/30 text-purple-300' : 'bg-purple-900/20 hover:bg-purple-900/40 text-purple-300'}`}>
+                <Pin size={11} /> {topic.is_pinned ? 'Открепить' : 'Закрепить'}
+              </button>
+            )}
             {(me?.id === topic.author_id || ['moderator','admin','owner'].includes(myProfile?.role)) && (
               <button onClick={async () => {
                 if (!confirm('Удалить тему вместе со всеми комментариями?')) return;
@@ -322,6 +367,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
               myVotes={myVotes}
               me={me}
               myRole={myProfile?.role}
+              blockedIds={blockedIds}
               onVote={vote}
               onReply={setReplyTo}
               onDelete={delComment}
@@ -395,15 +441,25 @@ const CommentItem: React.FC<{
   myVotes: Record<string, number>;
   me: any;
   myRole?: string;
+  blockedIds: string[];
   onVote: (t: 'comment', id: string, v: 1 | -1) => void;
   onReply: (c: Comment) => void;
   onDelete: (id: string) => void;
   index: number;
   depth?: number;
-}> = ({ comment: c, allComments, myVotes, me, myRole, onVote, onReply, onDelete, index, depth = 0 }) => {
+}> = ({ comment: c, allComments, myVotes, me, myRole, blockedIds, onVote, onReply, onDelete, index, depth = 0 }) => {
   const replies = allComments.filter(x => x.parent_id === c.id);
   const v = myVotes[`comment:${c.id}`];
   const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myRole || ''));
+  const isBlockedAuthor = !!me && me.id !== c.author_id && blockedIds.includes(c.author_id);
+
+  if (isBlockedAuthor) {
+    return (
+      <BlockedContent label="Комментарий от пользователя из вашего чёрного списка" className={depth > 0 ? 'ml-6 sm:ml-10' : ''}>
+        <CommentItem comment={c} allComments={allComments} myVotes={myVotes} me={me} myRole={myRole} blockedIds={[]} onVote={onVote} onReply={onReply} onDelete={onDelete} index={index} depth={depth} />
+      </BlockedContent>
+    );
+  }
 
   return (
     <motion.div
@@ -476,6 +532,7 @@ const CommentItem: React.FC<{
               myVotes={myVotes}
               me={me}
               myRole={myRole}
+              blockedIds={blockedIds}
               onVote={onVote}
               onReply={onReply}
               onDelete={onDelete}

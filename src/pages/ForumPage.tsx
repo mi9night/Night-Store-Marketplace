@@ -56,9 +56,24 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
     })();
   }, []);
 
+  const isAdmin = ['admin', 'owner'].includes(myRole);
+
   const handleDeleteTopic = async (id: string) => {
     if (!confirm('Удалить тему?')) return;
     await supabase.from('forum_topics').delete().eq('id', id);
+    loadTopics();
+  };
+
+  const handleTogglePin = async (topic: Topic) => {
+    if (!isAdmin) return;
+    const { error } = await supabase
+      .from('forum_topics')
+      .update({ is_pinned: !topic.is_pinned })
+      .eq('id', topic.id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
     loadTopics();
   };
 
@@ -70,6 +85,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState('Дискуссии');
+  const [newPinned, setNewPinned] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -146,6 +162,10 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
       setCreateError('Заголовок минимум 5 символов');
       return;
     }
+    if (newCategory === 'Правила' && !isAdmin) {
+      setCreateError('Темы в разделе «Правила» могут создавать только администраторы');
+      return;
+    }
 
     setCreating(true);
     try {
@@ -183,7 +203,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
         replies: 0,
         views: 0,
         likes: 0,
-        is_pinned: false,
+        is_pinned: isAdmin && newPinned,
         is_hot: false,
         images: imgUrls,
       }).select().single();
@@ -208,6 +228,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
 
       setNewTitle('');
       setNewContent('');
+      setNewPinned(false);
       setNewImages([]);
       setGwPrize('');
       setGwDays('3'); setGwHours('0'); setGwMinutes('0');
@@ -323,7 +344,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
               </div>
               <div className="space-y-2">
                 {pinned.map((topic, i) => (
-                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} />
+                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} />
                 ))}
               </div>
             </div>
@@ -338,7 +359,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
             )}
             <div className="space-y-2">
               {regular.map((topic, i) => (
-                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} />
+                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} />
               ))}
             </div>
           </div>
@@ -375,10 +396,26 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
                 onChange={e => setNewCategory(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white mb-3"
               >
-                {categoriesList.filter(c => c !== 'Все').map(c => (
+                {categoriesList.filter(c => c !== 'Все' && (isAdmin || c !== 'Правила')).map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+
+              {isAdmin && (
+                <label className="mb-3 flex items-center justify-between rounded-xl border border-purple-900/20 bg-bg-secondary p-3 cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Pin size={14} className="text-accent" />
+                    <div>
+                      <p className="text-sm font-semibold text-white">Закрепить тему</p>
+                      <p className="text-[10px] text-text-secondary">Доступно только администраторам</p>
+                    </div>
+                  </div>
+                  <div onClick={() => setNewPinned(!newPinned)}
+                    className={`w-10 h-5 rounded-full transition-all relative ${newPinned ? 'bg-accent' : 'bg-purple-900/40'}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${newPinned ? 'left-5' : 'left-0.5'}`} />
+                  </div>
+                </label>
+              )}
 
               <label className="text-sm text-text-secondary mb-1.5 block">Заголовок</label>
               <input
@@ -496,7 +533,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   );
 };
 
-const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete }) => {
+const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; canPin?: boolean; onTogglePin?: (topic: Topic) => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete, canPin, onTogglePin }) => {
   const categoryColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
   const dateStr = new Date(topic.created_at).toLocaleDateString('ru-RU');
 
@@ -537,8 +574,15 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
             <div className="flex items-center gap-1"><ThumbsUp size={11} />{topic.likes || 0}</div>
             <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
               <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} small />
+              {canPin && (
+                <button onClick={(e) => { e.stopPropagation(); onTogglePin?.(topic); }}
+                  className={`p-1 ${topic.is_pinned ? 'text-accent' : 'text-text-secondary hover:text-accent'}`}
+                  title={topic.is_pinned ? 'Открепить тему' : 'Закрепить тему'}>
+                  <Pin size={11} />
+                </button>
+              )}
               {canDelete && (
-                <button onClick={() => onDelete?.(topic.id)}
+                <button onClick={(e) => { e.stopPropagation(); onDelete?.(topic.id); }}
                   className="text-text-secondary hover:text-red-400 p-1"
                   title="Удалить тему">
                   <Trash2 size={11} />
