@@ -3,15 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, ArrowDownLeft, ArrowLeft, Copy, CheckCircle2, AlertCircle,
-  CreditCard, Smartphone, Globe, Bitcoin, ExternalLink, Headset,
-  ChevronRight, Info, Shield, X, Clock
+  CreditCard, Globe, ExternalLink, Headset, Clock, BellRing, Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useCurrency } from '../lib/CurrencyContext';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Payment methods config
 // ═══════════════════════════════════════════════════════════════════════════
+
+type PaymentIconId = 'donatx' | 'donationalerts' | 'card_ru' | 'card_world';
 
 interface PaymentMethod {
   id: string;
@@ -19,26 +19,132 @@ interface PaymentMethod {
   fee: number;       // percent
   minAmount: number;
   maxAmount?: number;
-  icon: string;      // emoji or URL
+  icon: PaymentIconId; // custom inline icon id
   color: string;     // border/accent color
   type: 'deposit' | 'withdraw' | 'both';
   region?: string;
   popular?: boolean;
-  link?: string;     // payment link (will be configured)
+  link?: string;     // external payment link
   disabled?: boolean; // coming soon
 }
 
 const DEPOSIT_METHODS: PaymentMethod[] = [
-  { id: 'donatx',       name: 'DonatX',             fee: 8,    minAmount: 100,   icon: '💜', color: 'border-purple-500/40',   type: 'deposit', popular: true },
-  { id: 'donationalerts',name: 'DonationAlerts',    fee: 12,   minAmount: 10,    icon: '🔔', color: 'border-orange-500/40',   type: 'deposit' },
-  { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: '💳', color: 'border-green-500/40',    type: 'deposit', region: 'RU', disabled: true },
-  { id: 'card_world',   name: 'Карта мира',         fee: 12,   minAmount: 1000,  icon: '🌍', color: 'border-cyan-500/40',     type: 'deposit', disabled: true },
+  {
+    id: 'donatx',
+    name: 'DonatX',
+    fee: 8,
+    minAmount: 100,
+    icon: 'donatx',
+    color: 'border-purple-500/40',
+    type: 'deposit',
+    popular: true,
+    link: 'https://donatex.gg/donate/mi9night',
+  },
+  {
+    id: 'donationalerts',
+    name: 'DonationAlerts',
+    fee: 12,
+    minAmount: 10,
+    icon: 'donationalerts',
+    color: 'border-orange-500/40',
+    type: 'deposit',
+    link: 'https://dalink.to/mi9night',
+  },
+  { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: 'card_ru',    color: 'border-green-500/40', type: 'deposit', region: 'RU', disabled: true },
+  { id: 'card_world',   name: 'Карта мира',         fee: 12,   minAmount: 1000,  icon: 'card_world', color: 'border-cyan-500/40',  type: 'deposit', disabled: true },
 ];
 
 const WITHDRAW_METHODS: PaymentMethod[] = [
-  { id: 'card_ru_out',   name: 'Карта РФ',          fee: 10,   minAmount: 500,   icon: '💳', color: 'border-green-500/40',   type: 'withdraw', region: 'RU' },
-  { id: 'card_world_out',name: 'Зарубежная карта',  fee: 15,   minAmount: 1000,  icon: '🌍', color: 'border-cyan-500/40',    type: 'withdraw' },
+  { id: 'card_ru_out',    name: 'Карта РФ',          fee: 10,  minAmount: 500,   icon: 'card_ru',    color: 'border-green-500/40', type: 'withdraw', region: 'RU' },
+  { id: 'card_world_out', name: 'Зарубежная карта',  fee: 15,  minAmount: 1000,  icon: 'card_world', color: 'border-cyan-500/40',  type: 'withdraw' },
 ];
+
+
+interface PaymentMethodIconProps {
+  method: Pick<PaymentMethod, 'icon' | 'name'>;
+  large?: boolean;
+}
+
+const PaymentMethodIcon: React.FC<PaymentMethodIconProps> = ({ method, large = false }) => {
+  const size = large ? 'w-16 h-16 rounded-2xl' : 'w-11 h-11 rounded-xl';
+  const iconSize = large ? 28 : 20;
+
+  if (method.icon === 'donatx') {
+    return (
+      <motion.div
+        whileHover={{ scale: 1.06, rotate: -2 }}
+        className={`${size} relative overflow-hidden bg-gradient-to-br from-purple-500/30 via-fuchsia-500/20 to-[#171425] border border-purple-400/40 flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.22)]`}
+        title={method.name}
+      >
+        <motion.span
+          aria-hidden="true"
+          animate={{ opacity: [0.25, 0.75, 0.25], scale: [1, 1.15, 1] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -right-3 -top-3 w-9 h-9 rounded-full bg-purple-400/30 blur-xl"
+        />
+        <svg width={iconSize + 10} height={iconSize + 10} viewBox="0 0 42 42" fill="none" className="relative z-10">
+          <path d="M21 4.5L35.5 21L21 37.5L6.5 21L21 4.5Z" fill="url(#donatx-main)" stroke="rgba(255,255,255,.38)" strokeWidth="1.5" />
+          <path d="M21 11L29 21L21 31L13 21L21 11Z" fill="rgba(11,10,18,.72)" stroke="rgba(255,255,255,.22)" />
+          <path d="M16.2 20.9H21.6C24.4 20.9 26.1 19.45 26.1 17.15C26.1 14.85 24.4 13.45 21.6 13.45H16.2V28.55H20.05V23.95H21.35L25.05 28.55H29.45L25.05 23.25C25.95 22.78 26.58 21.98 26.92 20.9H30.1V18.25H26.95" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+          <defs>
+            <linearGradient id="donatx-main" x1="6.5" y1="4.5" x2="37" y2="34" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#A855F7" />
+              <stop offset="0.55" stopColor="#7C3AED" />
+              <stop offset="1" stopColor="#EC4899" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/80 tracking-tight">DX</span>
+      </motion.div>
+    );
+  }
+
+  if (method.icon === 'donationalerts') {
+    return (
+      <motion.div
+        whileHover={{ scale: 1.06, rotate: 2 }}
+        className={`${size} relative overflow-hidden bg-gradient-to-br from-orange-500/30 via-amber-500/20 to-[#171425] border border-orange-400/40 flex items-center justify-center shadow-[0_0_24px_rgba(251,146,60,0.20)]`}
+        title={method.name}
+      >
+        <motion.span
+          aria-hidden="true"
+          animate={{ y: [-2, 2, -2], opacity: [0.35, 0.75, 0.35] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute inset-x-2 top-2 h-px bg-gradient-to-r from-transparent via-orange-200/80 to-transparent"
+        />
+        <div className="relative z-10 w-8 h-8 rounded-full bg-orange-500/20 border border-orange-200/25 flex items-center justify-center">
+          <BellRing size={iconSize} className="text-orange-300 drop-shadow-[0_0_14px_rgba(251,146,60,0.4)]" />
+          <Sparkles size={large ? 11 : 8} className="absolute -right-1 -top-1 text-yellow-200" />
+        </div>
+        <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/80 tracking-tight">DA</span>
+      </motion.div>
+    );
+  }
+
+  if (method.icon === 'card_world') {
+    return (
+      <motion.div
+        whileHover={{ scale: 1.05 }}
+        className={`${size} relative overflow-hidden bg-gradient-to-br from-cyan-500/25 via-blue-500/15 to-[#171425] border border-cyan-400/40 flex items-center justify-center shadow-[0_0_22px_rgba(34,211,238,0.18)]`}
+        title={method.name}
+      >
+        <Globe size={iconSize + 3} className="text-cyan-300 relative z-10" />
+        <CreditCard size={large ? 24 : 17} className="absolute right-2 bottom-2 text-white/70" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      className={`${size} relative overflow-hidden bg-gradient-to-br from-green-500/25 via-emerald-500/15 to-[#171425] border border-green-400/40 flex items-center justify-center shadow-[0_0_22px_rgba(34,197,94,0.16)]`}
+      title={method.name}
+    >
+      <CreditCard size={iconSize + 3} className="text-green-300 relative z-10" />
+      <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/75 tracking-tight">RU</span>
+    </motion.div>
+  );
+};
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000, 2000, 5000];
 
@@ -69,15 +175,12 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [txId, setTxId] = useState<string | null>(null);
-  const [userDisplay, setUserDisplay] = useState('');
   const [fullUserId, setFullUserId] = useState('');
 
   // Withdraw fields
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
   const [bankName, setBankName] = useState('');
-
-  const { convert, symbol } = useCurrency();
 
   useEffect(() => {
     (async () => {
@@ -89,7 +192,6 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
           .eq('id', u.user.id).maybeSingle();
         if (profile) {
           setBalance(profile.balance || 0);
-          setUserDisplay(profile.custom_id || profile.username || u.user.id.slice(0, 8));
           setFullUserId(profile.custom_id || u.user.id);
         }
       }
@@ -123,7 +225,7 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
         fee,
         total: total,
         status: 'pending',
-        meta: { fee_percent: selectedMethod.fee },
+        meta: { fee_percent: selectedMethod.fee, payment_link: selectedMethod.link },
       }).select().single();
 
       if (error) throw error;
@@ -279,7 +381,7 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
                     </span>
                   )}
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{m.icon}</span>
+                    <PaymentMethodIcon method={m} />
                     <div>
                       <p className="text-sm font-semibold text-white">{m.name}</p>
                       <p className="text-[10px] text-text-secondary">
@@ -306,7 +408,7 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
 
             {/* Selected method */}
             <div className={`flex items-center gap-3 p-3 rounded-xl border ${selectedMethod.color} bg-purple-900/10`}>
-              <span className="text-2xl">{selectedMethod.icon}</span>
+              <PaymentMethodIcon method={selectedMethod} />
               <div>
                 <p className="text-sm font-semibold text-white">{selectedMethod.name}</p>
                 <p className="text-[10px] text-text-secondary">
@@ -468,7 +570,7 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-6 space-y-5">
 
             <div className="text-center">
-              <span className="text-4xl mb-3 block">{selectedMethod.icon}</span>
+              <div className="mb-3 flex justify-center"><PaymentMethodIcon method={selectedMethod} large /></div>
               <h2 className="text-lg font-bold text-white">Оплата через {selectedMethod.name}</h2>
               <p className="text-sm text-text-secondary mt-1">
                 Переведите <span className="text-white font-bold">{total.toLocaleString('ru-RU')} ₽</span> и нажмите «Я оплатил»
@@ -507,6 +609,26 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
                   <span className={`${r.bold ? 'text-white font-bold' : 'text-white'}`}>{r.value}</span>
                 </div>
               ))}
+            </div>
+
+            {selectedMethod.link && (
+              <motion.a
+                href={selectedMethod.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_24px_rgba(168,85,247,0.22)]"
+              >
+                <ExternalLink size={16} /> Открыть страницу оплаты {selectedMethod.name}
+              </motion.a>
+            )}
+
+            <div className="bg-purple-900/10 border border-purple-700/25 rounded-xl p-3 flex items-start gap-2">
+              <AlertCircle size={14} className="text-purple-300 mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] text-text-secondary">
+                Сначала откройте ссылку оплаты, переведите итоговую сумму и укажите ваш ID в комментарии. После перевода вернитесь сюда и нажмите «Я оплатил».
+              </p>
             </div>
 
             {/* Buttons */}
