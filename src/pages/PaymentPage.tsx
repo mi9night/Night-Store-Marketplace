@@ -423,32 +423,34 @@ const PaymentPage: React.FC<Props> = ({ initialMode, setCurrentPage }) => {
               </div>
             </div>
 
-            {/* User ID (for deposit) */}
-            {mode === 'deposit' && (
-              <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
-                <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Ваш ID для оплаты</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white font-mono text-sm truncate">
-                    {fullUserId || user?.id || '—'}
-                  </code>
-                  <motion.button onClick={copyUserId}
-                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    className={`p-2.5 rounded-lg transition-all flex-shrink-0 ${
-                      copied
-                        ? 'bg-green-900/30 border border-green-700/30 text-green-400'
-                        : 'bg-purple-900/20 border border-purple-700/30 text-purple-300 hover:bg-purple-900/40'
-                    }`}>
-                    {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-                  </motion.button>
-                </div>
-                <div className="mt-2 flex items-start gap-2 bg-yellow-900/10 border border-yellow-700/30 rounded-lg p-2.5">
-                  <AlertCircle size={13} className="text-yellow-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-yellow-400">
-                    Обязательно укажите этот ID в комментарии к платежу. Без него оплата не будет зачислена!
-                  </p>
-                </div>
+            {/* User ID for deposit / withdraw */}
+            <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
+              <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">
+                {mode === 'deposit' ? 'Ваш ID для оплаты' : 'Ваш ID для вывода'}
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 rounded-lg bg-[#171425] border border-purple-900/30 text-white font-mono text-sm truncate">
+                  {fullUserId || user?.id || '—'}
+                </code>
+                <motion.button onClick={copyUserId}
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  className={`p-2.5 rounded-lg transition-all flex-shrink-0 ${
+                    copied
+                      ? 'bg-green-900/30 border border-green-700/30 text-green-400'
+                      : 'bg-purple-900/20 border border-purple-700/30 text-purple-300 hover:bg-purple-900/40'
+                  }`}>
+                  {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                </motion.button>
               </div>
-            )}
+              <div className="mt-2 flex items-start gap-2 bg-yellow-900/10 border border-yellow-700/30 rounded-lg p-2.5">
+                <AlertCircle size={13} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-yellow-400">
+                  {mode === 'deposit'
+                    ? 'Обязательно укажите этот ID в комментарии к платежу. Без него оплата не будет зачислена!'
+                    : 'Укажите этот ID в комментарии к заявке или сообщении поддержки, если потребуется уточнение по выводу.'}
+                </p>
+              </div>
+            </div>
 
             {/* Withdraw card fields */}
             {mode === 'withdraw' && (
