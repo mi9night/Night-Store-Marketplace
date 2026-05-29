@@ -2,7 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, Shield, Zap, CheckCircle2, AlertCircle, ArrowLeft,
-  Mail, Key, Eye, EyeOff, Lock, Plus, Trash2
+  Mail, Key, Eye, EyeOff, Lock, Plus, Trash2,
+  Package, Gamepad2, Send, Target, Hexagon, Square, Crown, Box,
+  Star, MessageCircle, Music, Camera, Brain, Atom, Sparkles,
+  Joystick, Pickaxe
 } from 'lucide-react';
 import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
@@ -206,6 +209,58 @@ const RISK_CONFIG = {
   low:    { label: 'Низкий',  color: 'text-green-400',  bg: 'bg-green-900/20 border-green-700/30',  desc: 'Проверенный аккаунт' },
   medium: { label: 'Средний', color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-700/30', desc: 'Есть нюансы' },
   high:   { label: 'Высокий', color: 'text-red-400',    bg: 'bg-red-900/20 border-red-700/30',       desc: 'Повышенный риск' },
+};
+
+type CategoryVisual = {
+  Icon: React.ElementType;
+  color: string;
+  glow: string;
+  bg: string;
+};
+
+// Те же Lucide-логотипы категорий, что в MarketPage и карточках товаров.
+const SELL_CATEGORY_ICONS: Record<string, CategoryVisual> = {
+  steam:     { Icon: Gamepad2,      color: 'text-blue-400',   glow: 'shadow-blue-500/25',   bg: 'from-blue-500/20 to-purple-500/5' },
+  telegram:  { Icon: Send,          color: 'text-cyan-400',   glow: 'shadow-cyan-500/25',   bg: 'from-cyan-500/20 to-purple-500/5' },
+  epic:      { Icon: Joystick,      color: 'text-gray-200',   glow: 'shadow-white/10',      bg: 'from-white/15 to-purple-500/5' },
+  fortnite:  { Icon: Pickaxe,       color: 'text-blue-400',   glow: 'shadow-sky-500/25',    bg: 'from-sky-500/20 to-purple-500/5' },
+  ea:        { Icon: Target,        color: 'text-red-500',    glow: 'shadow-red-500/25',    bg: 'from-red-500/20 to-purple-500/5' },
+  ubisoft:   { Icon: Hexagon,       color: 'text-blue-500',   glow: 'shadow-blue-500/25',   bg: 'from-blue-600/20 to-purple-500/5' },
+  minecraft: { Icon: Square,        color: 'text-green-500',  glow: 'shadow-green-500/25',  bg: 'from-green-500/20 to-purple-500/5' },
+  supercell: { Icon: Crown,         color: 'text-yellow-400', glow: 'shadow-yellow-500/25', bg: 'from-yellow-500/20 to-purple-500/5' },
+  roblox:    { Icon: Box,           color: 'text-red-400',    glow: 'shadow-red-400/25',    bg: 'from-red-400/20 to-purple-500/5' },
+  wot:       { Icon: Shield,        color: 'text-gray-400',   glow: 'shadow-gray-400/20',   bg: 'from-gray-400/20 to-purple-500/5' },
+  wr:        { Icon: Zap,           color: 'text-yellow-300', glow: 'shadow-yellow-400/25', bg: 'from-yellow-400/20 to-purple-500/5' },
+  rockstar:  { Icon: Star,          color: 'text-yellow-400', glow: 'shadow-yellow-500/25', bg: 'from-yellow-500/20 to-purple-500/5' },
+  discord:   { Icon: MessageCircle, color: 'text-indigo-400', glow: 'shadow-indigo-500/25', bg: 'from-indigo-500/20 to-purple-500/5' },
+  tiktok:    { Icon: Music,         color: 'text-pink-400',   glow: 'shadow-pink-500/25',   bg: 'from-pink-500/20 to-purple-500/5' },
+  instagram: { Icon: Camera,        color: 'text-pink-500',   glow: 'shadow-pink-500/25',   bg: 'from-pink-500/20 to-purple-500/5' },
+  ai:        { Icon: Brain,         color: 'text-purple-400', glow: 'shadow-purple-500/25', bg: 'from-purple-500/25 to-fuchsia-500/5' },
+  neural:    { Icon: Atom,          color: 'text-purple-500', glow: 'shadow-purple-600/25', bg: 'from-purple-600/25 to-fuchsia-500/5' },
+  vpn:       { Icon: Lock,          color: 'text-orange-400', glow: 'shadow-orange-500/25', bg: 'from-orange-500/20 to-purple-500/5' },
+  mihoyo:    { Icon: Sparkles,      color: 'text-cyan-300',   glow: 'shadow-cyan-400/25',   bg: 'from-cyan-400/20 to-purple-500/5' },
+};
+
+const getSellCategoryVisual = (id?: string): CategoryVisual => (
+  id && SELL_CATEGORY_ICONS[id]
+    ? SELL_CATEGORY_ICONS[id]
+    : { Icon: Package, color: 'text-purple-300', glow: 'shadow-purple-500/20', bg: 'from-purple-500/20 to-purple-500/5' }
+);
+
+const SellCategoryLogo: React.FC<{ id?: string; active?: boolean; size?: number }> = ({ id, active, size = 22 }) => {
+  const visual = getSellCategoryVisual(id);
+  const Icon = visual.Icon;
+
+  return (
+    <motion.span
+      whileHover={{ scale: 1.08, rotate: -2 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+      className={`relative inline-flex items-center justify-center rounded-2xl border bg-gradient-to-br ${visual.bg} ${active ? 'w-11 h-11 border-accent shadow-[0_0_22px_var(--tw-shadow-color)]' : 'w-10 h-10 border-purple-700/25 shadow-[0_0_16px_var(--tw-shadow-color)]'} ${visual.glow}`}
+    >
+      <Icon size={size} className={visual.color} strokeWidth={1.9} />
+      {active && <span className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_10px_rgba(168,85,247,0.8)]" />}
+    </motion.span>
+  );
 };
 
 interface AccountDataField { key: string; value: string; }
@@ -469,7 +524,9 @@ const SellPage: React.FC = () => {
                         ? 'border-accent bg-purple-900/30 text-accent-soft'
                         : 'border-purple-900/20 bg-bg-secondary text-text-secondary hover:border-purple-700/40'
                     }`}>
-                    <span className="text-2xl block mb-2">{cat.icon}</span>
+                    <div className="mb-3">
+                      <SellCategoryLogo id={cat.id} active={formData.category === cat.id} />
+                    </div>
                     <span className="text-sm font-medium block">{cat.name}</span>
                   </motion.button>
                 ))}
@@ -517,7 +574,7 @@ const SellPage: React.FC = () => {
                 {catFields.length > 0 && (
                   <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 space-y-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-base">{currentCategory?.icon || '📦'}</span>
+                      <SellCategoryLogo id={currentCategory?.id} size={16} active />
                       <span className="text-xs font-semibold text-accent-soft uppercase tracking-wider">
                         Параметры {currentCategory?.name || 'аккаунта'}
                       </span>
