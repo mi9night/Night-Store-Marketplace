@@ -28,7 +28,6 @@ interface PaymentMethod {
 }
 
 const DEPOSIT_METHODS: PaymentMethod[] = [
-  { id: 'sbp',          name: 'СБП',                fee: 6,    minAmount: 10,    icon: '🏦', color: 'border-blue-500/40',     type: 'deposit', region: 'RU', popular: true },
   { id: 'donatx',       name: 'DonatX',             fee: 8,    minAmount: 100,   icon: '💜', color: 'border-purple-500/40',   type: 'deposit', popular: true },
   { id: 'donationalerts',name: 'DonationAlerts',    fee: 12,   minAmount: 10,    icon: '🔔', color: 'border-orange-500/40',   type: 'deposit' },
   { id: 'card_ru',      name: 'Карта РФ',           fee: 6,    minAmount: 10,    icon: '💳', color: 'border-green-500/40',    type: 'deposit', region: 'RU' },
