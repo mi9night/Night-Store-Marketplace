@@ -16,4 +16,7 @@ export type Page =
   | 'autobuy'
   | 'api'
   | 'rates'
-  | 'operations';
+  | 'operations'
+  | 'payment'
+  | 'support'
+  | 'messages';

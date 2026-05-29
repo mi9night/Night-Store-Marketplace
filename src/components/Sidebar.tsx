@@ -149,22 +149,33 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Пополнить / Вывести / Перевести */}
         <div className="grid grid-cols-3 gap-2 mt-3">
-          {[
-            { icon: Plus, label: 'Пополнить', color: 'text-success', act: 'deposit' as BalanceAction },
-            { icon: ArrowDownLeft, label: 'Вывести', color: 'text-error', act: 'withdraw' as BalanceAction },
-            { icon: ArrowLeftRight, label: 'Перевести', color: 'text-accent-soft', act: 'transfer' as BalanceAction },
-          ].map(item => (
-            <motion.button
-              key={item.label}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setAction(item.act)}
-              className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
-            >
-              <item.icon size={14} className={item.color} />
-              <span className="text-[10px] text-text-secondary">{item.label}</span>
-            </motion.button>
-          ))}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setCurrentPage('payment' as any); onClose(); }}
+            className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
+          >
+            <Plus size={14} className="text-success" />
+            <span className="text-[10px] text-text-secondary">Пополнить</span>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setCurrentPage('payment' as any); onClose(); }}
+            className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
+          >
+            <ArrowDownLeft size={14} className="text-error" />
+            <span className="text-[10px] text-text-secondary">Вывести</span>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setAction('transfer')}
+            className="flex flex-col items-center gap-1.5 p-2 bg-bg-card rounded-xl border border-purple-900/20 hover:border-purple-700/40 transition-all"
+          >
+            <ArrowLeftRight size={14} className="text-accent-soft" />
+            <span className="text-[10px] text-text-secondary">Перевести</span>
+          </motion.button>
         </div>
       </div>
 

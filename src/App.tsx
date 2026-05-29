@@ -30,6 +30,7 @@ import LabelsPage from './pages/LabelsPage';
 import AutobuyPage from './pages/AutobuyPage';
 import RatesPage from './pages/RatesPage';
 import ApiPage from './pages/ApiPage';
+import PaymentPage from './pages/PaymentPage';
 
 import type { Page } from './types/pages';
 import { Account } from './types';
@@ -271,6 +272,7 @@ const App: React.FC = () => {
                   {currentPage === 'autobuy' && <AutobuyPage />}
                   {currentPage === 'rates' && <RatesPage />}
                   {currentPage === 'api' && <ApiPage />}
+                  {currentPage === ('payment' as any) && <PaymentPage setCurrentPage={handleSetPage} />}
 
                 </motion.div>
               </AnimatePresence>
