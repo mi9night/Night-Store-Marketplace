@@ -1359,16 +1359,19 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
         <Modal onClose={() => setModal(null)} title="Сменить роль пользователя">
           <div className="space-y-2 mb-4">
             {[
-              { id: 'user',      label: 'Обычный пользователь',  icon: '👤', cls: 'bg-gray-700/20 text-gray-300 hover:bg-gray-700/40' },
-              { id: 'support',   label: 'Support (поддержка)',   icon: '🛟', cls: 'bg-cyan-900/30 text-cyan-400 hover:bg-cyan-900/50' },
-              { id: 'moderator', label: 'Moderator (модератор)', icon: '⚖️', cls: 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50' },
-              { id: 'admin',     label: 'Admin (администратор)', icon: '🛡',  cls: 'bg-orange-900/30 text-orange-400 hover:bg-orange-900/50' },
-              ...(myRole === 'owner' ? [{ id: 'owner', label: 'Owner (владелец)', icon: '👑', cls: 'bg-red-900/30 text-red-400 hover:bg-red-900/50' }] : []),
+              { id: 'user',      label: 'Обычный пользователь',  Icon: Users,      cls: 'bg-gray-700/20 text-gray-300 hover:bg-gray-700/40' },
+              { id: 'support',   label: 'Support (поддержка)',   Icon: Send,       cls: 'bg-cyan-900/30 text-cyan-400 hover:bg-cyan-900/50' },
+              { id: 'moderator', label: 'Moderator (модератор)', Icon: ScanSearch, cls: 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50' },
+              { id: 'admin',     label: 'Admin (администратор)', Icon: Shield,     cls: 'bg-orange-900/30 text-orange-400 hover:bg-orange-900/50' },
+              ...(myRole === 'owner' ? [{ id: 'owner', label: 'Owner (владелец)', Icon: Crown, cls: 'bg-red-900/30 text-red-400 hover:bg-red-900/50' }] : []),
             ].map(r => (
               <motion.button key={r.id} onClick={() => applyRole(r.id)}
                 whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${r.cls}`}>
-                <span className="text-base">{r.icon}</span> {r.label}
+                <span className="w-7 h-7 rounded-lg bg-black/20 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <r.Icon size={15} />
+                </span>
+                {r.label}
               </motion.button>
             ))}
           </div>

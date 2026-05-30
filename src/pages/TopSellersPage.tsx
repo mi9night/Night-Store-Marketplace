@@ -345,15 +345,39 @@ const TopSellersPage: React.FC = () => {
               newbie: 'Базовые возможности', bronze: 'Доступ к API', silver: 'Приоритет поддержки',
               gold: 'Премиум значок', platinum: 'Консьерж сервис', diamond: 'VIP статус',
             };
-            const icons: Record<string, React.ElementType> = {
-              newbie: Star,
-              bronze: Award,
-              silver: CheckCircle2,
-              gold: Trophy,
-              platinum: Sparkles,
-              diamond: Crown,
+            const icons: Record<string, React.ReactNode> = {
+              newbie: <Star size={21} />,
+              bronze: <Award size={21} />,
+              silver: (
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M8 3h8l-1.5 5h-5L8 3Z" fill="#CBD5E1" stroke="#F8FAFC" strokeWidth="1.2" />
+                  <circle cx="12" cy="14" r="6" fill="url(#silver-medal)" stroke="#F8FAFC" strokeWidth="1.4" />
+                  <path d="M9.8 14.2l1.4 1.4 3.2-3.4" stroke="#475569" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  <defs>
+                    <linearGradient id="silver-medal" x1="7" y1="8" x2="18" y2="20" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#F8FAFC" />
+                      <stop offset="0.5" stopColor="#CBD5E1" />
+                      <stop offset="1" stopColor="#94A3B8" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              ),
+              gold: <Trophy size={21} />,
+              platinum: (
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6.5 4.5h11L21 9l-9 11L3 9l3.5-4.5Z" fill="url(#platinum-gem)" stroke="#67E8F9" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M3 9h18M8 4.5 12 20l4-15.5M6.5 4.5 8 9l4-4.5L16 9l1.5-4.5" stroke="#E0F7FF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+                  <defs>
+                    <linearGradient id="platinum-gem" x1="5" y1="4" x2="19" y2="19" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#E0F7FF" />
+                      <stop offset="0.45" stopColor="#22D3EE" />
+                      <stop offset="1" stopColor="#2563EB" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              ),
+              diamond: <Crown size={21} />,
             };
-            const LevelIcon = icons[key];
             return (
               <motion.div
                 key={key}
@@ -363,7 +387,7 @@ const TopSellersPage: React.FC = () => {
                 className={`flex items-center justify-between p-4 bg-[#0B0A12] rounded-xl border ${levelColorBg} hover:border-purple-700/40 transition-all`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl bg-[#171425] border border-purple-900/20 flex items-center justify-center ${levelColors[key]}`}><LevelIcon size={21} /></div>
+                  <div className={`w-10 h-10 rounded-xl bg-[#171425] border border-purple-900/20 flex items-center justify-center ${levelColors[key]}`}>{icons[key]}</div>
                   <div>
                     <p className={`text-base font-bold ${levelColors[key]} mb-0.5`}>{label}</p>
                     <p className="text-xs text-text-secondary">{sales} продаж</p>
