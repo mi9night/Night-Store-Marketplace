@@ -346,8 +346,7 @@ const SellPage: React.FC = () => {
     guaranteeHours: '24',
     categoryFields: {} as Record<string, any>,
     accountData: [
-      { key: 'Логин', value: '' },
-      { key: 'Пароль', value: '' },
+      { key: 'Почта', value: '' },
     ] as AccountDataField[],
   });
 
@@ -395,10 +394,10 @@ const SellPage: React.FC = () => {
 
       const dataObj: Record<string, any> = {};
 
-      // Account data (login/password)
-      formData.accountData.forEach(f => {
-        if (f.key.trim() && f.value.trim()) dataObj[f.key.trim()] = f.value.trim();
-      });
+      // Account credentials (single pair: email/login + password)
+      const mainCreds = formData.accountData[0];
+      if (mainCreds?.key?.trim()) dataObj['Почта'] = mainCreds.key.trim();
+      if (mainCreds?.value?.trim()) dataObj['Пароль'] = mainCreds.value.trim();
 
       // Category-specific fields → save into data for bot + display
       catFields.forEach(f => {
@@ -459,7 +458,7 @@ const SellPage: React.FC = () => {
           originalEmail: '', originalEmailPassword: '', tempEmail: '', tempEmailPassword: '',
           guarantee: true, guaranteeHours: '24',
           categoryFields: {},
-          accountData: [{ key: 'Логин', value: '' }, { key: 'Пароль', value: '' }],
+          accountData: [{ key: 'Почта', value: '' }],
         });
       }, 2500);
     } catch (e: any) {
@@ -797,27 +796,26 @@ const SellPage: React.FC = () => {
                 {/* Account credentials */}
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block">Данные аккаунта для покупателя</label>
-                  <div className="space-y-2">
-                    {formData.accountData.map((field, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <input type="text" value={field.key} onChange={e => updateDataField(idx, 'key', e.target.value)} placeholder="Название"
-                          className="w-1/3 px-3 py-2.5 rounded-lg text-sm bg-bg-secondary border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors" />
-                        <div className="flex-1 relative">
-                          <input type={showPasswords[idx] ? 'text' : 'password'} value={field.value} onChange={e => updateDataField(idx, 'value', e.target.value)} placeholder="Значение"
-                            className="w-full px-3 py-2.5 pr-9 rounded-lg text-sm bg-bg-secondary border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors" />
-                          <button onClick={() => setShowPasswords(p => ({ ...p, [idx]: !p[idx] }))} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors">
-                            {showPasswords[idx] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                        {formData.accountData.length > 1 && (
-                          <button onClick={() => removeDataField(idx)} className="p-2 text-text-secondary hover:text-red-400 transition-colors flex-shrink-0"><Trash2 size={14} /></button>
-                        )}
-                      </div>
-                    ))}
-                    <button onClick={addDataField}
-                      className="w-full py-2 rounded-lg text-xs font-medium bg-purple-900/20 border border-purple-700/30 text-purple-300 hover:bg-purple-900/30 hover:border-purple-500/50 transition-all flex items-center justify-center gap-1.5">
-                      <Plus size={12} /> Добавить поле
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="email"
+                      value={formData.accountData[0]?.key || ''}
+                      onChange={e => setFormData({ ...formData, accountData: [{ ...(formData.accountData[0] || { value: '' }), key: e.target.value }] })}
+                      placeholder="Почта / логин"
+                      className="w-full px-3 py-2.5 rounded-lg text-sm bg-bg-secondary border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors"
+                    />
+                    <div className="relative">
+                      <input
+                        type={showPasswords[0] ? 'text' : 'password'}
+                        value={formData.accountData[0]?.value || ''}
+                        onChange={e => setFormData({ ...formData, accountData: [{ ...(formData.accountData[0] || { key: '' }), value: e.target.value }] })}
+                        placeholder="Пароль"
+                        className="w-full px-3 py-2.5 pr-9 rounded-lg text-sm bg-bg-secondary border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors"
+                      />
+                      <button onClick={() => setShowPasswords(p => ({ ...p, 0: !p[0] }))} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors">
+                        {showPasswords[0] ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
                   <p className="text-[10px] text-text-secondary mt-2 flex items-center gap-1">
                     <Lock size={10} /> Данные зашифрованы и будут доступны покупателю после оплаты
@@ -862,7 +860,7 @@ const SellPage: React.FC = () => {
                   { label: 'Гарантия', value: formData.guarantee ? `${formData.guaranteeHours}ч` : 'Только на момент покупки' },
                   { label: 'Escrow', value: 'Активна ✅' },
                   { label: 'Уровень риска', value: riskCfg.label },
-                  { label: 'Данные аккаунта', value: `${formData.accountData.filter(f => f.key && f.value).length} полей` },
+                  { label: 'Данные аккаунта', value: formData.accountData[0]?.key && formData.accountData[0]?.value ? 'Почта и пароль заполнены' : 'Не заполнены' },
                   ...catFields.filter(f => formData.categoryFields[f.id]).map(f => ({
                     label: f.label,
                     value: f.type === 'toggle'
