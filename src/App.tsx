@@ -148,6 +148,25 @@ const App: React.FC = () => {
 
   }, [loadActiveBan]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const refresh = () => loadActiveBan(user.id);
+    const channel = supabase.channel('app_ban_sync')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'bans', filter: `user_id=eq.${user.id}` },
+        refresh
+      )
+      .subscribe();
+
+    const interval = window.setInterval(refresh, 30_000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+    };
+  }, [user?.id, loadActiveBan]);
+
   const handleSetPage = useCallback(
     (page: Page, filter: string | null = null) => {
       if (page === 'profile') setViewedProfileId(null);
