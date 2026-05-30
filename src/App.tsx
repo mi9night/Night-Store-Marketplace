@@ -13,7 +13,6 @@ import StartupNotice from './components/StartupNotice';
 
 import AuthPage from './pages/AuthPage';
 import DiscordCallback from './pages/DiscordCallback';
-import EmailConfirmedPage from './pages/EmailConfirmedPage';
 import MarketPage from './pages/MarketPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
@@ -226,11 +225,6 @@ const App: React.FC = () => {
   // Discord callback — отдельная страница
   if (typeof window !== 'undefined' && window.location.pathname === '/auth/discord/callback') {
     return <DiscordCallback />;
-  }
-
-  // Email confirmation callback — отдельная страница
-  if (typeof window !== 'undefined' && window.location.pathname === '/email-confirmed') {
-    return <EmailConfirmedPage />;
   }
 
   return (
