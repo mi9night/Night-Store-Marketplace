@@ -6,7 +6,7 @@ import {
   XCircle, Eye, MessageSquare, Lock, Tag, Users, Package,
   AlertCircle, Send, Trash2, RefreshCw, AlertOctagon, X,
   Image, Paperclip, ZoomIn, ChevronLeft, ChevronRight, Crown,
-  ThumbsUp, ThumbsDown, Award, ShoppingBag
+  ThumbsUp, ThumbsDown, Award, ShoppingBag, Copy, KeyRound, Inbox, ExternalLink, ShieldOff
 } from 'lucide-react';
 import { Account } from '../types';
 import { Page } from '../types/pages';
@@ -29,6 +29,49 @@ const riskConfig = {
   medium: { label: 'Средний риск', className: 'bg-yellow-900/20 border-yellow-700/40 text-yellow-400', Icon: AlertTriangle, desc: 'Есть некоторые факторы риска. Рекомендуем использовать осторожно.' },
   high:   { label: 'Высокий риск', className: 'bg-red-900/20 border-red-700/40 text-red-400',          Icon: XCircle,       desc: 'Аккаунт имеет признаки возможной блокировки. Покупайте с осторожностью.' },
 };
+
+const getCredentialGroups = (data: Record<string, any>) => {
+  const entries = Object.entries(data || {});
+  const findValue = (pred: (key: string) => boolean) => {
+    const hit = entries.find(([key]) => pred(key.toLowerCase()));
+    return hit ? String(hit[1]) : '';
+  };
+  const accountLogin = findValue(k => ['почта', 'логин', 'email', 'login'].includes(k.trim())) || '';
+  const accountPassword = findValue(k => k.trim() === 'пароль' || k.trim() === 'password') || '';
+  const mailEmail = findValue(k => k.includes('родная почта') || k.includes('временная почта') || k.includes('почта от почты')) || accountLogin;
+  const mailPassword = findValue(k => k.includes('пароль от почты') || k.includes('пароль от врем') || k.includes('mail password') || k.includes('email password')) || '';
+  const used = new Set<string>();
+  entries.forEach(([key]) => {
+    const k = key.toLowerCase();
+    if (['почта', 'логин', 'email', 'login', 'пароль', 'password'].includes(k.trim()) ||
+      k.includes('родная почта') || k.includes('временная почта') || k.includes('пароль от почты') || k.includes('пароль от врем') ||
+      k.includes('код') || k.includes('code') || k.includes('письм') || k.includes('letter')) used.add(key);
+  });
+  const additional = entries.filter(([key]) => !used.has(key));
+  return { accountLogin, accountPassword, mailEmail, mailPassword, additional };
+};
+
+const getMailLoginUrl = (emailOrDomain?: string) => {
+  const domain = (emailOrDomain?.match(/@([^@\s]+)$/)?.[1] || emailOrDomain || '').toLowerCase();
+  if (!domain) return 'https://mail.google.com/';
+  if (domain.includes('gmail')) return 'https://mail.google.com/';
+  if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live.com')) return 'https://outlook.live.com/mail/';
+  if (domain.includes('mail.ru') || domain.includes('bk.ru') || domain.includes('inbox.ru') || domain.includes('list.ru')) return 'https://e.mail.ru/login';
+  if (domain.includes('yandex')) return 'https://mail.yandex.ru/';
+  if (domain.includes('rambler')) return 'https://mail.rambler.ru/';
+  if (domain.includes('proton')) return 'https://mail.proton.me/';
+  if (domain.includes('icloud')) return 'https://www.icloud.com/mail';
+  if (domain.includes('yahoo')) return 'https://mail.yahoo.com/';
+  return `https://${domain}`;
+};
+
+const CredentialRow: React.FC<{ label: string; value?: string; onCopy: (value: string) => void }> = ({ label, value, onCopy }) => (
+  <div className="flex items-center gap-2 bg-bg-card rounded-lg p-2">
+    <span className="text-[10px] text-text-secondary uppercase min-w-[92px]">{label}:</span>
+    <span className="text-xs text-white flex-1 font-mono truncate">{value || '—'}</span>
+    {value && <button onClick={() => onCopy(value)} className="p-1 text-purple-300 hover:text-white" title="Копировать"><Copy size={12} /></button>}
+  </div>
+);
 
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 const MAX_FILES = 4;
@@ -245,6 +288,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
   const [me, setMe] = useState<any>(null);
   const [myRole, setMyRole] = useState<string>('user');
   const [myOrder, setMyOrder] = useState<any>(null);
+  const [productMailModal, setProductMailModal] = useState<null | { type: 'code' | 'letter'; accepted: boolean }>(null);
+  const [productGuaranteeVoided, setProductGuaranteeVoided] = useState(false);
   const [myReview, setMyReview] = useState<any>(null);
   const [showReview, setShowReview] = useState(false);
   const [revRating, setRevRating] = useState(5);
@@ -387,6 +432,24 @@ const ProductPage: React.FC<ProductPageProps> = ({ account, setCurrentPage, onAd
     };
     load();
   }, [account.id]);
+
+  const copyText = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); alert('✅ Скопировано'); } catch {}
+  };
+
+  const extractMailCode = () => {
+    const data = (account as any).accountData || {};
+    const hit = Object.entries(data).find(([k]) => /код|code|2fa|otp/i.test(k));
+    if (hit) return String(hit[1]);
+    return String(account.id).replace(/\D/g, '').slice(0, 6).padEnd(6, '0');
+  };
+
+  const extractMailLetter = () => {
+    const data = (account as any).accountData || {};
+    const hit = Object.entries(data).find(([k]) => /письм|letter|mail text/i.test(k));
+    if (hit) return String(hit[1]);
+    return 'Последнее письмо будет отображено здесь после подключения почтового бота. Если письмо не появляется — откройте почту вручную или обратитесь в поддержку.';
+  };
 
   const handleBuy = async () => {
     setBuyResult(null);
@@ -816,6 +879,23 @@ ${problemDescription || '—'}${filesInfo}`;
               <LabelManager targetType="account" targetId={account.id} />
             </div>
           </motion.div>
+
+          {myOrder && (() => {
+            const data = (account as any).accountData || {};
+            const groups = getCredentialGroups(data);
+            const hasMailInfo = !!groups.mailEmail;
+            return (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+                className="bg-[#171425] border border-green-800/30 rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-green-400" /> Данные купленного аккаунта</h3>
+                <div className="space-y-3">
+                  <div><p className="text-[10px] text-text-secondary uppercase mb-2">Данные аккаунта</p><div className="space-y-2"><CredentialRow label="Почта / логин" value={groups.accountLogin} onCopy={copyText} /><CredentialRow label="Пароль" value={groups.accountPassword} onCopy={copyText} /></div></div>
+                  <div className="pt-3 border-t border-purple-900/20"><p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1"><Mail size={11} /> Почта от аккаунта</p><div className="space-y-2"><CredentialRow label="Почта" value={groups.mailEmail} onCopy={copyText} /><CredentialRow label="Пароль почты" value={groups.mailPassword} onCopy={copyText} /></div></div>
+                  {hasMailInfo && <div className="pt-3 border-t border-purple-900/20"><p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1"><Mail size={11} /> Действия с почтой</p><div className="grid grid-cols-1 sm:grid-cols-3 gap-2"><button onClick={() => setProductMailModal({ type: 'code', accepted: false })} className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-lg text-xs font-semibold"><KeyRound size={12} /> Получить код</button><button onClick={() => setProductMailModal({ type: 'letter', accepted: false })} className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-lg text-xs font-semibold"><Inbox size={12} /> Получить письмо</button><button onClick={() => window.open(getMailLoginUrl(groups.mailEmail), '_blank', 'noopener,noreferrer')} className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-900/20 hover:bg-green-900/40 border border-green-700/30 text-green-400 rounded-lg text-xs font-semibold"><ExternalLink size={12} /> Войти в почту</button></div></div>}
+                </div>
+              </motion.div>
+            );
+          })()}
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="bg-[#171425] border border-purple-900/20 rounded-2xl p-5">
@@ -1691,6 +1771,24 @@ ${problemDescription || '—'}${filesInfo}`;
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {productMailModal && (() => {
+          const activeGuarantee = !!account.guarantee && !productGuaranteeVoided;
+          const content = productMailModal.type === 'code' ? extractMailCode() : extractMailLetter();
+          const title = productMailModal.type === 'code' ? 'Код из почты' : 'Письмо из почты';
+          const groups = getCredentialGroups((account as any).accountData || {});
+          const needsConfirm = activeGuarantee && !productMailModal.accepted;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/75 z-[140] flex items-center justify-center p-4" onClick={() => setProductMailModal(null)}>
+              <motion.div initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94 }} onClick={e => e.stopPropagation()} className="bg-[#171425] border border-purple-900/30 rounded-2xl p-5 w-full max-w-md shadow-[0_0_60px_rgba(139,92,246,0.18)]">
+                <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-bold text-white flex items-center gap-2">{productMailModal.type === 'code' ? <KeyRound size={18} className="text-purple-300" /> : <Inbox size={18} className="text-purple-300" />}{title}</h2><button onClick={() => setProductMailModal(null)} className="text-text-secondary hover:text-white"><X size={20} /></button></div>
+                {needsConfirm ? <div className="space-y-4"><div className="bg-yellow-900/10 border border-yellow-700/30 rounded-xl p-4 flex gap-3"><ShieldOff size={18} className="text-yellow-400 mt-0.5" /><p className="text-xs text-yellow-200/80 leading-relaxed">Если вы используете код или письмо для смены почты, пароля или других данных аккаунта, гарантия по покупке будет потеряна.</p></div><label className="flex items-center gap-2 cursor-pointer bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3"><input type="checkbox" checked={productMailModal.accepted} onChange={e => setProductMailModal({ ...productMailModal, accepted: e.target.checked })} className="accent-purple-500 w-4 h-4" /><span className="text-xs text-white">Я понимаю, что при смене данных гарантия пропадёт</span></label><button disabled={!productMailModal.accepted} onClick={() => { setProductGuaranteeVoided(true); setProductMailModal({ ...productMailModal, accepted: true }); }} className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50">ОК, показать {productMailModal.type === 'code' ? 'код' : 'письмо'}</button></div> : <div className="space-y-3"><div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4"><p className="text-[10px] text-text-secondary uppercase mb-2">Почта</p><p className="text-sm text-white font-mono break-all">{groups.mailEmail || '—'}</p></div><div className="bg-purple-900/10 border border-purple-700/30 rounded-xl p-4"><p className="text-[10px] text-text-secondary uppercase mb-2">{title}</p><p className="text-sm text-white font-mono whitespace-pre-wrap break-words">{content}</p></div><button onClick={() => copyText(content)} className="w-full py-2.5 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-xl text-sm font-semibold"><Copy size={14} className="inline mr-1" /> Скопировать</button></div>}
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Image viewer */}

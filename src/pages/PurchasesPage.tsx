@@ -223,6 +223,44 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
     return 'Последнее письмо будет отображено здесь после подключения почтового бота. Если письмо не появляется — откройте почту вручную или обратитесь в поддержку.';
   };
 
+  const getCredentialGroups = (data: Record<string, any>) => {
+    const entries = Object.entries(data || {});
+    const findValue = (pred: (key: string) => boolean) => {
+      const hit = entries.find(([key]) => pred(key.toLowerCase()));
+      return hit ? String(hit[1]) : '';
+    };
+
+    const accountLogin = findValue(k => ['почта', 'логин', 'email', 'login'].includes(k.trim())) || '';
+    const accountPassword = findValue(k => k.trim() === 'пароль' || k.trim() === 'password') || '';
+    const mailEmail = findValue(k => k.includes('родная почта') || k.includes('временная почта') || k.includes('почта от почты')) || accountLogin;
+    const mailPassword = findValue(k => k.includes('пароль от почты') || k.includes('пароль от врем') || k.includes('mail password') || k.includes('email password')) || '';
+
+    const used = new Set<string>();
+    entries.forEach(([key]) => {
+      const k = key.toLowerCase();
+      if (
+        ['почта', 'логин', 'email', 'login', 'пароль', 'password'].includes(k.trim()) ||
+        k.includes('родная почта') || k.includes('временная почта') || k.includes('пароль от почты') || k.includes('пароль от врем') ||
+        k.includes('mail password') || k.includes('email password') || k.includes('код') || k.includes('code') || k.includes('письм') || k.includes('letter')
+      ) used.add(key);
+    });
+
+    const additional = entries.filter(([key]) => !used.has(key));
+    return { accountLogin, accountPassword, mailEmail, mailPassword, additional };
+  };
+
+  const CredentialRow: React.FC<{ label: string; value?: string; secret?: boolean }> = ({ label, value, secret }) => (
+    <div className="flex items-center gap-2 bg-bg-card rounded-lg p-2">
+      <span className="text-[10px] text-text-secondary uppercase min-w-[92px]">{label}:</span>
+      <span className="text-xs text-white flex-1 font-mono truncate">{value || '—'}</span>
+      {value && (
+        <button onClick={() => copyText(value)} className="p-1 text-purple-300 hover:text-white" title="Копировать">
+          <Copy size={12} />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
@@ -253,7 +291,8 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
             const accData = o.account?.data || {};
             const hasData = accData && Object.keys(accData).length > 0;
             const mailInfo = getMailInfo(accData);
-            const hasMailInfo = !!mailInfo.email;
+            const credentialGroups = getCredentialGroups(accData);
+            const hasMailInfo = !!(credentialGroups.mailEmail || mailInfo.email);
 
             return (
               <motion.div key={o.id}
@@ -431,19 +470,40 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
                           🔐 Данные для входа
                         </p>
                         {hasData ? (
-                          <div className="space-y-2">
-                            {Object.entries(accData).map(([k, v]) => (
-                              <div key={k} className="flex items-center gap-2 bg-bg-card rounded-lg p-2">
-                                <span className="text-[10px] text-text-secondary uppercase min-w-[60px]">{k}:</span>
-                                <span className="text-xs text-white flex-1 font-mono truncate">{String(v)}</span>
-                                <button onClick={() => copyText(String(v))}
-                                  className="p-1 text-purple-300 hover:text-white" title="Копировать">
-                                  <Copy size={12} />
-                                </button>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1">
+                                <Lock size={11} /> Данные аккаунта
+                              </p>
+                              <div className="space-y-2">
+                                <CredentialRow label="Почта / логин" value={credentialGroups.accountLogin} />
+                                <CredentialRow label="Пароль" value={credentialGroups.accountPassword} secret />
                               </div>
-                            ))}
+                            </div>
+
+                            <div className="pt-3 border-t border-purple-900/20">
+                              <p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1">
+                                <Mail size={11} /> Почта от аккаунта
+                              </p>
+                              <div className="space-y-2">
+                                <CredentialRow label="Почта" value={credentialGroups.mailEmail} />
+                                <CredentialRow label="Пароль почты" value={credentialGroups.mailPassword} secret />
+                              </div>
+                            </div>
+
+                            {credentialGroups.additional.length > 0 && (
+                              <div className="pt-3 border-t border-purple-900/20">
+                                <p className="text-[10px] text-text-secondary uppercase mb-2">Дополнительная информация</p>
+                                <div className="space-y-2">
+                                  {credentialGroups.additional.map(([k, v]) => (
+                                    <CredentialRow key={k} label={k} value={String(v)} />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {hasMailInfo && (
-                              <div className="mt-3 pt-3 border-t border-purple-900/20">
+                              <div className="pt-3 border-t border-purple-900/20">
                                 <p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1">
                                   <Mail size={11} /> Действия с почтой
                                 </p>
@@ -456,12 +516,12 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
                                     className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-lg text-xs font-semibold">
                                     <Inbox size={12} /> Получить письмо
                                   </button>
-                                  <button onClick={() => window.open(getMailLoginUrl(mailInfo.domain), '_blank', 'noopener,noreferrer')}
+                                  <button onClick={() => window.open(getMailLoginUrl((credentialGroups.mailEmail || mailInfo.email).match(/@([^@\s]+)$/)?.[1] || mailInfo.domain), '_blank', 'noopener,noreferrer')}
                                     className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-900/20 hover:bg-green-900/40 border border-green-700/30 text-green-400 rounded-lg text-xs font-semibold">
                                     <ExternalLink size={12} /> Войти в почту
                                   </button>
                                 </div>
-                                <p className="text-[10px] text-text-secondary mt-2">Почта: <span className="text-white font-mono">{mailInfo.email}</span>{mailInfo.domain && ` · ${mailInfo.domain}`}</p>
+                                <p className="text-[10px] text-text-secondary mt-2">Почта: <span className="text-white font-mono">{credentialGroups.mailEmail || mailInfo.email}</span></p>
                               </div>
                             )}
                           </div>
