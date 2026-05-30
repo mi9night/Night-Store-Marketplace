@@ -919,7 +919,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
             ) : (
               <div className="space-y-3">
                 {reviews.map((r, i) => {
-                  const isMod = ['moderator','admin','owner'].includes(profile?.role || '');
+                  const isMod = ['moderator','admin','owner'].includes(myRole || '');
                   return (
                     <motion.div
                       key={r.id}
@@ -964,11 +964,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                       </div>
                       {r.text && <p className="text-sm text-white mb-2">{r.text}</p>}
 
-                      <div className="flex items-center gap-1 pt-2 border-t border-purple-900/20">
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-purple-900/20">
                         <ReportButton targetType="comment" targetId={r.id} targetName={'Отзыв: ' + (r.text || '').slice(0, 40)} />
                         {isMod && (
                           <button onClick={() => deleteReviewAsAdmin(r.id)}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold ml-auto">
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold">
                             <Trash2 size={11} /> Удалить
                           </button>
                         )}
