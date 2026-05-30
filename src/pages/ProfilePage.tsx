@@ -87,6 +87,7 @@ interface ProfilePageProps {
 const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, onOpenAccount, viewedProfileId, onResetView }) => {
   const isOwnProfile = !viewedProfileId;
   const [user, setUser] = useState<any>(null);
+  const [myRole, setMyRole] = useState<string>('user');
   const [profile, setProfile] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'wall' | 'products' | 'reviews' | 'themes' | 'integrations' | 'bans'>('wall');
@@ -124,6 +125,12 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           return;
         }
         setUser(u.user);
+        const { data: meProfile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', u.user.id)
+          .maybeSingle();
+        setMyRole(meProfile?.role || 'user');
 
         const targetId = viewedProfileId || u.user.id;
         const { data: p } = await supabase
@@ -360,6 +367,26 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       await supabase.from('user_blacklist').insert({ blocker_id: user.id, blocked_id: viewedProfileId });
       setIsBlocked(true);
     }
+  };
+
+  const deleteReviewAsAdmin = async (reviewId: string) => {
+    if (!['moderator', 'admin', 'owner'].includes(myRole)) return;
+    if (!confirm('Удалить отзыв? Это действие нельзя отменить.')) return;
+
+    const { data, error } = await supabase.rpc('moderate_delete_review', { p_review_id: reviewId });
+    if (error) {
+      // Fallback для старых баз без RPC. Если RLS не даст удалить — покажем понятную ошибку.
+      const { error: delError } = await supabase.from('reviews').delete().eq('id', reviewId);
+      if (delError) {
+        alert('Не удалось удалить отзыв. Выполните SQL supabase/moderate_delete_review.sql. Ошибка: ' + delError.message);
+        return;
+      }
+    } else if (data && data.ok === false) {
+      alert(data.error || 'Не удалось удалить отзыв');
+      return;
+    }
+
+    setReviews(prev => prev.filter(rv => rv.id !== reviewId));
   };
 
   /* ============ Загрузка аватарки/баннера ============ */
@@ -826,7 +853,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                 const replies = wallComments.filter((r: any) => r.parent_id === wc.id);
                 const isMine = wc.author_id === user?.id;
                 const isOwner = !viewedProfileId;
-                const isMod = ['moderator','admin','owner'].includes(profile?.role || '');
+                const isMod = ['moderator','admin','owner'].includes(myRole || '');
                 const canDel = isMine || isOwner || isMod;
                 const handleDel = async (id: string) => {
                   if (!confirm('Удалить комментарий?')) return;
@@ -940,11 +967,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                       <div className="flex items-center gap-1 pt-2 border-t border-purple-900/20">
                         <ReportButton targetType="comment" targetId={r.id} targetName={'Отзыв: ' + (r.text || '').slice(0, 40)} />
                         {isMod && (
-                          <button onClick={async () => {
-                            if (!confirm('Удалить отзыв?')) return;
-                            await supabase.from('reviews').delete().eq('id', r.id);
-                            setReviews(prev => prev.filter(rv => rv.id !== r.id));
-                          }}
+                          <button onClick={() => deleteReviewAsAdmin(r.id)}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold ml-auto">
                             <Trash2 size={11} /> Удалить
                           </button>
