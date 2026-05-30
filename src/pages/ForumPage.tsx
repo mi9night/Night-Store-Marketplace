@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X, Image as ImageIcon,
-  Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+  Trash2, ArrowUp, ArrowDown, Lock, Unlock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
@@ -28,11 +28,13 @@ interface Topic {
   created_at: string;
   is_pinned?: boolean;
   is_hot?: boolean;
+  is_closed?: boolean;
+  closed_at?: string | null;
   pinned_order?: number | null;
   edited_at?: string | null;
 }
 
-const categoriesList = ['Все', '🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
+const categoriesList = ['Все', '🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии', 'Оффтоп'];
 const categoryColors: Record<string, string> = {
   'Гайды': 'text-blue-400 bg-blue-900/20 border-blue-800/30',
   'Правила': 'text-red-400 bg-red-900/20 border-red-800/30',
@@ -40,6 +42,7 @@ const categoryColors: Record<string, string> = {
   'Обзоры': 'text-yellow-400 bg-yellow-900/20 border-yellow-800/30',
   'Отзывы': 'text-purple-400 bg-purple-900/20 border-purple-800/30',
   'Дискуссии': 'text-cyan-400 bg-cyan-900/20 border-cyan-800/30',
+  'Оффтоп': 'text-gray-300 bg-gray-900/30 border-gray-700/40',
   '🎁 Розыгрыши': 'text-pink-400 bg-pink-900/20 border-pink-800/30 shadow-[0_0_10px_rgba(236,72,153,0.4)]',
 };
 
@@ -74,6 +77,19 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
       .eq('id', topic.id);
     if (error) {
       alert(error.message);
+      return;
+    }
+    loadTopics();
+  };
+
+  const handleToggleClose = async (topic: Topic) => {
+    if (!['moderator', 'admin', 'owner'].includes(myRole)) return;
+    const payload = topic.is_closed
+      ? { is_closed: false, closed_at: null, closed_by: null }
+      : { is_closed: true, closed_at: new Date().toISOString(), closed_by: me?.id };
+    const { error } = await supabase.from('forum_topics').update(payload).eq('id', topic.id);
+    if (error) {
+      alert('Для закрытия тем выполните SQL forum_topic_closing_rules.sql: ' + error.message);
       return;
     }
     loadTopics();
@@ -374,7 +390,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
               </div>
               <div className="space-y-2">
                 {pinned.map((topic, i) => (
-                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} canOrder={isAdmin} canMoveUp={i > 0} canMoveDown={i < pinned.length - 1} onMovePinned={(direction) => movePinnedTopic(topic.id, direction, pinned)} />
+                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} canOrder={isAdmin} canMoveUp={i > 0} canMoveDown={i < pinned.length - 1} onMovePinned={(direction) => movePinnedTopic(topic.id, direction, pinned)} canClose={['moderator','admin','owner'].includes(myRole)} onToggleClose={handleToggleClose} />
                 ))}
               </div>
             </div>
@@ -389,7 +405,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
             )}
             <div className="space-y-2">
               {regular.map((topic, i) => (
-                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} />
+                <TopicRow key={topic.id} topic={topic} index={i} onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} canClose={['moderator','admin','owner'].includes(myRole)} onToggleClose={handleToggleClose} />
               ))}
             </div>
           </div>
@@ -563,7 +579,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   );
 };
 
-const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; canPin?: boolean; onTogglePin?: (topic: Topic) => void; canOrder?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; onMovePinned?: (direction: 'up' | 'down') => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete, canPin, onTogglePin, canOrder, canMoveUp, canMoveDown, onMovePinned }) => {
+const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; canPin?: boolean; onTogglePin?: (topic: Topic) => void; canOrder?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; onMovePinned?: (direction: 'up' | 'down') => void; canClose?: boolean; onToggleClose?: (topic: Topic) => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete, canPin, onTogglePin, canOrder, canMoveUp, canMoveDown, onMovePinned, canClose, onToggleClose }) => {
   const categoryColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
   const dateStr = new Date(topic.created_at).toLocaleDateString('ru-RU');
 
@@ -590,6 +606,7 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
             {pinned && <Pin size={12} className="text-accent" />}
             {topic.is_hot && <span className="text-xs text-orange-400 bg-orange-900/20 border border-orange-800/30 px-1.5 py-0.5 rounded-full">🔥 Горячее</span>}
             <span className={`text-xs px-2 py-0.5 rounded-full border ${categoryColor}`}>{topic.category}</span>
+            {topic.is_closed && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-900/40 text-gray-300 border border-gray-700/40 inline-flex items-center gap-1"><Lock size={10} /> Закрыта</span>}
           </div>
           <h3 className="text-sm font-semibold text-text-primary hover:text-accent-soft transition-colors line-clamp-1">
             {topic.title}
@@ -622,6 +639,13 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
                   className={`p-1 ${topic.is_pinned ? 'text-accent' : 'text-text-secondary hover:text-accent'}`}
                   title={topic.is_pinned ? 'Открепить тему' : 'Закрепить тему'}>
                   <Pin size={11} />
+                </button>
+              )}
+              {canClose && (
+                <button onClick={(e) => { e.stopPropagation(); onToggleClose?.(topic); }}
+                  className={`p-1 ${topic.is_closed ? 'text-green-400' : 'text-text-secondary hover:text-gray-200'}`}
+                  title={topic.is_closed ? 'Открыть тему' : 'Закрыть тему'}>
+                  {topic.is_closed ? <Unlock size={11} /> : <Lock size={11} />}
                 </button>
               )}
               {canDelete && (

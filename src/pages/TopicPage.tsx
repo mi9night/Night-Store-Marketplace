@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MessageSquare, Eye, ThumbsUp, ThumbsDown,
-  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply, Edit3, Save
+  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply, Edit3, Save, Lock, Unlock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
@@ -240,6 +240,10 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const topLevel = comments.filter(c => !c.parent_id);
   const repliesOf = (id: string) => comments.filter(c => c.parent_id === id);
   const isAdmin = ['admin', 'owner'].includes(myProfile?.role || '');
+  const canCloseTopic = ['moderator', 'admin', 'owner'].includes(myProfile?.role || '');
+  const isClosed = !!topic.is_closed;
+  const rulesLocked = topic.category === 'Правила' && !isAdmin;
+  const canComment = !!me && (!isClosed || isAdmin) && !rulesLocked;
 
   const togglePin = async () => {
     if (!isAdmin) return;
@@ -249,6 +253,19 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
       return;
     }
     setTopic({ ...topic, is_pinned: !topic.is_pinned });
+  };
+
+  const toggleClose = async () => {
+    if (!canCloseTopic) return;
+    const payload = topic.is_closed
+      ? { is_closed: false, closed_at: null, closed_by: null }
+      : { is_closed: true, closed_at: new Date().toISOString(), closed_by: me.id };
+    const { error } = await supabase.from('forum_topics').update(payload).eq('id', topic.id);
+    if (error) {
+      alert('Для закрытия тем выполните SQL forum_topic_closing_rules.sql: ' + error.message);
+      return;
+    }
+    setTopic({ ...topic, ...payload });
   };
 
   const canEditTopic = !!me && (me.id === topic.author_id || isAdmin);
@@ -313,6 +330,11 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
           )}
           {topic.is_hot && (
             <span className="text-xs text-orange-400 bg-orange-900/20 border border-orange-800/30 px-1.5 py-0.5 rounded-full">🔥 Горячее</span>
+          )}
+          {isClosed && (
+            <span className="text-xs text-gray-300 bg-gray-900/40 border border-gray-700/40 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+              <Lock size={10} /> Закрыта
+            </span>
           )}
         </div>
 
@@ -401,6 +423,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
                 <Pin size={11} /> {topic.is_pinned ? 'Открепить' : 'Закрепить'}
               </button>
             )}
+            {canCloseTopic && (
+              <button onClick={toggleClose}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${isClosed ? 'bg-green-900/20 hover:bg-green-900/40 text-green-400' : 'bg-gray-900/30 hover:bg-gray-900/50 text-gray-300'}`}>
+                {isClosed ? <Unlock size={11} /> : <Lock size={11} />} {isClosed ? 'Открыть' : 'Закрыть'}
+              </button>
+            )}
             {(me?.id === topic.author_id || ['moderator','admin','owner'].includes(myProfile?.role)) && (
               <button onClick={async () => {
                 if (!confirm('Удалить тему вместе со всеми комментариями?')) return;
@@ -442,7 +470,13 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
         )}
 
         {/* Форма комментария */}
-        {me ? (
+        {me && !canComment ? (
+          <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4 text-center text-sm text-text-secondary">
+            {isClosed && !isAdmin
+              ? 'Тема закрыта. Новые комментарии недоступны.'
+              : 'В разделе «Правила» писать могут только администраторы.'}
+          </div>
+        ) : me ? (
           <div className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4">
             {replyTo && (
               <div className="flex items-center gap-2 mb-2 p-2 bg-purple-900/10 rounded-lg text-xs">
