@@ -45,7 +45,7 @@ export const ACCOUNT_ORIGIN_OPTIONS = [
   'восстановлен через поддержку'
 ];
 
-export const MAIL_ACCESS_OPTIONS = ['Родная почта', 'Смена почты', 'Полный доступ', 'Без доступа', 'Временная почта', 'Почта в комплекте'];
+export const MAIL_ACCESS_OPTIONS = ['родная', 'авторег', 'временная', 'полный доступ', 'без доступа'];
 export const MAIL_DOMAIN_OPTIONS = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com', 'mail.ru', 'bk.ru', 'inbox.ru', 'list.ru', 'yandex.ru', 'rambler.ru', 'proton.me', 'protonmail.com', 'gmx.com', 'aol.com', 'другой'];
 
 export const CATEGORY_FILTERS: Record<string, FilterGroup[]> = {

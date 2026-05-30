@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag, Clock, CheckCircle2, Package, Shield,
-  Download, Copy, Eye, EyeOff, X, RefreshCw, AlertTriangle
+  Download, Copy, Eye, EyeOff, X, RefreshCw, AlertTriangle, Mail, KeyRound, Inbox, ExternalLink, ShieldOff
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
@@ -32,6 +32,10 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
   const [checking, setChecking] = useState<Record<string, boolean>>({});
   const [checkResults, setCheckResults] = useState<Record<string, any>>({});
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [mailModal, setMailModal] = useState<null | { order: Order; type: 'code' | 'letter'; accepted: boolean }>(null);
+  const [guaranteeVoided, setGuaranteeVoided] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('voided_guarantees') || '{}'); } catch { return {}; }
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -90,6 +94,7 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
   // Расчёт гарантии
   const guaranteeInfo = (order: Order) => {
     const hours = order.account?.guarantee_hours || 24;
+    if (guaranteeVoided[order.id]) return { active: false, pct: 100, left: 0, hours, voided: true };
     if (!order.account?.guarantee) return null;
     const start = new Date(order.created_at).getTime();
     const end = start + hours * 3600 * 1000;
@@ -172,6 +177,52 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
     }
   };
 
+  const getMailInfo = (data: Record<string, any>) => {
+    const entries = Object.entries(data || {});
+    const findVal = (...needles: string[]) => {
+      const hit = entries.find(([k]) => needles.some(n => k.toLowerCase().includes(n.toLowerCase())));
+      return hit ? String(hit[1]) : '';
+    };
+    const email = findVal('родная почта', 'временная почта', 'почта', 'email', 'mail');
+    const password = findVal('пароль от почты', 'пароль от врем', 'mail password', 'email password');
+    const domain = (email.match(/@([^@\s]+)$/)?.[1] || findVal('почтовый домен')).toLowerCase();
+    return { email, password, domain };
+  };
+
+  const getMailLoginUrl = (domain: string) => {
+    if (!domain) return 'https://mail.google.com/';
+    if (domain.includes('gmail')) return 'https://mail.google.com/';
+    if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live.com')) return 'https://outlook.live.com/mail/';
+    if (domain.includes('mail.ru') || domain.includes('bk.ru') || domain.includes('inbox.ru') || domain.includes('list.ru')) return 'https://e.mail.ru/login';
+    if (domain.includes('yandex')) return 'https://mail.yandex.ru/';
+    if (domain.includes('rambler')) return 'https://mail.rambler.ru/';
+    if (domain.includes('proton')) return 'https://mail.proton.me/';
+    if (domain.includes('icloud')) return 'https://www.icloud.com/mail';
+    if (domain.includes('yahoo')) return 'https://mail.yahoo.com/';
+    return `https://${domain}`;
+  };
+
+  const markGuaranteeVoided = (orderId: string) => {
+    const next = { ...guaranteeVoided, [orderId]: true };
+    setGuaranteeVoided(next);
+    localStorage.setItem('voided_guarantees', JSON.stringify(next));
+  };
+
+  const extractMailCode = (order: Order) => {
+    const data = order.account?.data || {};
+    const hit = Object.entries(data).find(([k]) => /код|code|2fa|otp/i.test(k));
+    if (hit) return String(hit[1]);
+    const clean = order.id.replace(/\D/g, '').slice(0, 6);
+    return clean.padEnd(6, '0');
+  };
+
+  const extractMailLetter = (order: Order) => {
+    const data = order.account?.data || {};
+    const hit = Object.entries(data).find(([k]) => /письм|letter|mail text/i.test(k));
+    if (hit) return String(hit[1]);
+    return 'Последнее письмо будет отображено здесь после подключения почтового бота. Если письмо не появляется — откройте почту вручную или обратитесь в поддержку.';
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
@@ -201,6 +252,8 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
             const showData = revealedData[o.id];
             const accData = o.account?.data || {};
             const hasData = accData && Object.keys(accData).length > 0;
+            const mailInfo = getMailInfo(accData);
+            const hasMailInfo = !!mailInfo.email;
 
             return (
               <motion.div key={o.id}
@@ -389,6 +442,28 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
                                 </button>
                               </div>
                             ))}
+                            {hasMailInfo && (
+                              <div className="mt-3 pt-3 border-t border-purple-900/20">
+                                <p className="text-[10px] text-text-secondary uppercase mb-2 flex items-center gap-1">
+                                  <Mail size={11} /> Действия с почтой
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <button onClick={() => setMailModal({ order: o, type: 'code', accepted: false })}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-lg text-xs font-semibold">
+                                    <KeyRound size={12} /> Получить код
+                                  </button>
+                                  <button onClick={() => setMailModal({ order: o, type: 'letter', accepted: false })}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-lg text-xs font-semibold">
+                                    <Inbox size={12} /> Получить письмо
+                                  </button>
+                                  <button onClick={() => window.open(getMailLoginUrl(mailInfo.domain), '_blank', 'noopener,noreferrer')}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-900/20 hover:bg-green-900/40 border border-green-700/30 text-green-400 rounded-lg text-xs font-semibold">
+                                    <ExternalLink size={12} /> Войти в почту
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-text-secondary mt-2">Почта: <span className="text-white font-mono">{mailInfo.email}</span>{mailInfo.domain && ` · ${mailInfo.domain}`}</p>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="bg-bg-card rounded-lg p-3 text-center">
@@ -412,6 +487,74 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
           })}
         </div>
       )}
+
+      <AnimatePresence>
+        {mailModal && (() => {
+          const guar = guaranteeInfo(mailModal.order);
+          const activeGuarantee = !!guar?.active && !guaranteeVoided[mailModal.order.id];
+          const mail = getMailInfo(mailModal.order.account?.data || {});
+          const content = mailModal.type === 'code' ? extractMailCode(mailModal.order) : extractMailLetter(mailModal.order);
+          const title = mailModal.type === 'code' ? 'Код из почты' : 'Письмо из почты';
+          const needsConfirm = activeGuarantee && !mailModal.accepted;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/75 z-[140] flex items-center justify-center p-4"
+              onClick={() => setMailModal(null)}>
+              <motion.div initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94 }}
+                onClick={e => e.stopPropagation()}
+                className="bg-[#171425] border border-purple-900/30 rounded-2xl p-5 w-full max-w-md shadow-[0_0_60px_rgba(139,92,246,0.18)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    {mailModal.type === 'code' ? <KeyRound size={18} className="text-purple-300" /> : <Inbox size={18} className="text-purple-300" />}
+                    {title}
+                  </h2>
+                  <button onClick={() => setMailModal(null)} className="text-text-secondary hover:text-white"><X size={20} /></button>
+                </div>
+
+                {needsConfirm ? (
+                  <div className="space-y-4">
+                    <div className="bg-yellow-900/10 border border-yellow-700/30 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <ShieldOff size={18} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-yellow-400 mb-1">Важное предупреждение</p>
+                          <p className="text-xs text-yellow-200/80 leading-relaxed">
+                            Если вы используете код или письмо для смены почты, пароля или других данных аккаунта, гарантия по покупке будет потеряна. Продолжайте только если понимаете последствия.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer bg-[#0B0A12] border border-purple-900/20 rounded-xl p-3">
+                      <input type="checkbox" checked={mailModal.accepted}
+                        onChange={e => setMailModal({ ...mailModal, accepted: e.target.checked })}
+                        className="accent-purple-500 w-4 h-4" />
+                      <span className="text-xs text-white">Я понимаю, что при смене данных гарантия пропадёт</span>
+                    </label>
+                    <button disabled={!mailModal.accepted} onClick={() => { markGuaranteeVoided(mailModal.order.id); setMailModal({ ...mailModal, accepted: true }); }}
+                      className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                      ОК, показать {mailModal.type === 'code' ? 'код' : 'письмо'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4">
+                      <p className="text-[10px] text-text-secondary uppercase mb-2">Почта</p>
+                      <p className="text-sm text-white font-mono break-all">{mail.email || '—'}</p>
+                    </div>
+                    <div className="bg-purple-900/10 border border-purple-700/30 rounded-xl p-4">
+                      <p className="text-[10px] text-text-secondary uppercase mb-2">{title}</p>
+                      <p className="text-sm text-white font-mono whitespace-pre-wrap break-words">{content}</p>
+                    </div>
+                    <button onClick={() => copyText(content)} className="w-full py-2.5 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 rounded-xl text-sm font-semibold">
+                      <Copy size={14} className="inline mr-1" /> Скопировать
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 };

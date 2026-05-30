@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, Shield, Zap, CheckCircle2, AlertCircle, ArrowLeft,
@@ -266,6 +266,57 @@ const SellCategoryLogo: React.FC<{ id?: string; active?: boolean; size?: number 
 };
 
 interface AccountDataField { key: string; value: string; }
+
+const SellSearchableSelect: React.FC<{
+  label: string;
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+}> = ({ label, value, options, placeholder, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value || '');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setQuery(value || ''), [value]);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(o => o.toLowerCase().includes(q));
+  }, [options, query]);
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="text-sm text-text-secondary mb-1.5 block">{label}</label>
+      <input
+        type="text"
+        value={query}
+        onFocus={() => setOpen(true)}
+        onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+        placeholder={placeholder}
+        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white placeholder:text-text-secondary focus:border-accent focus:outline-none transition-colors"
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-[80] overflow-hidden rounded-xl border border-purple-800/40 bg-[#171425] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_24px_rgba(139,92,246,0.14)]">
+          <div className="max-h-56 overflow-y-auto p-1.5">
+            {filtered.length > 0 ? filtered.map(o => (
+              <button key={o} type="button" onClick={() => { setQuery(o); onChange(o); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${value === o ? 'bg-purple-600/30 text-white border border-purple-500/40' : 'text-text-secondary hover:text-white hover:bg-purple-900/20'}`}>
+                {o}
+              </button>
+            )) : <div className="px-3 py-3 text-xs text-text-secondary text-center">Ничего не найдено</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Component
@@ -600,30 +651,27 @@ const SellPage: React.FC = () => {
                     <span className="text-xs font-semibold text-accent-soft uppercase tracking-wider">Основные параметры</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm text-text-secondary mb-1.5 block">Страна</label>
-                      <select value={formData.country} onChange={e => setFormData({ ...formData, country: e.target.value })}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
-                        <option value="">— выберите страну —</option>
-                        {COUNTRY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm text-text-secondary mb-1.5 block">Происхождение аккаунта</label>
-                      <select value={formData.accountOrigin} onChange={e => setFormData({ ...formData, accountOrigin: e.target.value })}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
-                        <option value="">— выберите происхождение —</option>
-                        {ACCOUNT_ORIGIN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm text-text-secondary mb-1.5 block">Доступ к почте</label>
-                      <select value={formData.mailAccess} onChange={e => setFormData({ ...formData, mailAccess: e.target.value })}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
-                        <option value="">— выберите доступ —</option>
-                        {MAIL_ACCESS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
+                    <SellSearchableSelect
+                      label="Страна"
+                      value={formData.country}
+                      options={COUNTRY_OPTIONS}
+                      placeholder="— выберите страну —"
+                      onChange={v => setFormData({ ...formData, country: v })}
+                    />
+                    <SellSearchableSelect
+                      label="Происхождение аккаунта"
+                      value={formData.accountOrigin}
+                      options={ACCOUNT_ORIGIN_OPTIONS}
+                      placeholder="— выберите происхождение —"
+                      onChange={v => setFormData({ ...formData, accountOrigin: v })}
+                    />
+                    <SellSearchableSelect
+                      label="Доступ к почте"
+                      value={formData.mailAccess}
+                      options={MAIL_ACCESS_OPTIONS}
+                      placeholder="— выберите доступ —"
+                      onChange={v => setFormData({ ...formData, mailAccess: v })}
+                    />
                     <div>
                       <label className="text-sm text-text-secondary mb-1.5 block">Почтовый домен</label>
                       <div className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
