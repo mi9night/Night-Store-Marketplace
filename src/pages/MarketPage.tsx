@@ -537,10 +537,10 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                     !g.title || (!LEFT.includes(g.title) && !MID.includes(g.title) && !RIGHT.includes(g.title))
                   );
 
-                  const Col: React.FC<{ items: any[] }> = ({ items }) => (
-                    <div className="space-y-3">
-                      {items.map((g: any, gi: number) => (
-                        <div key={gi} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
+                  const renderColumn = (items: any[], columnKey: string) => (
+                    <div className="space-y-3" key={columnKey}>
+                      {items.map((g: any) => (
+                        <div key={g.title || `${columnKey}-group`} className="bg-bg-secondary border border-purple-900/20 rounded-xl p-3 space-y-2">
                           <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{g.title}</p>
                           <CategoryFilters groups={[{ fields: g.fields }]} values={extraFilters} onChange={setExtraFilters} />
                         </div>
@@ -551,9 +551,9 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                   return (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Col items={byCol(LEFT)} />
-                        <Col items={byCol(MID)} />
-                        <Col items={byCol(RIGHT)} />
+                        {renderColumn(byCol(LEFT), 'left')}
+                        {renderColumn(byCol(MID), 'mid')}
+                        {renderColumn(byCol(RIGHT), 'right')}
                       </div>
                       {restGroups.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
