@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X, Image as ImageIcon
-, Trash2 } from 'lucide-react';
+  MessageSquare, TrendingUp, Plus, Eye, ThumbsUp, Clock, Pin, X, Image as ImageIcon,
+  Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { UserLink } from '../components/UserLink';
 import ReportButton from '../components/ReportButton';
@@ -28,6 +28,8 @@ interface Topic {
   created_at: string;
   is_pinned?: boolean;
   is_hot?: boolean;
+  pinned_order?: number | null;
+  edited_at?: string | null;
 }
 
 const categoriesList = ['Все', '🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
@@ -127,7 +129,16 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
         });
       }
 
-      setTopics(data || []);
+      const sorted = [...(data || [])].sort((a: any, b: any) => {
+        if (!!a.is_pinned !== !!b.is_pinned) return a.is_pinned ? -1 : 1;
+        if (a.is_pinned && b.is_pinned) {
+          const ao = a.pinned_order ?? 999999;
+          const bo = b.pinned_order ?? 999999;
+          if (ao !== bo) return ao - bo;
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      setTopics(sorted);
     } catch (e) {
       console.warn('Не удалось загрузить темы:', e);
       setTopics([]);
@@ -248,6 +259,25 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   const pinned = filtered.filter(t => t.is_pinned);
   const regular = filtered.filter(t => !t.is_pinned);
 
+  const movePinnedTopic = async (topicId: string, direction: 'up' | 'down', list: Topic[]) => {
+    if (!isAdmin) return;
+    const current = [...list];
+    const idx = current.findIndex(t => t.id === topicId);
+    const target = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || target < 0 || target >= current.length) return;
+    [current[idx], current[target]] = [current[target], current[idx]];
+    const updates = current.map((t, order) =>
+      supabase.from('forum_topics').update({ pinned_order: order }).eq('id', t.id)
+    );
+    const result = await Promise.all(updates);
+    const err = result.find(r => r.error)?.error;
+    if (err) {
+      alert('Для изменения порядка закрепов выполните SQL forum_topic_editing_order.sql: ' + err.message);
+      return;
+    }
+    loadTopics();
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       {/* Header */}
@@ -344,7 +374,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
               </div>
               <div className="space-y-2">
                 {pinned.map((topic, i) => (
-                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} />
+                  <TopicRow key={topic.id} topic={topic} index={i} pinned onOpen={onOpenTopic} canDelete={me?.id === topic.author_id || ['moderator','admin','owner'].includes(myRole)} onDelete={handleDeleteTopic} canPin={isAdmin} onTogglePin={handleTogglePin} canOrder={isAdmin} canMoveUp={i > 0} canMoveDown={i < pinned.length - 1} onMovePinned={(direction) => movePinnedTopic(topic.id, direction, pinned)} />
                 ))}
               </div>
             </div>
@@ -533,7 +563,7 @@ const ForumPage: React.FC<ForumPageProps> = ({ filter, onOpenTopic }) => {
   );
 };
 
-const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; canPin?: boolean; onTogglePin?: (topic: Topic) => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete, canPin, onTogglePin }) => {
+const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen?: (id: string) => void; canDelete?: boolean; onDelete?: (id: string) => void; canPin?: boolean; onTogglePin?: (topic: Topic) => void; canOrder?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; onMovePinned?: (direction: 'up' | 'down') => void; }> = ({ topic, index, pinned, onOpen, canDelete, onDelete, canPin, onTogglePin, canOrder, canMoveUp, canMoveDown, onMovePinned }) => {
   const categoryColor = categoryColors[topic.category] || 'text-text-secondary bg-purple-900/20 border-purple-800/30';
   const dateStr = new Date(topic.created_at).toLocaleDateString('ru-RU');
 
@@ -568,12 +598,25 @@ const TopicRow: React.FC<{ topic: Topic; index: number; pinned?: boolean; onOpen
             <UserLink userId={topic.author_id} username={topic.author_name || 'Аноним'} className="text-text-secondary" />
             <span>•</span>
             <div className="flex items-center gap-1"><Clock size={11} />{dateStr}</div>
+            {topic.edited_at && <span className="text-yellow-400">изменено</span>}
             <span>•</span>
             <div className="flex items-center gap-1"><MessageSquare size={11} />{topic.replies || 0}</div>
             <div className="flex items-center gap-1"><Eye size={11} />{topic.views || 0}</div>
             <div className="flex items-center gap-1"><ThumbsUp size={11} />{topic.likes || 0}</div>
             <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
               <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} small />
+              {canOrder && topic.is_pinned && (
+                <>
+                  <button disabled={!canMoveUp} onClick={(e) => { e.stopPropagation(); onMovePinned?.('up'); }}
+                    className="text-text-secondary hover:text-purple-300 disabled:opacity-30 p-1" title="Выше">
+                    <ArrowUp size={11} />
+                  </button>
+                  <button disabled={!canMoveDown} onClick={(e) => { e.stopPropagation(); onMovePinned?.('down'); }}
+                    className="text-text-secondary hover:text-purple-300 disabled:opacity-30 p-1" title="Ниже">
+                    <ArrowDown size={11} />
+                  </button>
+                </>
+              )}
               {canPin && (
                 <button onClick={(e) => { e.stopPropagation(); onTogglePin?.(topic); }}
                   className={`p-1 ${topic.is_pinned ? 'text-accent' : 'text-text-secondary hover:text-accent'}`}

@@ -211,12 +211,15 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-br from-purple-900/30 via-purple-800/20 to-bg-secondary border border-purple-700/30 rounded-2xl p-5 overflow-hidden"
+        className="relative bg-[#171425] border border-purple-900/30 rounded-2xl p-5 overflow-hidden shadow-[0_0_28px_rgba(139,92,246,0.08)]"
       >
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/25 via-transparent to-bg-primary pointer-events-none" />
+        <div className="relative z-10">
         <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Маркет аккаунтов</h1>
         <p className="text-sm text-text-secondary">
           {accounts.length} аккаунтов · мгновенная выдача · Escrow защита 🌙
         </p>
+        </div>
       </motion.div>
 
       {/* === Категории-квадратики === */}
@@ -285,6 +288,22 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
           </div>
         );
       })()}
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[#171425] border border-purple-900/20 rounded-2xl p-4 flex items-start gap-3"
+      >
+        <div className="w-9 h-9 rounded-xl bg-green-900/20 border border-green-700/30 flex items-center justify-center flex-shrink-0">
+          <Shield size={18} className="text-green-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white mb-1">Автоматическая проверка товаров</p>
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Автопроверка доступна для категорий: Steam, Telegram, Epic Games, Fortnite, EA, Ubisoft, Minecraft, Supercell, Roblox, World of Tanks, Wargaming, Rockstar, Discord, TikTok, Instagram и miHoYo. По остальным категориям ответственность за корректность товара несёт пользователь, а спорные случаи разбираются через поддержку.
+          </p>
+        </div>
+      </motion.div>
 
       {/* === Поиск + фильтры + сортировка === */}
       <div className="flex items-center gap-2 flex-wrap">

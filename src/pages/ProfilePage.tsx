@@ -270,6 +270,34 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
+  // Realtime синк наказаний: значки BAN/MUTE/WARN исчезают сразу после снятия.
+  useEffect(() => {
+    if (!user?.id) return;
+    const targetId = viewedProfileId || user.id;
+
+    const reloadBans = async () => {
+      const { data } = await supabase.from('bans')
+        .select('*')
+        .eq('user_id', targetId)
+        .order('created_at', { ascending: false });
+      setBans(data || []);
+    };
+
+    const ch = supabase.channel('profile_bans_sync')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'bans', filter: `user_id=eq.${targetId}` },
+        reloadBans
+      )
+      .subscribe();
+
+    const interval = window.setInterval(reloadBans, 30_000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      window.clearInterval(interval);
+    };
+  }, [user?.id, viewedProfileId]);
+
   const sendWall = async () => {
     if ((!wallText.trim() && wallImages.length === 0) || !user) return;
     const targetId = viewedProfileId || user.id;
@@ -410,10 +438,12 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
     { label: 'XP',       value: xpVal,                       icon: Award,        color: 'text-purple-400' },
   ];
 
-  const activeBan = bans.find(b => b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
-  const activeMute = bans.find(b => b.type === 'mute' && b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date()));
-  const warnCount = bans.filter(b => b.type === 'warn').length;
-  const lastWarn = bans.filter(b => b.type === 'warn')[0];
+  const isActivePunishment = (b: any) => b.is_active && (!b.ends_at || new Date(b.ends_at) > new Date());
+  const activeBan = bans.find(b => b.type === 'ban' && isActivePunishment(b));
+  const activeMute = bans.find(b => b.type === 'mute' && isActivePunishment(b));
+  const activeWarns = bans.filter(b => b.type === 'warn' && isActivePunishment(b));
+  const warnCount = activeWarns.length;
+  const lastWarn = activeWarns[0];
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -429,11 +459,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#171425] border border-purple-900/20 rounded-2xl overflow-hidden"
+        className="bg-bg-card border border-purple-900/30 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(139,92,246,0.08)]"
       >
         {/* Banner */}
         <div
-          className="h-32 sm:h-40 relative bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-purple-900/60 bg-cover bg-center"
+          className="h-32 sm:h-40 relative bg-gradient-to-br from-purple-900/35 via-[#171425] to-bg-primary bg-cover bg-center border-b border-purple-900/20"
           style={profile?.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : {}}
         >
           <div className="absolute top-3 right-3 flex gap-2">
@@ -471,7 +501,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           {/* Аватарка отдельно — наполовину в баннер, наполовину под ним */}
           <div className="-mt-12 mb-3">
             <div className="relative inline-block">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-bg-card overflow-hidden">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -486,7 +516,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                   <Camera size={12} className="text-white" />
                 </button>
               )}
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#171425]" />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-card" />
               <input
                 ref={avatarInput}
                 type="file"

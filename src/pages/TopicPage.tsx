@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MessageSquare, Eye, ThumbsUp, ThumbsDown,
-  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply
+  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply, Edit3, Save
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
@@ -28,6 +28,8 @@ const categoryColors: Record<string, string> = {
   'Отзывы':    'text-purple-400 bg-purple-900/20 border-purple-800/30',
   'Дискуссии': 'text-cyan-400 bg-cyan-900/20 border-cyan-800/30',
 };
+
+const editableCategories = ['🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
 
 interface Comment {
   id: string;
@@ -58,6 +60,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const [commentImages, setCommentImages] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] = useState('Дискуссии');
+  const [editContent, setEditContent] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   /* ============ Загрузка ============ */
   const load = async () => {
@@ -243,6 +251,51 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     setTopic({ ...topic, is_pinned: !topic.is_pinned });
   };
 
+  const canEditTopic = !!me && (me.id === topic.author_id || isAdmin);
+
+  const openEdit = () => {
+    setEditTitle(topic.title || '');
+    setEditCategory(topic.category || 'Дискуссии');
+    setEditContent(topic.content || '');
+    setEditError(null);
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if (!canEditTopic || !editTitle.trim()) return;
+    if (editCategory === 'Правила' && !isAdmin) {
+      setEditError('Переносить темы в «Правила» могут только администраторы');
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    const editedAt = new Date().toISOString();
+    try {
+      const payload: any = {
+        title: editTitle.trim(),
+        category: editCategory,
+        content: editContent.trim(),
+        edited_at: editedAt,
+        edited_by: me.id,
+      };
+      const { error } = await supabase.from('forum_topics').update(payload).eq('id', topic.id);
+      if (error) {
+        const { error: fallbackError } = await supabase.from('forum_topics').update({
+          title: editTitle.trim(),
+          category: editCategory,
+          content: editContent.trim(),
+        }).eq('id', topic.id);
+        if (fallbackError) throw fallbackError;
+      }
+      setTopic({ ...topic, ...payload });
+      setShowEdit(false);
+    } catch (e: any) {
+      setEditError(e.message || 'Не удалось изменить тему');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       <button onClick={() => setCurrentPage('forum')} className="flex items-center gap-2 text-sm text-text-secondary hover:text-white">
@@ -279,6 +332,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
           <UserLink userId={topic.author_id} username={topic.author_name || 'Аноним'} className="font-medium text-white" />
           <span>•</span>
           <div className="flex items-center gap-1"><Clock size={11} />{new Date(topic.created_at).toLocaleString('ru-RU')}</div>
+          {topic.edited_at && (
+            <>
+              <span>•</span>
+              <span className="text-yellow-400">изменено {new Date(topic.edited_at).toLocaleString('ru-RU')}</span>
+            </>
+          )}
         </div>
 
         {topic.category?.includes('Розыгрыш') && (
@@ -330,6 +389,12 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
             <span className="flex items-center gap-1"><Eye size={12} /> {topic.views || 0}</span>
             <span className="flex items-center gap-1"><MessageSquare size={12} /> {comments.length}</span>
             <ReportButton targetType="topic" targetId={topic.id} targetName={topic.title} />
+            {canEditTopic && (
+              <button onClick={openEdit}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-purple-900/20 hover:bg-purple-900/40 text-purple-300">
+                <Edit3 size={11} /> Изменить
+              </button>
+            )}
             {isAdmin && (
               <button onClick={togglePin}
                 className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${topic.is_pinned ? 'bg-purple-600/30 text-purple-300' : 'bg-purple-900/20 hover:bg-purple-900/40 text-purple-300'}`}>
@@ -430,6 +495,37 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
           </div>
         )}
       </div>
+
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/70 z-[120] flex items-center justify-center p-4" onClick={() => !editSaving && setShowEdit(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            onClick={e => e.stopPropagation()}
+            className="bg-[#171425] border border-purple-900/30 rounded-2xl p-5 w-full max-w-lg shadow-[0_0_60px_rgba(139,92,246,0.18)]"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><Edit3 size={18} className="text-purple-300" /> Изменить тему</h2>
+              <button onClick={() => setShowEdit(false)} className="text-text-secondary hover:text-white"><X size={20} /></button>
+            </div>
+            <label className="text-sm text-text-secondary mb-1.5 block">Название</label>
+            <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm mb-3" />
+            <label className="text-sm text-text-secondary mb-1.5 block">Категория</label>
+            <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm mb-3">
+              {editableCategories.filter(c => isAdmin || c !== 'Правила').map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <label className="text-sm text-text-secondary mb-1.5 block">Текст</label>
+            <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={6}
+              className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none mb-3" />
+            {editError && <div className="text-sm text-red-400 bg-red-900/10 border border-red-800/30 rounded-xl p-2 mb-3">{editError}</div>}
+            <button onClick={saveEdit} disabled={editSaving || !editTitle.trim()}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+              <Save size={16} /> {editSaving ? 'Сохранение...' : 'Сохранить изменения'}
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
