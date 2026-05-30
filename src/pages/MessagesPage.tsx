@@ -460,8 +460,23 @@ const MessagesPage: React.FC = () => {
 
   const saveEditMessage = async (id: string) => {
     if (!editingText.trim()) return;
-    const { error } = await supabase.from('messages').update({ text: editingText.trim(), edited_at: new Date().toISOString() }).eq('id', id).eq('sender_id', user.id);
-    if (error) { alert(error.message); return; }
+    const { data, error } = await supabase.rpc('edit_own_message', {
+      p_message_id: id,
+      p_text: editingText.trim(),
+    });
+    if (error) {
+      alert('Не удалось изменить сообщение. Выполните SQL supabase/message_comment_editing.sql. Ошибка: ' + error.message);
+      return;
+    }
+    if (data?.ok === false) {
+      const errMap: Record<string, string> = {
+        not_authenticated: 'Войдите в систему',
+        empty_text: 'Сообщение не может быть пустым',
+        message_not_found_or_forbidden: 'Можно редактировать только свои сообщения',
+      };
+      alert(errMap[data.error] || data.error || 'Не удалось изменить сообщение');
+      return;
+    }
     setEditingId(null);
     setEditingText('');
     if (active) loadMessages(active.partner_id);
@@ -470,8 +485,19 @@ const MessagesPage: React.FC = () => {
 
   const deleteMessage = async (id: string) => {
     if (!confirm('Удалить сообщение?')) return;
-    const { error } = await supabase.from('messages').delete().eq('id', id).eq('sender_id', user.id);
-    if (error) { alert(error.message); return; }
+    const { data, error } = await supabase.rpc('delete_own_message', { p_message_id: id });
+    if (error) {
+      alert('Не удалось удалить сообщение. Выполните SQL supabase/message_comment_editing.sql. Ошибка: ' + error.message);
+      return;
+    }
+    if (data?.ok === false) {
+      const errMap: Record<string, string> = {
+        not_authenticated: 'Войдите в систему',
+        message_not_found_or_forbidden: 'Можно удалять только свои сообщения',
+      };
+      alert(errMap[data.error] || data.error || 'Не удалось удалить сообщение');
+      return;
+    }
     if (active) loadMessages(active.partner_id);
     loadConversations();
   };
