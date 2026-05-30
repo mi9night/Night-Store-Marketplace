@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag, Clock, CheckCircle2, Package, Shield,
-  Download, Copy, Eye, EyeOff, X, RefreshCw, AlertTriangle, Mail, KeyRound, Inbox, ExternalLink, ShieldOff
+  Download, Copy, Eye, EyeOff, X, RefreshCw, AlertTriangle, Mail, KeyRound, Inbox, ExternalLink, ShieldOff, Lock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';

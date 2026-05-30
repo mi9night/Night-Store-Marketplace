@@ -943,7 +943,7 @@ ${problemDescription || '—'}${filesInfo}`;
           {myOrder && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
               className={`rounded-2xl p-5 border transition-colors ${
-                showReview && !revPositive
+                (myReview && !myReview.positive) || (showReview && !revPositive)
                   ? 'bg-red-900/10 border-red-700/30'
                   : 'bg-green-900/10 border-green-700/30'
               }`}>
