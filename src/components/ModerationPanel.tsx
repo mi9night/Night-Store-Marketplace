@@ -5,7 +5,7 @@ import {
   Search, Ban, CheckCircle2, Trash2, Edit3, ArrowRight, X,
   Crown, Settings as SettingsIcon, Megaphone, Send,
   Image, Paperclip, ChevronLeft, ChevronRight, FileText, ZoomIn,
-  ScanSearch, RefreshCw, AlertTriangle, Star, Moon, Flame, Rocket, Target, Trophy, Gamepad2, Music, Palette, Skull, Sparkles, Gift
+  ScanSearch, RefreshCw, AlertTriangle, Star, Moon, Flame, Rocket, Target, Trophy, Gamepad2, Music, Palette, Skull, Sparkles, Gift, Zap
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge as RB } from './RoleBadge';
