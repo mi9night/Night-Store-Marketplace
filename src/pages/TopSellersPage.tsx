@@ -348,20 +348,7 @@ const TopSellersPage: React.FC = () => {
             const icons: Record<string, React.ReactNode> = {
               newbie: <Star size={21} />,
               bronze: <Award size={21} />,
-              silver: (
-                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M8 3h8l-1.5 5h-5L8 3Z" fill="#CBD5E1" stroke="#F8FAFC" strokeWidth="1.2" />
-                  <circle cx="12" cy="14" r="6" fill="url(#silver-medal)" stroke="#F8FAFC" strokeWidth="1.4" />
-                  <path d="M9.8 14.2l1.4 1.4 3.2-3.4" stroke="#475569" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                  <defs>
-                    <linearGradient id="silver-medal" x1="7" y1="8" x2="18" y2="20" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#F8FAFC" />
-                      <stop offset="0.5" stopColor="#CBD5E1" />
-                      <stop offset="1" stopColor="#94A3B8" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              ),
+              silver: <Award size={21} />,
               gold: <Trophy size={21} />,
               platinum: (
                 <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
