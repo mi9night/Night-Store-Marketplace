@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Send, Search as SearchIcon, ArrowLeft,
-  Image, Paperclip, X, ChevronLeft, ChevronRight, ZoomIn, FileText
+  Image, Paperclip, X, ChevronLeft, ChevronRight, ZoomIn, FileText, Edit3, Trash2, Check
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUserNav } from '../lib/UserNavContext';
@@ -286,6 +286,8 @@ const MessagesPage: React.FC = () => {
   const [previews, setPreviews]           = useState<Map<string, string>>(new Map());
   const [viewer, setViewer]               = useState<{ urls: string[]; idx: number } | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const { openUser } = useUserNav();
 
@@ -450,6 +452,29 @@ const MessagesPage: React.FC = () => {
     try { return JSON.parse(m.attachments); } catch { return []; }
   };
 
+  const startEditMessage = (m: Message) => {
+    setEditingId(m.id);
+    setEditingText(m.text || '');
+  };
+
+  const saveEditMessage = async (id: string) => {
+    if (!editingText.trim()) return;
+    const { error } = await supabase.from('messages').update({ text: editingText.trim() }).eq('id', id).eq('sender_id', user.id);
+    if (error) { alert(error.message); return; }
+    setEditingId(null);
+    setEditingText('');
+    if (active) loadMessages(active.partner_id);
+    loadConversations();
+  };
+
+  const deleteMessage = async (id: string) => {
+    if (!confirm('Удалить сообщение?')) return;
+    const { error } = await supabase.from('messages').delete().eq('id', id).eq('sender_id', user.id);
+    if (error) { alert(error.message); return; }
+    if (active) loadMessages(active.partner_id);
+    loadConversations();
+  };
+
   const filtered = search.trim()
     ? conversations.filter(c => c.partner_name.toLowerCase().includes(search.toLowerCase()))
     : conversations;
@@ -559,7 +584,16 @@ const MessagesPage: React.FC = () => {
                             : 'bg-[#1E1A30] border border-purple-900/30 text-white rounded-tl-sm'
                         }`}>
                           {/* Text */}
-                          {hasText && (
+                          {editingId === m.id ? (
+                            <div className="p-2 space-y-2">
+                              <textarea value={editingText} onChange={e => setEditingText(e.target.value)} rows={2}
+                                className="w-full px-3 py-2 rounded-lg text-sm bg-[#0B0A12] border border-purple-900/30 text-white resize-none" />
+                              <div className="flex gap-1 justify-end">
+                                <button onClick={() => { setEditingId(null); setEditingText(''); }} className="px-2 py-1 rounded-md bg-white/10 text-xs text-white">Отмена</button>
+                                <button onClick={() => saveEditMessage(m.id)} className="px-2 py-1 rounded-md bg-green-600 text-xs text-white flex items-center gap-1"><Check size={11} />Сохранить</button>
+                              </div>
+                            </div>
+                          ) : hasText && (
                             <p className="px-3 pt-2.5 pb-1 whitespace-pre-wrap break-words">{m.text}</p>
                           )}
 
@@ -573,12 +607,16 @@ const MessagesPage: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Time */}
-                          <p className={`px-3 pb-2 text-[10px] ${
-                            isMine ? 'text-purple-200/70' : 'text-text-secondary'
-                          } ${!hasText && atts.length > 0 ? 'pt-0' : 'pt-0.5'}`}>
-                            {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          {/* Time / actions */}
+                          <div className={`px-3 pb-2 pt-0.5 flex items-center gap-2 ${isMine ? 'justify-end text-purple-200/70' : 'justify-start text-text-secondary'}`}>
+                            {isMine && editingId !== m.id && (
+                              <>
+                                <button onClick={() => startEditMessage(m)} className="text-[10px] hover:text-white flex items-center gap-1"><Edit3 size={10} />Изм.</button>
+                                <button onClick={() => deleteMessage(m.id)} className="text-[10px] hover:text-red-300 flex items-center gap-1"><Trash2 size={10} />Удал.</button>
+                              </>
+                            )}
+                            <span className="text-[10px]">{new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
                         </div>
                       </motion.div>
                     );

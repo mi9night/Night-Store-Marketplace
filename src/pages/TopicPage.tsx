@@ -216,6 +216,13 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     load();
   };
 
+  const editComment = async (id: string, content: string) => {
+    if (!content.trim()) return;
+    const { error } = await supabase.from('forum_comments').update({ content: content.trim(), edited_at: new Date().toISOString() }).eq('id', id);
+    if (error) alert(error.message);
+    load();
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files).slice(0, 4 - commentImages.length);
@@ -464,6 +471,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
               onVote={vote}
               onReply={setReplyTo}
               onDelete={delComment}
+              onEdit={editComment}
               index={i}
             />
           ))
@@ -575,9 +583,12 @@ const CommentItem: React.FC<{
   onVote: (t: 'comment', id: string, v: 1 | -1) => void;
   onReply: (c: Comment) => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string, content: string) => void;
   index: number;
   depth?: number;
-}> = ({ comment: c, allComments, myVotes, me, myRole, blockedIds, onVote, onReply, onDelete, index, depth = 0 }) => {
+}> = ({ comment: c, allComments, myVotes, me, myRole, blockedIds, onVote, onReply, onDelete, onEdit, index, depth = 0 }) => {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(c.content || '');
   const replies = allComments.filter(x => x.parent_id === c.id);
   const v = myVotes[`comment:${c.id}`];
   const canDelete = me && (me.id === c.author_id || ['moderator', 'admin', 'owner'].includes(myRole || ''));
@@ -586,7 +597,7 @@ const CommentItem: React.FC<{
   if (isBlockedAuthor) {
     return (
       <BlockedContent label="Комментарий от пользователя из вашего чёрного списка" className={depth > 0 ? 'ml-6 sm:ml-10' : ''}>
-        <CommentItem comment={c} allComments={allComments} myVotes={myVotes} me={me} myRole={myRole} blockedIds={[]} onVote={onVote} onReply={onReply} onDelete={onDelete} index={index} depth={depth} />
+        <CommentItem comment={c} allComments={allComments} myVotes={myVotes} me={me} myRole={myRole} blockedIds={[]} onVote={onVote} onReply={onReply} onDelete={onDelete} onEdit={onEdit} index={index} depth={depth} />
       </BlockedContent>
     );
   }
@@ -608,7 +619,18 @@ const CommentItem: React.FC<{
         <UserLink userId={c.author_id} username={c.author_name} className="text-sm font-semibold text-white" />
         <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
       </div>
-      <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>
+      {editing ? (
+        <div className="space-y-2 mb-2">
+          <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={3}
+            className="w-full px-3 py-2 rounded-lg bg-[#0B0A12] border border-purple-900/30 text-white text-sm resize-none" />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setEditing(false); setEditText(c.content || ''); }} className="px-3 py-1.5 rounded-lg bg-purple-900/20 text-white text-xs">Отмена</button>
+            <button onClick={() => { onEdit(c.id, editText); setEditing(false); }} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs flex items-center gap-1"><Save size={11} />Сохранить</button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>
+      )}
 
       {/* Фото в комменте */}
       {c.images && c.images.length > 0 && (
@@ -640,6 +662,12 @@ const CommentItem: React.FC<{
             <Reply size={11} /> Ответить
           </button>
         )}
+        {me?.id === c.author_id && !editing && (
+          <button onClick={() => setEditing(true)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-purple-900/20 text-text-secondary hover:text-purple-300">
+            <Edit3 size={11} /> Изменить
+          </button>
+        )}
         <div className="ml-auto flex items-center gap-1">
           <ReportButton targetType="comment" targetId={c.id} targetName={'Комментарий: ' + c.content.slice(0, 40)} />
           {canDelete && (
@@ -666,6 +694,7 @@ const CommentItem: React.FC<{
               onVote={onVote}
               onReply={onReply}
               onDelete={onDelete}
+              onEdit={onEdit}
               index={i}
               depth={Math.min(depth + 1, 5)}
             />
