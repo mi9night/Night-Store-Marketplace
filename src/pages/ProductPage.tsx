@@ -32,21 +32,43 @@ const riskConfig = {
 
 const getCredentialGroups = (data: Record<string, any>) => {
   const entries = Object.entries(data || {});
+  const normalize = (key: string) => key.toLowerCase().trim();
+  const emailKeyEntry = entries.find(([key]) => /@/.test(key));
+
   const findValue = (pred: (key: string) => boolean) => {
-    const hit = entries.find(([key]) => pred(key.toLowerCase()));
+    const hit = entries.find(([key]) => pred(normalize(key)));
     return hit ? String(hit[1]) : '';
   };
-  const accountLogin = findValue(k => ['почта', 'логин', 'email', 'login'].includes(k.trim())) || '';
-  const accountPassword = findValue(k => k.trim() === 'пароль' || k.trim() === 'password') || '';
-  const mailEmail = findValue(k => k.includes('родная почта') || k.includes('временная почта') || k.includes('почта от почты')) || accountLogin;
-  const mailPassword = findValue(k => k.includes('пароль от почты') || k.includes('пароль от врем') || k.includes('mail password') || k.includes('email password')) || '';
+
+  const accountLogin =
+    findValue(k => ['почта', 'логин', 'email', 'login'].includes(k)) ||
+    (emailKeyEntry ? String(emailKeyEntry[0]) : '');
+
+  const accountPassword =
+    findValue(k => k === 'пароль' || k === 'password') ||
+    (emailKeyEntry ? String(emailKeyEntry[1]) : '');
+
+  const mailEmail =
+    findValue(k => k.includes('родная почта') || k.includes('временная почта') || k.includes('почта от почты') || k.includes('mail email')) ||
+    accountLogin;
+
+  const mailPassword =
+    findValue(k => k.includes('пароль от почты') || k.includes('пароль от врем') || k.includes('mail password') || k.includes('email password')) ||
+    accountPassword;
+
   const used = new Set<string>();
   entries.forEach(([key]) => {
-    const k = key.toLowerCase();
-    if (['почта', 'логин', 'email', 'login', 'пароль', 'password'].includes(k.trim()) ||
-      k.includes('родная почта') || k.includes('временная почта') || k.includes('пароль от почты') || k.includes('пароль от врем') ||
-      k.includes('код') || k.includes('code') || k.includes('письм') || k.includes('letter')) used.add(key);
+    const k = normalize(key);
+    if (
+      key === accountLogin ||
+      ['почта', 'логин', 'email', 'login', 'пароль', 'password'].includes(k) ||
+      k.includes('родная почта') || k.includes('временная почта') || k.includes('почта от почты') ||
+      k.includes('пароль от почты') || k.includes('пароль от врем') ||
+      k.includes('mail password') || k.includes('email password') ||
+      k.includes('mail email') || k.includes('код') || k.includes('code') || k.includes('письм') || k.includes('letter')
+    ) used.add(key);
   });
+
   const additional = entries.filter(([key]) => !used.has(key));
   return { accountLogin, accountPassword, mailEmail, mailPassword, additional };
 };
