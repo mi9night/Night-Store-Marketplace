@@ -300,7 +300,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
         <div>
           <p className="text-sm font-semibold text-white mb-1">Автоматическая проверка товаров</p>
           <p className="text-xs text-text-secondary leading-relaxed">
-            Автопроверка доступна для категорий: Steam, Telegram, Epic Games, Fortnite, EA, Ubisoft, Minecraft, Supercell, Roblox, World of Tanks, Wargaming, Rockstar, Discord, TikTok, Instagram и miHoYo. По остальным категориям ответственность за корректность товара несёт пользователь, а спорные случаи разбираются через поддержку.
+            Автоматическая проверка сейчас доступна только для категорий: Steam, Telegram и Discord. Проверка остальных категорий находится в разработке, поэтому ответственность за корректность товара несёт пользователь, а спорные случаи разбираются через поддержку.
           </p>
         </div>
       </motion.div>
