@@ -35,6 +35,7 @@ interface Message {
   attachments?: string; // JSON: string[]
   is_read: boolean;
   created_at: string;
+  edited_at?: string | null;
 }
 
 /* ─── Image Viewer ─────────────────────────────────────────────────────── */
@@ -459,7 +460,7 @@ const MessagesPage: React.FC = () => {
 
   const saveEditMessage = async (id: string) => {
     if (!editingText.trim()) return;
-    const { error } = await supabase.from('messages').update({ text: editingText.trim() }).eq('id', id).eq('sender_id', user.id);
+    const { error } = await supabase.from('messages').update({ text: editingText.trim(), edited_at: new Date().toISOString() }).eq('id', id).eq('sender_id', user.id);
     if (error) { alert(error.message); return; }
     setEditingId(null);
     setEditingText('');
@@ -615,7 +616,10 @@ const MessagesPage: React.FC = () => {
                                 <button onClick={() => deleteMessage(m.id)} className="text-[10px] hover:text-red-300 flex items-center gap-1"><Trash2 size={10} />Удал.</button>
                               </>
                             )}
-                            <span className="text-[10px]">{new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-[10px]">
+                              {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                              {m.edited_at && ' · изменено'}
+                            </span>
                           </div>
                         </div>
                       </motion.div>

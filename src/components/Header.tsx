@@ -315,7 +315,7 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-purple-900/20 bg-bg-secondary/80 backdrop-blur">
-      <div className="flex items-center h-16 px-4 gap-4">
+      <div className="flex items-center h-16 px-2 sm:px-4 gap-1.5 sm:gap-4">
         <button onClick={onMenuToggle} className="lg:hidden text-text-secondary hover:text-text-primary p-1">
           {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -350,9 +350,11 @@ const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Search */}
-        <GlobalSearch setCurrentPage={setCurrentPage} onOpenAccount={onOpenAccountFull} onOpenTopic={onOpenTopic} />
+        <div className="hidden sm:block flex-1 max-w-xl mx-auto">
+          <GlobalSearch setCurrentPage={setCurrentPage} onOpenAccount={onOpenAccountFull} onOpenTopic={onOpenTopic} />
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* ===== BALANCE (выезжающий дропдаун) ===== */}
           <div className="relative" ref={balanceRef}>
             <motion.button onClick={() => setShowBalance(!showBalance)}
@@ -515,7 +517,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Messages dropdown */}
-          <div className="relative hidden sm:block" ref={msgRef}>
+          <div className="relative" ref={msgRef}>
             <motion.button onClick={() => setShowMsgDropdown(!showMsgDropdown)}
               className="relative p-2 text-text-secondary hover:text-text-primary"
               whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>

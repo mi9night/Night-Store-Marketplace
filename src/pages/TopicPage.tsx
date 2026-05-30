@@ -44,6 +44,7 @@ interface Comment {
   likes: number;
   dislikes?: number;
   created_at: string;
+  edited_at?: string | null;
 }
 
 const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
@@ -617,7 +618,9 @@ const CommentItem: React.FC<{
           )}
         </div>
         <UserLink userId={c.author_id} username={c.author_name} className="text-sm font-semibold text-white" />
-        <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
+        <span className="text-xs text-text-secondary ml-auto">
+          {new Date(c.created_at).toLocaleString('ru-RU')}{c.edited_at && ' · изменено'}
+        </span>
       </div>
       {editing ? (
         <div className="space-y-2 mb-2">
