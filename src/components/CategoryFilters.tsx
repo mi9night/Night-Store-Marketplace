@@ -108,14 +108,39 @@ const CategoryFilters: React.FC<Props> = ({ groups, values, onChange }) => {
               );
             }
             if (f.type === 'select') {
+              const listId = `filter-${f.key}-${gi}`;
+              const cur = values[f.key] || '';
               return (
                 <div key={f.key}>
                   <label className="text-[11px] text-text-secondary mb-1 block">{f.label}</label>
-                  <select value={values[f.key] || ''} onChange={e => onChange(set(values, f.key, e.target.value))}
-                    className="w-full px-2 py-1.5 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white">
-                    <option value="">— любой —</option>
-                    {f.options.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      list={listId}
+                      value={cur}
+                      onChange={e => onChange(set(values, f.key, e.target.value))}
+                      placeholder="— любой — / начните вводить"
+                      className="w-full px-2 py-1.5 pr-7 bg-bg-card border border-purple-900/30 rounded-md text-xs text-white placeholder:text-text-secondary focus:border-accent focus:outline-none"
+                    />
+                    {cur && (
+                      <button
+                        type="button"
+                        onClick={() => onChange(set(values, f.key, ''))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white text-xs"
+                        title="Очистить"
+                      >
+                        ×
+                      </button>
+                    )}
+                    <datalist id={listId}>
+                      {f.options.map(o => <option key={o} value={o} />)}
+                    </datalist>
+                  </div>
+                  {f.options.length > 12 && (
+                    <p className="text-[9px] text-text-secondary mt-1">
+                      💡 Можно печатать для поиска по списку
+                    </p>
+                  )}
                 </div>
               );
             }

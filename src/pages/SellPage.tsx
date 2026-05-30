@@ -8,6 +8,7 @@ import {
   Joystick, Pickaxe
 } from 'lucide-react';
 import { categories } from '../data/mockData';
+import { ACCOUNT_ORIGIN_OPTIONS, COUNTRY_OPTIONS, MAIL_ACCESS_OPTIONS } from '../data/categoryFilters';
 import { supabase } from '../lib/supabase';
 import { fetchActivePunishment, formatPunishmentDate } from '../lib/moderation';
 
@@ -281,6 +282,9 @@ const SellPage: React.FC = () => {
     title: '',
     description: '',
     price: '',
+    country: '',
+    accountOrigin: '',
+    mailAccess: '',
     hasOriginalEmail: false,
     hasTempEmail: false,
     originalEmail: '',
@@ -354,6 +358,11 @@ const SellPage: React.FC = () => {
         }
       });
 
+      if (formData.accountOrigin) dataObj['Происхождение аккаунта'] = formData.accountOrigin;
+      if (formData.mailAccess) dataObj['Доступ к почте'] = formData.mailAccess;
+      if (detectedMailDomain) dataObj['Почтовый домен'] = detectedMailDomain;
+      if (formData.country) dataObj['Страна'] = formData.country;
+
       // Emails
       if (formData.hasOriginalEmail && formData.originalEmail) {
         dataObj['Родная почта'] = formData.originalEmail;
@@ -374,6 +383,7 @@ const SellPage: React.FC = () => {
         category: formData.category,
         subcategory: formData.subcategory || null,
         price: parseInt(formData.price),
+        country: formData.country || null,
         games_count: gamesCount,
         has_original_email: formData.hasOriginalEmail,
         has_temp_email: formData.hasTempEmail,
@@ -393,6 +403,7 @@ const SellPage: React.FC = () => {
         setStep(1);
         setFormData({
           category: '', subcategory: '', title: '', description: '', price: '',
+          country: '', accountOrigin: '', mailAccess: '',
           hasOriginalEmail: false, hasTempEmail: false,
           originalEmail: '', originalEmailPassword: '', tempEmail: '', tempEmailPassword: '',
           guarantee: true, guaranteeHours: '24',
@@ -408,6 +419,11 @@ const SellPage: React.FC = () => {
   };
 
   const currentCategory = categories.find(c => c.id === formData.category);
+  const detectedMailDomain = (() => {
+    const email = formData.originalEmail || formData.tempEmail;
+    const match = email.trim().toLowerCase().match(/@([^@\s]+)$/);
+    return match?.[1] || '';
+  })();
   const addDataField = () => setFormData({ ...formData, accountData: [...formData.accountData, { key: '', value: '' }] });
   const removeDataField = (idx: number) => setFormData({ ...formData, accountData: formData.accountData.filter((_, i) => i !== idx) });
   const updateDataField = (idx: number, field: 'key' | 'value', val: string) => {
@@ -576,6 +592,45 @@ const SellPage: React.FC = () => {
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Подробно опишите аккаунт..." rows={4}
                     className="w-full px-4 py-3 rounded-xl text-sm bg-bg-secondary border border-purple-900/30 text-white resize-none focus:border-accent focus:outline-none transition-colors" />
+                </div>
+
+                <div className="bg-[#0B0A12] border border-purple-900/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Shield size={14} className="text-accent" />
+                    <span className="text-xs font-semibold text-accent-soft uppercase tracking-wider">Основные параметры</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-text-secondary mb-1.5 block">Страна</label>
+                      <select value={formData.country} onChange={e => setFormData({ ...formData, country: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
+                        <option value="">— выберите страну —</option>
+                        {COUNTRY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-text-secondary mb-1.5 block">Происхождение аккаунта</label>
+                      <select value={formData.accountOrigin} onChange={e => setFormData({ ...formData, accountOrigin: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
+                        <option value="">— выберите происхождение —</option>
+                        {ACCOUNT_ORIGIN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-text-secondary mb-1.5 block">Доступ к почте</label>
+                      <select value={formData.mailAccess} onChange={e => setFormData({ ...formData, mailAccess: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white focus:border-accent focus:outline-none transition-colors">
+                        <option value="">— выберите доступ —</option>
+                        {MAIL_ACCESS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-text-secondary mb-1.5 block">Почтовый домен</label>
+                      <div className="w-full px-3 py-2.5 rounded-xl text-sm bg-bg-card border border-purple-900/30 text-white font-mono">
+                        {detectedMailDomain || 'Определится автоматически после ввода почты'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Category-specific fields */}
@@ -752,6 +807,10 @@ const SellPage: React.FC = () => {
                   formData.subcategory ? { label: 'Подкатегория', value: formData.subcategory } : null,
                   { label: 'Название', value: formData.title || '—' },
                   { label: 'Цена', value: formData.price ? `${parseInt(formData.price).toLocaleString()} ₽` : '—' },
+                  formData.country ? { label: 'Страна', value: formData.country } : null,
+                  formData.accountOrigin ? { label: 'Происхождение', value: formData.accountOrigin } : null,
+                  formData.mailAccess ? { label: 'Доступ к почте', value: formData.mailAccess } : null,
+                  detectedMailDomain ? { label: 'Почтовый домен', value: detectedMailDomain } : null,
                   { label: 'Гарантия', value: formData.guarantee ? `${formData.guaranteeHours}ч` : 'Только на момент покупки' },
                   { label: 'Escrow', value: 'Активна ✅' },
                   { label: 'Уровень риска', value: riskCfg.label },
