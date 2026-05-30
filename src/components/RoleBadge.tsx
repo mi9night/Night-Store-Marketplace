@@ -1,6 +1,6 @@
 // src/components/RoleBadge.tsx
 import React, { useEffect, useState } from 'react';
-import { Award, Crown, Flame, Gamepad2, Moon, Music, Palette, Rocket, Shield, Skull, Sparkles, Star, Target, Trophy, Zap } from 'lucide-react';
+import { Award, Crown, Flame, Gamepad2, Moon, Music, Palette, Rocket, Send, Shield, Skull, Sparkles, Star, Target, Trophy, Zap } from 'lucide-react';
 import BadgeTooltip from './BadgeTooltip';
 
 interface CustomRole {
@@ -29,12 +29,12 @@ interface Props {
   user?: User;
 }
 
-const presetMap: Record<string, { label: string; icon: string; cls: string; glow: string; tip: string }> = {
-  owner:     { label: 'OWNER',     icon: '👑', cls: 'bg-red-900/30 text-red-400 border-red-800/40',           glow: 'shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse', tip: '👑 OWNER\nВладелец сайта' },
-  admin:     { label: 'ADMIN',     icon: '🛡',  cls: 'bg-orange-900/30 text-orange-400 border-orange-800/40', glow: 'shadow-[0_0_10px_rgba(249,115,22,0.5)]',              tip: '🛡 ADMIN\nАдминистратор сайта' },
-  moderator: { label: 'MOD',       icon: '⚖️', cls: 'bg-blue-900/30 text-blue-400 border-blue-800/40',        glow: 'shadow-[0_0_10px_rgba(59,130,246,0.5)]',              tip: '⚖️ MOD\nМодератор сайта' },
-  support:   { label: 'SUPPORT',   icon: '🛟', cls: 'bg-cyan-900/30 text-cyan-400 border-cyan-800/40',        glow: 'shadow-[0_0_8px_rgba(6,182,212,0.4)]',                tip: '🛟 SUPPORT\nСлужба поддержки' },
-  vip:       { label: 'VIP',       icon: '💎', cls: 'bg-purple-900/30 text-purple-300 border-purple-700/40',  glow: 'shadow-[0_0_10px_rgba(168,85,247,0.5)]',              tip: '💎 VIP\nVIP-статус' },
+const presetMap: Record<string, { label: string; Icon: React.ElementType; cls: string; glow: string; tip: string }> = {
+  owner:     { label: 'OWNER',   Icon: Crown,    cls: 'bg-red-900/30 text-red-400 border-red-800/40',          glow: 'shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse', tip: 'OWNER\nВладелец сайта' },
+  admin:     { label: 'ADMIN',   Icon: Shield,   cls: 'bg-orange-900/30 text-orange-400 border-orange-800/40', glow: 'shadow-[0_0_10px_rgba(249,115,22,0.5)]',              tip: 'ADMIN\nАдминистратор сайта' },
+  moderator: { label: 'MOD',     Icon: Target,   cls: 'bg-blue-900/30 text-blue-400 border-blue-800/40',       glow: 'shadow-[0_0_10px_rgba(59,130,246,0.5)]',              tip: 'MOD\nМодератор сайта' },
+  support:   { label: 'SUPPORT', Icon: Send,     cls: 'bg-cyan-900/30 text-cyan-400 border-cyan-800/40',       glow: 'shadow-[0_0_8px_rgba(6,182,212,0.4)]',                tip: 'SUPPORT\nСлужба поддержки' },
+  vip:       { label: 'VIP',     Icon: Sparkles, cls: 'bg-purple-900/30 text-purple-300 border-purple-700/40', glow: 'shadow-[0_0_10px_rgba(168,85,247,0.5)]',              tip: 'VIP\nVIP-статус' },
 };
 
 const glowByColor: Record<string, string> = {
@@ -95,6 +95,19 @@ const iconMap: Record<string, React.ElementType> = {
   music: Music,
   skull: Skull,
   sparkles: Sparkles,
+  '⭐': Star,
+  '🌙': Moon,
+  '🔥': Flame,
+  '💎': Sparkles,
+  '👑': Crown,
+  '🛡': Shield,
+  '⚡': Zap,
+  '🚀': Rocket,
+  '🎯': Target,
+  '🎮': Gamepad2,
+  '🎨': Palette,
+  '🎵': Music,
+  '💀': Skull,
 };
 
 const CustomRoleIcon: React.FC<{ icon?: string; className?: string; size?: number }> = ({ icon, className, size = 11 }) => {
@@ -116,7 +129,7 @@ export const RoleBadge: React.FC<Props> = ({ role, user }) => {
       badges.push(
         <BadgeTooltip key="role" text={p.tip}>
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${p.cls} ${glowEnabled ? p.glow : ''}`}>
-            {p.icon} {p.label}
+            <p.Icon size={11} /> {p.label}
           </span>
         </BadgeTooltip>
       );
