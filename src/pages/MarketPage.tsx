@@ -9,7 +9,7 @@ import { categories } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { dbToAccount } from '../lib/db';
 import CategoryFilters from '../components/CategoryFilters';
-import { CATEGORY_FILTERS } from '../data/categoryFilters';
+import { CATEGORY_FILTERS, STEAM_GAME_OPTIONS } from '../data/categoryFilters';
 import { Account } from '../types';
 import type { Page } from '../types/pages';
 
@@ -194,6 +194,48 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
     setSelectedRisk('all');
     setSearch('');
     setExtraFilters({});
+  };
+
+  const dynamicSteamGames = useMemo(() => {
+    const set = new Set<string>(STEAM_GAME_OPTIONS);
+    const ignored = new Set(['Steam', 'Prime', 'Аккаунт', 'Игры', 'Игровой аккаунт']);
+
+    const addCandidate = (value?: any) => {
+      if (typeof value !== 'string') return;
+      value
+        .split(/[;,|]/)
+        .map(v => v.trim())
+        .filter(v => v.length >= 2 && v.length <= 60 && !ignored.has(v))
+        .forEach(v => set.add(v));
+    };
+
+    accounts.filter(a => a.category === 'steam').forEach((a: any) => {
+      addCandidate(a.subcategory);
+      const data = a.accountData || a.data || {};
+      Object.entries(data).forEach(([key, value]) => {
+        const k = String(key).toLowerCase();
+        if (k.includes('game') || k.includes('игр') || k.includes('vac') || k.includes('rank')) {
+          addCandidate(value);
+        }
+      });
+    });
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ru'));
+  }, [accounts]);
+
+  const getCategoryGroups = (categoryId: string) => {
+    const groups = CATEGORY_FILTERS[categoryId];
+    if (categoryId !== 'steam' || !groups) return groups;
+
+    return groups.map(group => ({
+      ...group,
+      fields: group.fields.map((field: any) => {
+        if (['game_no_vac', 'inv_game', 'vac_ban_in'].includes(field.key)) {
+          return { ...field, options: dynamicSteamGames };
+        }
+        return field;
+      }),
+    }));
   };
 
   const activeFiltersCount = [
@@ -475,7 +517,7 @@ const MarketPage: React.FC<MarketPageProps> = ({ onSelectAccount, setCurrentPage
                   if (selectedCategory === 'all') return null;
                   const cat = categories.find(cc => cc.id === selectedCategory);
                   if (!cat) return null;
-                  const groups = CATEGORY_FILTERS[selectedCategory];
+                  const groups = getCategoryGroups(selectedCategory);
                   if (!groups) return (
                     <div className="bg-purple-900/10 border border-purple-700/20 rounded-xl p-3 text-xs text-text-secondary">
                       💡 Для категории <b className="text-white">{cat.name}</b> используются базовые фильтры
