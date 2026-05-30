@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Moon } from 'lucide-react';
+import { MailCheck, Moon, Send } from 'lucide-react';
 import { STARTUP_NOTICE_EVENT, STARTUP_NOTICE_TRIGGER_KEY } from '../components/StartupNotice';
+
+const EMAIL_CONFIRMED_REDIRECT = `${window.location.origin}/email-confirmed`;
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,7 +13,18 @@ const AuthPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [showConfirmNotice, setShowConfirmNotice] = useState(false);
+
+  const translateAuthError = (message?: string) => {
+    const m = (message || '').toLowerCase();
+    if (m.includes('email not confirmed')) return 'Подтвердите почту: мы отправили письмо со ссылкой подтверждения.';
+    if (m.includes('invalid login credentials')) return 'Неверный email или пароль';
+    if (m.includes('user already registered') || m.includes('already registered')) return 'Этот email уже зарегистрирован';
+    return message || 'Ошибка авторизации';
+  };
 
   const handleAuth = async () => {
     try {
@@ -37,17 +50,26 @@ const AuthPage: React.FC = () => {
       setLoading(true);
 
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
+
+        const confirmed = !!(data.user?.email_confirmed_at || (data.user as any)?.confirmed_at);
+        if (!confirmed) {
+          await supabase.auth.signOut();
+          setRegisteredEmail(email);
+          setShowConfirmNotice(true);
+          setError('Подтвердите почту перед входом в аккаунт');
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: EMAIL_CONFIRMED_REDIRECT,
             data: {
               username,
             },
@@ -56,16 +78,56 @@ const AuthPage: React.FC = () => {
 
         if (error) throw error;
 
+        // Если в Supabase выключено обязательное подтверждение и сессия создалась сразу,
+        // всё равно не пускаем дальше без подтверждённой почты.
+        if (data.session && data.user && !(data.user.email_confirmed_at || (data.user as any).confirmed_at)) {
+          await supabase.auth.signOut();
+        }
+
         localStorage.setItem(STARTUP_NOTICE_TRIGGER_KEY, '1');
         sessionStorage.setItem(STARTUP_NOTICE_TRIGGER_KEY, '1');
         window.dispatchEvent(new Event(STARTUP_NOTICE_EVENT));
 
+        setRegisteredEmail(email);
+        setShowConfirmNotice(true);
         setError('Письмо подтверждения отправлено ✅');
       }
     } catch (err: any) {
-      setError(err.message || 'Ошибка авторизации');
+      setError(translateAuthError(err.message));
+      if ((err.message || '').toLowerCase().includes('email not confirmed')) {
+        setRegisteredEmail(email);
+        setShowConfirmNotice(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resendConfirmation = async () => {
+    const targetEmail = registeredEmail || email;
+    if (!targetEmail) {
+      setError('Введите email, чтобы отправить письмо повторно');
+      return;
+    }
+
+    setResending(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: EMAIL_CONFIRMED_REDIRECT,
+        },
+      });
+
+      if (error) throw error;
+      setError('Письмо подтверждения отправлено повторно ✅');
+      setShowConfirmNotice(true);
+    } catch (err: any) {
+      setError(translateAuthError(err.message));
+    } finally {
+      setResending(false);
     }
   };
 
@@ -99,6 +161,7 @@ const AuthPage: React.FC = () => {
                 onClick={() => {
                   setIsLogin(item.id === 'login');
                   setError('');
+                  setShowConfirmNotice(false);
                 }}
                 className={`relative rounded-xl py-2.5 text-sm font-semibold transition-all ${
                   active ? 'text-white' : 'text-text-secondary hover:text-white'
@@ -118,6 +181,32 @@ const AuthPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-white text-center mb-6">
           {isLogin ? 'Вход' : 'Регистрация'}
         </h2>
+
+        {showConfirmNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 rounded-2xl border border-green-700/30 bg-green-900/10 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <MailCheck size={20} className="text-green-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-white mb-1">Подтвердите почту</p>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Мы отправили письмо на <span className="text-green-400 font-mono">{registeredEmail || email}</span>. Перейдите по ссылке в письме, после подтверждения вы сможете войти на сайт.
+                </p>
+                <button
+                  type="button"
+                  onClick={resendConfirmation}
+                  disabled={resending}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-900/20 hover:bg-purple-900/40 border border-purple-700/30 text-purple-300 text-xs font-semibold disabled:opacity-50"
+                >
+                  <Send size={12} /> {resending ? 'Отправляем...' : 'Отправить письмо ещё раз'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <form
           onSubmit={(e) => {
@@ -190,6 +279,7 @@ const AuthPage: React.FC = () => {
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
+              setShowConfirmNotice(false);
             }}
           >
             {isLogin ? 'Регистрация' : 'Войти'}
