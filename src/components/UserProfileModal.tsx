@@ -148,14 +148,14 @@ const UserProfileModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="px-4 pb-4">
+          <div className="relative z-10 px-4 pb-4">
             {/* Avatar — частично в баннере, верх в контенте */}
-            <div className="-mt-10 mb-3 relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-[#171425] overflow-hidden shadow-lg">
+            <div className="-mt-10 mb-3 relative z-20">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-bg-card overflow-hidden shadow-[0_0_24px_rgba(139,92,246,0.22)]">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-xl font-bold text-white">{avatarLetter}</span>
+                  <span className="text-xl font-bold leading-none text-white">{avatarLetter}</span>
                 )}
               </div>
             </div>

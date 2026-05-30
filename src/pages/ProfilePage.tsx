@@ -497,15 +497,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
           />
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="relative z-10 px-6 pb-6">
           {/* Аватарка отдельно — наполовину в баннер, наполовину под ним */}
-          <div className="-mt-12 mb-3">
+          <div className="relative z-20 -mt-12 mb-3">
             <div className="relative inline-block">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-bg-card overflow-hidden">
+              <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center border-4 border-bg-card overflow-hidden shadow-[0_0_28px_rgba(139,92,246,0.22)]">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-3xl font-bold text-white">{avatarLetter}</span>
+                  <span className="text-3xl font-bold leading-none text-white">{avatarLetter}</span>
                 )}
               </div>
               {isOwnProfile && (
@@ -516,7 +516,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
                   <Camera size={12} className="text-white" />
                 </button>
               )}
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-card" />
+              <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-card shadow-[0_0_10px_rgba(34,197,94,0.65)]" />
               <input
                 ref={avatarInput}
                 type="file"
