@@ -1179,6 +1179,14 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
     openUser(active);
   };
 
+  const deletePunishmentHistory = async (banId: string) => {
+    if (myRole !== 'owner') return;
+    if (!confirm('Удалить запись из истории блокировок? Это действие нельзя отменить.')) return;
+    const { error } = await supabase.from('bans').delete().eq('id', banId);
+    if (error) { alert(error.message); return; }
+    openUser(active);
+  };
+
   const setStat = async () => {
     if (!active) return;
     const { data, error } = await supabase.rpc('moderate_set_stat', { p_user_id: active.id, p_field: statField, p_value: statValue });
@@ -1309,11 +1317,18 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
                     <b>Выдал:</b> {b.moderator_name} · <b>Срок:</b> {b.duration_hours ? `${b.duration_hours} ч` : 'навсегда'}
                     {b.ends_at && ` · до ${new Date(b.ends_at).toLocaleString('ru-RU')}`}
                   </p>
-                  {isActive && (
-                    <button onClick={() => unpunish(b.id)} className="mt-2 text-xs text-green-400 hover:underline">
-                      ✓ Снять наказание
-                    </button>
-                  )}
+                  <div className="mt-2 flex items-center gap-3">
+                    {isActive && (
+                      <button onClick={() => unpunish(b.id)} className="text-xs text-green-400 hover:underline">
+                        ✓ Снять наказание
+                      </button>
+                    )}
+                    {myRole === 'owner' && (
+                      <button onClick={() => deletePunishmentHistory(b.id)} className="text-xs text-red-400 hover:underline">
+                        <Trash2 size={11} className="inline mr-1" />Удалить из истории
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
