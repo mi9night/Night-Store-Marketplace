@@ -24,6 +24,45 @@ interface Order {
   account?: any;
 }
 
+const CopyValueButton: React.FC<{ value: string }> = ({ value }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1300);
+    } catch {}
+  };
+
+  return (
+    <motion.button
+      type="button"
+      onClick={copy}
+      whileHover={{ scale: 1.06 }}
+      whileTap={{ scale: 0.94 }}
+      className={`h-8 min-w-8 px-2 rounded-lg border flex items-center justify-center transition-all ${
+        copied
+          ? 'bg-green-900/30 border-green-600/40 text-green-400 shadow-[0_0_14px_rgba(34,197,94,0.22)]'
+          : 'bg-purple-900/20 border-purple-700/30 text-purple-300 hover:bg-purple-900/40 hover:border-purple-500/50 hover:text-white'
+      }`}
+      title={copied ? 'Скопировано' : 'Скопировать'}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {copied ? (
+          <motion.span key="check" initial={{ scale: 0.6, opacity: 0, rotate: -20 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} exit={{ scale: 0.6, opacity: 0 }}>
+            <CheckCircle2 size={15} />
+          </motion.span>
+        ) : (
+          <motion.span key="copy" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }}>
+            <Copy size={14} />
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  );
+};
+
 const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -270,11 +309,7 @@ const PurchasesPage: React.FC<Props> = ({ onSelectAccount, setCurrentPage }) => 
     <div className="flex items-center gap-2 bg-bg-card rounded-lg p-2">
       <span className="text-[10px] text-text-secondary uppercase min-w-[92px]">{label}:</span>
       <span className="text-xs text-white flex-1 font-mono truncate">{value || '—'}</span>
-      {value && (
-        <button onClick={() => copyText(value)} className="p-1 text-purple-300 hover:text-white" title="Копировать">
-          <Copy size={12} />
-        </button>
-      )}
+      {value && <CopyValueButton value={value} />}
     </div>
   );
 
