@@ -1,7 +1,7 @@
 // src/components/LiveFeed.tsx
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, X, MessageSquare, ShoppingBag, Gift, Megaphone } from 'lucide-react';
+import { Trophy, X, MessageSquare, ShoppingBag, Gift, Megaphone, AlertTriangle, Flame, Rocket, Star, Moon, Send, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUserNav } from '../lib/UserNavContext';
 import { usePrivacy } from '../lib/usePrivacy';
@@ -26,6 +26,19 @@ const typeConfig: Record<string, { label: string; Icon: any; animate?: boolean }
   new_product: { label: 'ТОВАР',      Icon: ShoppingBag },
   giveaway:    { label: 'РОЗЫГРЫШ',   Icon: Gift, animate: true },
   custom:      { label: 'ОБЪЯВЛЕНИЕ', Icon: Megaphone },
+};
+
+const liveIconMap: Record<string, any> = {
+  megaphone: Megaphone,
+  alert: AlertTriangle,
+  party: Sparkles,
+  gift: Gift,
+  flame: Flame,
+  diamond: Sparkles,
+  rocket: Rocket,
+  star: Star,
+  moon: Moon,
+  send: Send,
 };
 
 const LiveFeed: React.FC = () => {
@@ -71,6 +84,7 @@ const LiveFeed: React.FC = () => {
   if (!liveFeedEnabled || !event) return null;
 
   const cfg = typeConfig[event.event_type] || typeConfig.sale;
+  const EventIcon = liveIconMap[event.icon || ''] || cfg.Icon;
   const isClickable = !!(event.user_id && event.user_id !== 'demo');
 
   return (
@@ -96,15 +110,13 @@ const LiveFeed: React.FC = () => {
               {event.avatar_url ? (
                 <img src={event.avatar_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-sm font-bold text-white">
-                  {(event.username?.[0] || event.icon || 'L').toUpperCase()}
-                </span>
+                <EventIcon size={18} className="text-white" />
               )}
             </button>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <cfg.Icon size={11} style={{ color: 'var(--color-accent, #8A2BE2)' }} />
+                <EventIcon size={11} style={{ color: 'var(--color-accent, #8A2BE2)' }} />
                 <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--color-accent-soft, #B57CFF)' }}>
                   {cfg.label}
                 </span>

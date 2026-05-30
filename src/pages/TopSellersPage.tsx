@@ -345,9 +345,15 @@ const TopSellersPage: React.FC = () => {
               newbie: 'Базовые возможности', bronze: 'Доступ к API', silver: 'Приоритет поддержки',
               gold: 'Премиум значок', platinum: 'Консьерж сервис', diamond: 'VIP статус',
             };
-            const icons: Record<string, string> = {
-              newbie: '⭐', bronze: '🥉', silver: '🏅', gold: '🌟', platinum: '💎', diamond: '👑',
+            const icons: Record<string, React.ElementType> = {
+              newbie: Star,
+              bronze: Award,
+              silver: CheckCircle2,
+              gold: Trophy,
+              platinum: Sparkles,
+              diamond: Crown,
             };
+            const LevelIcon = icons[key];
             return (
               <motion.div
                 key={key}
@@ -357,7 +363,7 @@ const TopSellersPage: React.FC = () => {
                 className={`flex items-center justify-between p-4 bg-[#0B0A12] rounded-xl border ${levelColorBg} hover:border-purple-700/40 transition-all`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`text-2xl font-black ${levelColors[key]}`}>{icons[key]}</div>
+                  <div className={`w-10 h-10 rounded-xl bg-[#171425] border border-purple-900/20 flex items-center justify-center ${levelColors[key]}`}><LevelIcon size={21} /></div>
                   <div>
                     <p className={`text-base font-bold ${levelColors[key]} mb-0.5`}>{label}</p>
                     <p className="text-xs text-text-secondary">{sales} продаж</p>

@@ -511,12 +511,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setCurrentPage, onOpenTopic, 
               {isOwnProfile && (
                 <button
                   onClick={() => avatarInput.current?.click()}
-                  className="absolute bottom-0 right-0 w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-500 transition-colors"
+                  className="absolute inset-0 z-10 rounded-2xl bg-black/0 hover:bg-black/35 flex items-center justify-center opacity-0 hover:opacity-100 transition-all"
+                  title="Сменить аватар"
                 >
-                  <Camera size={12} className="text-white" />
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/55 backdrop-blur text-white text-xs font-semibold border border-white/10">
+                    <Camera size={13} /> Сменить
+                  </span>
                 </button>
               )}
-              <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-card shadow-[0_0_10px_rgba(34,197,94,0.65)]" />
+              <div className="absolute bottom-1 right-1 z-20 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-card shadow-[0_0_10px_rgba(34,197,94,0.65)]" />
               <input
                 ref={avatarInput}
                 type="file"

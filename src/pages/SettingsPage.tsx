@@ -709,8 +709,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
           {/* === ОПЛАТА === */}
           {activeSection === 'payments' && (
             <>
-              <h3 className="text-base font-semibold text-white">Способы оплаты</h3>
-              <p className="text-sm text-text-secondary">Скоро здесь можно будет добавить карты и кошельки 💳</p>
+              <h3 className="text-base font-semibold text-white">Финансы и способы оплаты</h3>
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-900/20 border border-green-700/30 flex items-center justify-center flex-shrink-0">
+                    <CreditCard size={18} className="text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white mb-1">Пополнение и вывод уже доступны</p>
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                      Вы можете опробовать финансовые операции прямо сейчас: нажмите на баланс в шапке сайта или в левом меню и выберите нужную кнопку — <span className="text-green-400 font-semibold">«Пополнить»</span> или <span className="text-red-400 font-semibold">«Вывести»</span>.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="bg-[#0B0A12] border border-green-900/20 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-green-400 mb-1">Пополнение</p>
+                    <p className="text-[11px] text-text-secondary">DonatX и DonationAlerts доступны через страницу финансов.</p>
+                  </div>
+                  <div className="bg-[#0B0A12] border border-red-900/20 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-red-400 mb-1">Вывод</p>
+                    <p className="text-[11px] text-text-secondary">Заявка уходит в админку «Финансы» и обрабатывается модерацией.</p>
+                  </div>
+                </div>
+              </div>
             </>
           )}
 
@@ -718,7 +740,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
           {activeSection === 'api' && (
             <>
               <h3 className="text-base font-semibold text-white">API-ключи</h3>
-              <p className="text-sm text-text-secondary">Скоро можно будет создавать API-токены для автоматизации 🔑</p>
+              <div className="bg-bg-secondary border border-purple-900/20 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-900/30 border border-purple-700/30 flex items-center justify-center flex-shrink-0 shadow-[0_0_18px_rgba(168,85,247,0.14)]">
+                    <Key size={18} className="text-accent-soft" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white mb-1">API для автоматизации Night Store</p>
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                      Здесь появятся персональные API-токены для продавцов: автоматическое управление товарами, статусы заказов, уведомления о продажах, webhooks и безопасные лимиты запросов.
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-900/20 border border-purple-700/30 text-purple-300 text-xs font-semibold">
+                      Скоро будет доступно
+                    </div>
+                  </div>
+                </div>
+              </div>
             </>
           )}
 

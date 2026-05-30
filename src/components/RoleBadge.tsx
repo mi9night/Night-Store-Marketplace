@@ -1,5 +1,6 @@
 // src/components/RoleBadge.tsx
 import React, { useEffect, useState } from 'react';
+import { Award, Crown, Flame, Gamepad2, Moon, Music, Palette, Rocket, Shield, Skull, Sparkles, Star, Target, Trophy, Zap } from 'lucide-react';
 import BadgeTooltip from './BadgeTooltip';
 
 interface CustomRole {
@@ -77,6 +78,32 @@ const useGlowEnabled = () => {
 
 const DEFAULT_CUSTOM_DESC = 'Кастомная роль, выданная за определённые услуги';
 
+const iconMap: Record<string, React.ElementType> = {
+  star: Star,
+  moon: Moon,
+  flame: Flame,
+  diamond: Sparkles,
+  crown: Crown,
+  shield: Shield,
+  zap: Zap,
+  rocket: Rocket,
+  target: Target,
+  trophy: Trophy,
+  gamepad: Gamepad2,
+  award: Award,
+  palette: Palette,
+  music: Music,
+  skull: Skull,
+  sparkles: Sparkles,
+};
+
+const CustomRoleIcon: React.FC<{ icon?: string; className?: string; size?: number }> = ({ icon, className, size = 11 }) => {
+  const key = icon || 'star';
+  const Icon = iconMap[key];
+  if (Icon) return <Icon size={size} className={className} />;
+  return <span className={className}>{icon || '⭐'}</span>;
+};
+
 export const RoleBadge: React.FC<Props> = ({ role, user }) => {
   const glowEnabled = useGlowEnabled();
   const badges: React.ReactNode[] = [];
@@ -104,11 +131,11 @@ export const RoleBadge: React.FC<Props> = ({ role, user }) => {
       const wantGlow = cr.has_glow !== false;
       const cglow = (glowEnabled && wantGlow) ? (glowByColor[cr.color || 'purple'] || '') : '';
       const pulse = (glowEnabled && cr.has_pulse) ? 'animate-pulse' : '';
-      const tip = `${cr.icon || '⭐'} ${cr.label.toUpperCase()}\n${cr.description || DEFAULT_CUSTOM_DESC}`;
+      const tip = `${cr.label.toUpperCase()}\n${cr.description || DEFAULT_CUSTOM_DESC}`;
       badges.push(
         <BadgeTooltip key={`cr-${cr.id || i}`} text={tip}>
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow} ${pulse}`}>
-            {cr.icon || '⭐'} {cr.label.toUpperCase()}
+            <CustomRoleIcon icon={cr.icon} /> {cr.label.toUpperCase()}
           </span>
         </BadgeTooltip>
       );
@@ -118,11 +145,11 @@ export const RoleBadge: React.FC<Props> = ({ role, user }) => {
     const wantGlow = user.custom_role_glow !== false;
     const cglow = (glowEnabled && wantGlow) ? (glowByColor[user.custom_role_color || 'purple'] || '') : '';
     const pulse = (glowEnabled && user.custom_role_pulse) ? 'animate-pulse' : '';
-    const tip = `${user.custom_role_icon || '⭐'} ${user.custom_role_label.toUpperCase()}\n${user.custom_role_description || DEFAULT_CUSTOM_DESC}`;
+    const tip = `${user.custom_role_label.toUpperCase()}\n${user.custom_role_description || DEFAULT_CUSTOM_DESC}`;
     badges.push(
       <BadgeTooltip key="custom" text={tip}>
         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${cls} ${cglow} ${pulse}`}>
-          {user.custom_role_icon || '⭐'} {user.custom_role_label.toUpperCase()}
+          <CustomRoleIcon icon={user.custom_role_icon} /> {user.custom_role_label.toUpperCase()}
         </span>
       </BadgeTooltip>
     );

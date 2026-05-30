@@ -5,7 +5,7 @@ import {
   Search, Ban, CheckCircle2, Trash2, Edit3, ArrowRight, X,
   Crown, Settings as SettingsIcon, Megaphone, Send,
   Image, Paperclip, ChevronLeft, ChevronRight, FileText, ZoomIn,
-  ScanSearch, RefreshCw, AlertTriangle
+  ScanSearch, RefreshCw, AlertTriangle, Star, Moon, Flame, Rocket, Target, Trophy, Gamepad2, Music, Palette, Skull, Sparkles, Gift
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge as RB } from './RoleBadge';
@@ -16,6 +16,38 @@ type Section = 'tickets' | 'users' | 'operations' | 'products' | 'stats' | 'broa
 interface Props {
   onNavigate?: (page: 'forum' | 'product' | 'profile' | 'topic', payload?: any) => void;
 }
+
+const MOD_ICON_OPTIONS = [
+  { id: 'star', Icon: Star, label: 'Звезда' },
+  { id: 'moon', Icon: Moon, label: 'Луна' },
+  { id: 'flame', Icon: Flame, label: 'Огонь' },
+  { id: 'diamond', Icon: Sparkles, label: 'Бриллиант' },
+  { id: 'crown', Icon: Crown, label: 'Корона' },
+  { id: 'shield', Icon: Shield, label: 'Щит' },
+  { id: 'zap', Icon: Zap, label: 'Молния' },
+  { id: 'rocket', Icon: Rocket, label: 'Ракета' },
+  { id: 'target', Icon: Target, label: 'Цель' },
+  { id: 'trophy', Icon: Trophy, label: 'Кубок' },
+  { id: 'gamepad', Icon: Gamepad2, label: 'Gamepad' },
+  { id: 'award', Icon: CheckCircle2, label: 'Награда' },
+  { id: 'palette', Icon: Palette, label: 'Палитра' },
+  { id: 'music', Icon: Music, label: 'Музыка' },
+  { id: 'skull', Icon: Skull, label: 'Череп' },
+  { id: 'sparkles', Icon: Sparkles, label: 'Искры' },
+];
+
+const LIVE_ICON_OPTIONS = [
+  { id: 'megaphone', Icon: Megaphone, label: 'Анонс' },
+  { id: 'alert', Icon: AlertTriangle, label: 'Важно' },
+  { id: 'party', Icon: Sparkles, label: 'Праздник' },
+  { id: 'gift', Icon: Gift, label: 'Подарок' },
+  { id: 'flame', Icon: Flame, label: 'Огонь' },
+  { id: 'diamond', Icon: Sparkles, label: 'Ценность' },
+  { id: 'rocket', Icon: Rocket, label: 'Запуск' },
+  { id: 'star', Icon: Star, label: 'Звезда' },
+  { id: 'moon', Icon: Moon, label: 'Night' },
+  { id: 'send', Icon: Send, label: 'Сообщение' },
+];
 
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 const MAX_FILES = 4;
@@ -1046,7 +1078,7 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   const [statField, setStatField] = useState('balance');
   const [statValue, setStatValue] = useState('');
   const [crLabel, setCrLabel]   = useState('');
-  const [crIcon, setCrIcon]     = useState('⭐');
+  const [crIcon, setCrIcon]     = useState('star');
   const [crColor, setCrColor]   = useState('purple');
   const [crDesc, setCrDesc]     = useState('');
   const [crGlow, setCrGlow]     = useState(true);
@@ -1356,14 +1388,14 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
             </div>
             <p className="text-[10px] text-text-secondary uppercase mb-1.5">Иконка</p>
             <div className="flex gap-1.5 flex-wrap mb-3">
-              {['⭐','🌙','🔥','💎','🎩','🐉','⚔️','🎭','🦊','🎮','👑','🛡','⚡','🚀','🎯','🌟','💫','🎪','🦅','🐺','🦁','🌌','🎨','🎵','🍷','☕','🎲','🃏','💀','😎'].map(i => (
-                <button key={i} onClick={() => setCrIcon(i)}
-                  className={`w-9 h-9 rounded-lg text-base flex items-center justify-center transition-all ${
-                    crIcon === i ? 'bg-purple-600 ring-2 ring-purple-400' : 'bg-[#0B0A12] border border-purple-900/30 hover:border-purple-700/40'
-                  }`}>{i}</button>
+              {MOD_ICON_OPTIONS.map(opt => (
+                <button key={opt.id} onClick={() => setCrIcon(opt.id)} title={opt.label}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+                    crIcon === opt.id ? 'bg-purple-600 ring-2 ring-purple-400 text-white' : 'bg-[#0B0A12] border border-purple-900/30 text-purple-300 hover:border-purple-700/40'
+                  }`}>
+                  <opt.Icon size={17} />
+                </button>
               ))}
-              <input value={crIcon} onChange={e => setCrIcon(e.target.value.slice(0, 4))} placeholder="свой" maxLength={4}
-                className="w-16 h-9 px-2 rounded-lg bg-[#0B0A12] border border-purple-900/30 text-white text-sm text-center" />
             </div>
             <p className="text-[10px] text-text-secondary uppercase mb-1.5">Цвет</p>
             <div className="flex gap-2 mb-3 flex-wrap">
@@ -1875,13 +1907,13 @@ const BroadcastSection: React.FC = () => {
   const [mode, setMode]             = useState<'live' | 'notif'>('live');
   const [liveTitle, setLiveTitle]   = useState('');
   const [liveSub, setLiveSub]       = useState('');
-  const [liveIcon, setLiveIcon]     = useState('📢');
+  const [liveIcon, setLiveIcon]     = useState('megaphone');
   const [notifTitle, setNotifTitle] = useState('');
   const [notifText, setNotifText]   = useState('');
   const [notifIcon, setNotifIcon]   = useState('📢');
   const [sending, setSending]       = useState(false);
   const [result, setResult]         = useState<string | null>(null);
-  const icons = ['📢','⚠️','🎉','🎁','🔥','💎','🚀','⭐','🌙','📨'];
+  const notifIcons = ['📢','⚠️','🎉','🎁','🔥','💎','🚀','⭐','🌙','📨'];
 
   const sendLive = async () => {
     if (!liveTitle.trim()) return;
@@ -1935,11 +1967,13 @@ const BroadcastSection: React.FC = () => {
             <div>
               <p className="text-xs text-text-secondary mb-1.5">Иконка</p>
               <div className="flex gap-1.5 flex-wrap">
-                {icons.map(i => (
-                  <button key={i} onClick={() => setLiveIcon(i)}
-                    className={`w-9 h-9 rounded-lg text-base flex items-center justify-center transition-all ${
-                      liveIcon === i ? 'bg-purple-600 ring-2 ring-purple-400' : 'bg-[#0B0A12] border border-purple-900/30 hover:border-purple-700/40'
-                    }`}>{i}</button>
+                {LIVE_ICON_OPTIONS.map(opt => (
+                  <button key={opt.id} onClick={() => setLiveIcon(opt.id)} title={opt.label}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+                      liveIcon === opt.id ? 'bg-purple-600 ring-2 ring-purple-400 text-white' : 'bg-[#0B0A12] border border-purple-900/30 text-purple-300 hover:border-purple-700/40'
+                    }`}>
+                    <opt.Icon size={17} />
+                  </button>
                 ))}
               </div>
             </div>
@@ -1963,7 +1997,7 @@ const BroadcastSection: React.FC = () => {
             <div>
               <p className="text-xs text-text-secondary mb-1.5">Иконка</p>
               <div className="flex gap-1.5 flex-wrap">
-                {icons.map(i => (
+                {notifIcons.map(i => (
                   <button key={i} onClick={() => setNotifIcon(i)}
                     className={`w-9 h-9 rounded-lg text-base flex items-center justify-center transition-all ${
                       notifIcon === i ? 'bg-purple-600 ring-2 ring-purple-400' : 'bg-[#0B0A12] border border-purple-900/30 hover:border-purple-700/40'
