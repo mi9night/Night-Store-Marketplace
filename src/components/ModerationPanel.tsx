@@ -1180,10 +1180,24 @@ const UsersSection: React.FC<{ myRole: string }> = ({ myRole }) => {
   };
 
   const deletePunishmentHistory = async (banId: string) => {
-    if (myRole !== 'owner') return;
+    if (myRole !== 'owner' || !active) return;
     if (!confirm('Удалить запись из истории блокировок? Это действие нельзя отменить.')) return;
-    const { error } = await supabase.from('bans').delete().eq('id', banId);
-    if (error) { alert(error.message); return; }
+
+    const { data, error } = await supabase.rpc('moderate_delete_punishment_history', { p_ban_id: banId });
+    if (error) {
+      alert('Не удалось удалить историю. Выполните SQL supabase/delete_punishment_history.sql. Ошибка: ' + error.message);
+      return;
+    }
+    if (data?.ok === false) {
+      const errMap: Record<string, string> = {
+        forbidden: 'Удалять историю блокировок может только владелец',
+        not_found: 'Запись уже удалена или не найдена',
+      };
+      alert(errMap[data.error] || data.error || 'Не удалось удалить историю');
+      return;
+    }
+
+    setBans(prev => prev.filter(b => b.id !== banId));
     openUser(active);
   };
 
