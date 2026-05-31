@@ -345,7 +345,7 @@ const App: React.FC = () => {
                   )}
 
                   {currentPage === 'sell' && requireAuth(<SellPage />)}
-                  {currentPage === 'bulk' && <BulkPage />}
+                  {currentPage === 'bulk' && requireAuth(<BulkPage />)}
                   {currentPage === 'forum' && <ForumPage filter={forumFilter} onOpenTopic={handleOpenTopic} />}
 
                   {currentPage === 'purchases' && requireAuth(

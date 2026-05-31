@@ -132,7 +132,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
 
   const isMod = ['moderator', 'admin', 'owner'].includes(profile?.role || '');
 
-  const sections = [
+  const sections = user ? [
     { id: 'profile', label: 'Профиль', icon: Settings },
     { id: 'security', label: 'Безопасность', icon: Shield },
     { id: 'notifications', label: 'Уведомления', icon: Bell },
@@ -141,7 +141,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
     { id: 'payments', label: 'Оплата', icon: CreditCard },
     { id: 'api', label: 'API', icon: Key },
     ...(isMod ? [{ id: 'moderation', label: 'Модерация', icon: Shield }] : []),
+  ] : [
+    { id: 'appearance', label: 'Внешний вид', icon: Palette },
+    { id: 'other', label: 'Другое', icon: Settings },
   ];
+
+  useEffect(() => {
+    if (!user && !['appearance', 'other'].includes(activeSection)) {
+      setActiveSection('appearance');
+    }
+  }, [user, activeSection]);
 
   /* ============ Открыть модалку ============ */
   const openAction = (type: ActionType) => {
@@ -704,6 +713,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                 </div>
               </div>
             </>
+          )}
+
+          {/* === ДРУГОЕ ДЛЯ ГОСТЕЙ === */}
+          {activeSection === 'other' && !user && (
+            <div className="bg-bg-secondary border border-purple-900/20 rounded-2xl p-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-purple-900/30 border border-purple-700/30 flex items-center justify-center mx-auto mb-4">
+                <Settings size={26} className="text-accent-soft" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Требуется регистрация</h3>
+              <p className="text-sm text-text-secondary max-w-md mx-auto">
+                Для остальных функций настроек требуется регистрация: профиль, безопасность, уведомления, интеграции, оплата, API и модерация доступны только авторизованным пользователям.
+              </p>
+            </div>
           )}
 
           {/* === ОПЛАТА === */}
