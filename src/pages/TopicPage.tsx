@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MessageSquare, Eye, ThumbsUp, ThumbsDown,
-  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply, Edit3, Save, Lock, Unlock
+  Send, Trash2, Pin, Clock, Image as ImageIcon, X, Reply, Edit3, Save, Lock, Unlock, Smile
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { RoleBadge } from '../components/RoleBadge';
@@ -30,6 +30,7 @@ const categoryColors: Record<string, string> = {
 };
 
 const editableCategories = ['🎁 Розыгрыши', 'Гайды', 'Правила', 'Поддержка', 'Обзоры', 'Отзывы', 'Дискуссии'];
+const EMOJIS = ['😀','😁','😂','🤣','😊','😍','😎','😢','😡','👍','👎','🔥','💜','🌙','⭐','✅','❌','🎉','💎','🚀'];
 
 interface Comment {
   id: string;
@@ -60,6 +61,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [commentImages, setCommentImages] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -228,6 +230,14 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files).slice(0, 4 - commentImages.length);
     setCommentImages([...commentImages, ...files]);
+  };
+
+  const handlePasteImages = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData.files || []).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      e.preventDefault();
+      setCommentImages(prev => [...prev, ...files].slice(0, 4));
+    }
   };
 
   if (loading) return <div className="text-center py-12 text-text-secondary">Загрузка...</div>;
@@ -497,7 +507,7 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
                 </button>
               </div>
             )}
-            <textarea value={newComment} onChange={e => setNewComment(e.target.value)}
+            <textarea value={newComment} onChange={e => setNewComment(e.target.value)} onPaste={handlePasteImages}
               placeholder={replyTo ? `Ответ для ${replyTo.author_name}...` : 'Напишите комментарий...'}
               rows={3}
               className="w-full px-4 py-3 rounded-xl text-sm bg-[#0B0A12] border border-purple-900/30 text-white resize-none mb-2" />
@@ -517,7 +527,15 @@ const TopicPage: React.FC<Props> = ({ topicId, setCurrentPage }) => {
               </div>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="relative flex items-center gap-2">
+              {showEmoji && (
+                <div className="absolute bottom-full left-0 mb-2 bg-[#171425] border border-purple-900/30 rounded-2xl p-2 shadow-xl z-20 grid grid-cols-8 gap-1">
+                  {EMOJIS.map(e => <button key={e} onClick={() => { setNewComment(v => v + e); setShowEmoji(false); }} className="w-8 h-8 rounded-lg hover:bg-purple-900/30 text-lg">{e}</button>)}
+                </div>
+              )}
+              <button type="button" onClick={() => setShowEmoji(v => !v)} className="p-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg" title="Эмодзи">
+                <Smile size={16} />
+              </button>
               <button onClick={() => fileInput.current?.click()}
                 disabled={commentImages.length >= 4}
                 className="p-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-lg disabled:opacity-50"

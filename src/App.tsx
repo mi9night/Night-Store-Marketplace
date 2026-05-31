@@ -172,6 +172,22 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    const channel = supabase.channel('online-users', {
+      config: { presence: { key: user.id } },
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
     const refresh = () => loadActiveBan(user.id);
     const channel = supabase.channel('app_ban_sync')
       .on('postgres_changes',

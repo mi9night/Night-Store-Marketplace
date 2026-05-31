@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Send, Search as SearchIcon, ArrowLeft,
-  Image, Paperclip, X, ChevronLeft, ChevronRight, ZoomIn, FileText, Edit3, Trash2, Check
+  Image, Paperclip, X, ChevronLeft, ChevronRight, ZoomIn, FileText, Edit3, Trash2, Check, CheckCheck, Smile
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUserNav } from '../lib/UserNavContext';
@@ -10,6 +10,7 @@ import { useUserNav } from '../lib/UserNavContext';
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 const MAX_FILES = 4;
 const BUCKET = 'chat-attachments';
+const EMOJIS = ['😀','😁','😂','🤣','😊','😍','😎','😢','😡','👍','👎','🔥','💜','🌙','⭐','✅','❌','🎉','💎','🚀'];
 
 const formatBytes = (b: number) =>
   b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} КБ` : `${(b / 1024 / 1024).toFixed(2)} МБ`;
@@ -289,6 +290,8 @@ const MessagesPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
   const { openUser } = useUserNav();
 
@@ -297,6 +300,58 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase.channel('online-users', {
+      config: { presence: { key: `messages-${user.id}` } },
+    });
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const ids = new Set<string>();
+      Object.values(state).flat().forEach((p: any) => {
+        if (p.user_id) ids.add(p.user_id);
+      });
+      setOnlineIds(ids);
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+  const appendFiles = (files: File[]) => {
+    let cur = totalSize;
+    const valid: File[] = [];
+    for (const f of files) {
+      if (attachFiles.length + valid.length >= MAX_FILES) break;
+      if (cur + f.size > MAX_TOTAL_SIZE) continue;
+      valid.push(f);
+      cur += f.size;
+    }
+    const newMap = new Map(previews);
+    valid.forEach(f => {
+      if (f.type.startsWith('image/')) {
+        newMap.set(f.name + f.size, URL.createObjectURL(f));
+      }
+    });
+    setPreviews(newMap);
+    setAttachFiles(prev => [...prev, ...valid]);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const files = Array.from(e.clipboardData.files || []).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      e.preventDefault();
+      appendFiles(files);
+    }
+  };
 
   const loadConversations = async () => {
     if (!user) return;
@@ -376,23 +431,7 @@ const MessagesPage: React.FC = () => {
 
   /* File handling */
   const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    let cur = totalSize;
-    const valid: File[] = [];
-    for (const f of files) {
-      if (attachFiles.length + valid.length >= MAX_FILES) break;
-      if (cur + f.size > MAX_TOTAL_SIZE) continue;
-      valid.push(f);
-      cur += f.size;
-    }
-    const newMap = new Map(previews);
-    valid.forEach(f => {
-      if (f.type.startsWith('image/')) {
-        newMap.set(f.name + f.size, URL.createObjectURL(f));
-      }
-    });
-    setPreviews(newMap);
-    setAttachFiles(prev => [...prev, ...valid]);
+    appendFiles(Array.from(e.target.files || []));
     e.target.value = '';
   };
 
@@ -547,10 +586,11 @@ const MessagesPage: React.FC = () => {
                     className={`w-full p-3 flex items-center gap-3 border-b border-purple-900/10 transition-colors ${
                       active?.partner_id === c.partner_id ? 'bg-purple-900/20' : ''
                     }`}>
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {c.partner_avatar_url
                         ? <img src={c.partner_avatar_url} className="w-full h-full object-cover" alt="" />
                         : <span className="text-sm font-bold text-white">{c.partner_avatar || 'U'}</span>}
+                      {onlineIds.has(c.partner_id) && <span className="absolute right-0.5 bottom-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#171425]" />}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <p className="text-sm font-semibold text-white truncate">{c.partner_name || 'User'}</p>
@@ -583,7 +623,9 @@ const MessagesPage: React.FC = () => {
                 </button>
                 <button onClick={() => openUser(active.partner_id)} className="flex-1 text-left hover:text-purple-300 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{active.partner_name}</p>
-                  <p className="text-[10px] text-text-secondary">Открыть профиль →</p>
+                  <p className={`text-[10px] ${onlineIds.has(active.partner_id) ? 'text-green-400' : 'text-text-secondary'}`}>
+                    {onlineIds.has(active.partner_id) ? 'Онлайн' : 'Открыть профиль →'}
+                  </p>
                 </button>
               </div>
 
@@ -642,6 +684,7 @@ const MessagesPage: React.FC = () => {
                                 <button onClick={() => deleteMessage(m.id)} className="text-[10px] hover:text-red-300 flex items-center gap-1"><Trash2 size={10} />Удал.</button>
                               </>
                             )}
+                            {isMine && (m.is_read ? <CheckCheck size={12} className="text-green-300" /> : <Check size={12} />)}
                             <span className="text-[10px]">
                               {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                               {m.edited_at && ' · изменено'}
@@ -698,7 +741,15 @@ const MessagesPage: React.FC = () => {
               </AnimatePresence>
 
               {/* Input */}
-              <div className="p-3 border-t border-purple-900/20 flex gap-2 items-end">
+              <div className="relative p-3 border-t border-purple-900/20 flex gap-2 items-end">
+                {showEmoji && (
+                  <div className="absolute bottom-full left-3 mb-2 bg-[#171425] border border-purple-900/30 rounded-2xl p-2 shadow-xl z-20 grid grid-cols-8 gap-1">
+                    {EMOJIS.map(e => <button key={e} onClick={() => { setNewMsg(v => v + e); setShowEmoji(false); }} className="w-8 h-8 rounded-lg hover:bg-purple-900/30 text-lg">{e}</button>)}
+                  </div>
+                )}
+                <button type="button" onClick={() => setShowEmoji(v => !v)} className="p-2.5 rounded-xl bg-purple-900/20 border border-purple-700/30 text-purple-400 hover:bg-purple-900/30 transition-all flex-shrink-0">
+                  <Smile size={16} />
+                </button>
                 {/* Photo */}
                 <label className="cursor-pointer flex-shrink-0">
                   <div className="p-2.5 rounded-xl bg-purple-900/20 border border-purple-700/30 text-purple-400 hover:bg-purple-900/30 transition-all">
@@ -718,6 +769,7 @@ const MessagesPage: React.FC = () => {
                 <input
                   value={newMsg}
                   onChange={e => setNewMsg(e.target.value)}
+                  onPaste={handlePaste}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder="Сообщение..."
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-[#0B0A12] border border-purple-900/30 text-white focus:border-purple-500/60 focus:outline-none transition-all"

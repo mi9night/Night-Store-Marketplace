@@ -1230,7 +1230,7 @@ const WallItem: React.FC<{
             <span className="text-xs font-bold text-white">{(c.author?.username?.[0] || 'U').toUpperCase()}</span>
           )}
         </div>
-        <span className="text-sm font-semibold text-white">{c.author?.username || 'Аноним'}</span>
+        <UserLink userId={c.author_id} username={c.author?.username || 'Аноним'} className="text-sm font-semibold text-white" />
         <span className="text-xs text-text-secondary ml-auto">{new Date(c.created_at).toLocaleString('ru-RU')}</span>
       </div>
       {c.content && <p className="text-sm text-white whitespace-pre-wrap mb-2">{c.content}</p>}
