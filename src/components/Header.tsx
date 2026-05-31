@@ -657,7 +657,8 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Profile */}
           <div className="relative" ref={profileRef}>
-            <motion.button onClick={() => setShowProfile(!showProfile)}
+            <motion.button
+              onClick={() => user ? setShowProfile(!showProfile) : setCurrentPage('auth' as Page)}
               className="flex items-center gap-2" whileHover={{ scale: 1.03 }}>
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
                 {myProfile?.avatar_url ? (
@@ -666,11 +667,11 @@ const Header: React.FC<HeaderProps> = ({
                   <span className="text-xs font-bold text-white">{user?.email?.[0]?.toUpperCase() || 'U'}</span>
                 )}
               </div>
-              <ChevronDown size={14} className="hidden sm:block text-text-secondary" />
+              {user && <ChevronDown size={14} className="hidden sm:block text-text-secondary" />}
             </motion.button>
 
             <AnimatePresence>
-              {showProfile && (
+              {user && showProfile && (
                 <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   className="absolute right-0 top-full mt-2 w-56 bg-bg-card border border-purple-900/20 rounded-2xl shadow-xl z-50 overflow-hidden">
                   <div className="p-4 border-b border-purple-900/20">

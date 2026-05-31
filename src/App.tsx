@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Ban, Clock, LogOut, ShieldAlert } from 'lucide-react';
+import { Ban, Clock, LogIn, LogOut, ShieldAlert } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { dbToAccount } from './lib/db';
 import { useUserNav } from './lib/UserNavContext';
@@ -13,6 +13,7 @@ import StartupNotice from './components/StartupNotice';
 
 import AuthPage from './pages/AuthPage';
 import DiscordCallback from './pages/DiscordCallback';
+import EmailConfirmedPage from './pages/EmailConfirmedPage';
 import MarketPage from './pages/MarketPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
@@ -65,6 +66,25 @@ const BanLockScreen: React.FC<{ ban: Punishment }> = ({ ban }) => {
     </div>
   );
 };
+
+const AuthRequired: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="max-w-xl mx-auto bg-[#171425] border border-purple-900/30 rounded-3xl p-8 text-center shadow-[0_0_50px_rgba(139,92,246,0.12)]"
+  >
+    <div className="w-16 h-16 rounded-2xl bg-purple-900/30 border border-purple-700/30 flex items-center justify-center mx-auto mb-4">
+      <LogIn size={30} className="text-purple-300" />
+    </div>
+    <h2 className="text-xl font-bold text-white mb-2">Нужна авторизация</h2>
+    <p className="text-sm text-text-secondary mb-5">
+      Смотреть сайт можно без регистрации, но для покупок, продажи, сообщений, финансов и других действий нужно войти в аккаунт.
+    </p>
+    <button onClick={onLogin} className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold">
+      Войти или зарегистрироваться
+    </button>
+  </motion.div>
+);
 
 const App: React.FC = () => {
 
@@ -140,13 +160,14 @@ const App: React.FC = () => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+      if (currentUser && currentPage === ('auth' as any)) setCurrentPage('market');
       loadActiveBan(currentUser?.id);
       setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
 
-  }, [loadActiveBan]);
+  }, [loadActiveBan, currentPage]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -222,9 +243,17 @@ const App: React.FC = () => {
     setCartItems([]);
   }, []);
 
+  const requireAuth = (children: React.ReactNode) =>
+    user ? children : <AuthRequired onLogin={() => setCurrentPage('auth' as any)} />;
+
   // Discord callback — отдельная страница
   if (typeof window !== 'undefined' && window.location.pathname === '/auth/discord/callback') {
     return <DiscordCallback />;
+  }
+
+  // Email confirmation callback — отдельная страница
+  if (typeof window !== 'undefined' && window.location.pathname === '/email-confirmed') {
+    return <EmailConfirmedPage />;
   }
 
   return (
@@ -236,15 +265,11 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {!authLoading && !user && (
-        <AuthPage />
-      )}
-
       {!authLoading && user && activeBan && (
         <BanLockScreen ban={activeBan} />
       )}
 
-      {!authLoading && user && !activeBan && (
+      {!authLoading && (!user || !activeBan) && (
         <>
           <Header
             currentPage={currentPage}
@@ -280,6 +305,8 @@ const App: React.FC = () => {
                   transition={{ duration: 0.25 }}
                 >
 
+                  {currentPage === ('auth' as any) && <AuthPage />}
+
                   {currentPage === 'market' && (
                     <MarketPage
                       onSelectAccount={handleSelectAccount}
@@ -298,7 +325,7 @@ const App: React.FC = () => {
 
                   {currentPage === 'profile' && <ProfilePage setCurrentPage={handleSetPage} onOpenTopic={handleOpenTopic} onOpenAccount={handleOpenAccount} viewedProfileId={viewedProfileId} onResetView={() => setViewedProfileId(null)} />}
 
-                  {currentPage === 'cart' && (
+                  {currentPage === 'cart' && requireAuth(
                     <CartPage
                       cartItems={cartItems}
                       onRemove={handleRemoveFromCart}
@@ -308,18 +335,18 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'sell' && <SellPage />}
+                  {currentPage === 'sell' && requireAuth(<SellPage />)}
                   {currentPage === 'bulk' && <BulkPage />}
                   {currentPage === 'forum' && <ForumPage filter={forumFilter} onOpenTopic={handleOpenTopic} />}
 
-                  {currentPage === 'purchases' && (
+                  {currentPage === 'purchases' && requireAuth(
                     <PurchasesPage
                       onSelectAccount={handleSelectAccount}
                       setCurrentPage={handleSetPage}
                     />
                   )}
 
-                  {currentPage === 'favorites' && (
+                  {currentPage === 'favorites' && requireAuth(
                     <FavoritesPage
                       onSelectAccount={handleSelectAccount}
                       setCurrentPage={handleSetPage}
@@ -327,7 +354,7 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'settings' && (
+                  {currentPage === 'settings' && requireAuth(
                     <SettingsPage
                       onNavigate={(page: any, payload?: any) => {
                         if (page === 'product' && payload?.id) handleOpenAccount(payload.id);
@@ -343,14 +370,14 @@ const App: React.FC = () => {
                   )}
 
                   {/* ✅ Восстановленные страницы */}
-                  {currentPage === 'operations' && <OperationsPage />}
-                  {currentPage === ('messages' as any) && <MessagesPage />}
+                  {currentPage === 'operations' && requireAuth(<OperationsPage />)}
+                  {currentPage === ('messages' as any) && requireAuth(<MessagesPage />)}
                   {currentPage === ('support' as any) && <SupportPage />}
-                  {currentPage === 'labels' && <LabelsPage />}
-                  {currentPage === 'autobuy' && <AutobuyPage />}
+                  {currentPage === 'labels' && requireAuth(<LabelsPage />)}
+                  {currentPage === 'autobuy' && requireAuth(<AutobuyPage />)}
                   {currentPage === 'rates' && <RatesPage />}
                   {currentPage === 'api' && <ApiPage />}
-                  {currentPage === ('payment' as any) && <PaymentPage initialMode={paymentMode} setCurrentPage={handleSetPage} />}
+                  {currentPage === ('payment' as any) && requireAuth(<PaymentPage initialMode={paymentMode} setCurrentPage={handleSetPage} />)}
 
                 </motion.div>
               </AnimatePresence>
