@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Moon, Search, ShoppingCart, Bell, ChevronDown, MessageSquare, Headset,
-  User, Settings, LogOut, Star, Package,
+  User, Settings, LogIn, LogOut, Star, Package,
   Wallet, Menu, X, Trash2, ArrowRight, Plus, ArrowDownLeft, ArrowLeftRight, CheckCircle2, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
 import { categories } from '../data/mockData';
@@ -657,18 +657,29 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Profile */}
           <div className="relative" ref={profileRef}>
-            <motion.button
-              onClick={() => user ? setShowProfile(!showProfile) : setCurrentPage('auth' as Page)}
-              className="flex items-center gap-2" whileHover={{ scale: 1.03 }}>
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
-                {myProfile?.avatar_url ? (
-                  <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xs font-bold text-white">{user?.email?.[0]?.toUpperCase() || 'U'}</span>
-                )}
-              </div>
-              {user && <ChevronDown size={14} className="hidden sm:block text-text-secondary" />}
-            </motion.button>
+            {!user ? (
+              <motion.button
+                onClick={() => setCurrentPage('auth' as Page)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold border border-purple-400/30 shadow-[0_0_18px_rgba(168,85,247,0.18)]"
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              >
+                <LogIn size={15} />
+                <span>Войти</span>
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={() => setShowProfile(!showProfile)}
+                className="flex items-center gap-2" whileHover={{ scale: 1.03 }}>
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center overflow-hidden">
+                  {myProfile?.avatar_url ? (
+                    <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-white">{user.email?.[0]?.toUpperCase() || 'U'}</span>
+                  )}
+                </div>
+                <ChevronDown size={14} className="hidden sm:block text-text-secondary" />
+              </motion.button>
+            )}
 
             <AnimatePresence>
               {user && showProfile && (

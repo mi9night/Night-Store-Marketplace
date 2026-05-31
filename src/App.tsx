@@ -204,6 +204,12 @@ const App: React.FC = () => {
     []
   );
 
+  useEffect(() => {
+    if (!authLoading && user && currentPage === ('auth' as any)) {
+      setCurrentPage('market');
+    }
+  }, [authLoading, user, currentPage]);
+
   const handleSelectAccount = useCallback((account: Account) => {
     setSelectedAccount(account);
     setCurrentPage('product');
@@ -256,6 +262,11 @@ const App: React.FC = () => {
     return <EmailConfirmedPage />;
   }
 
+  // Страница входа/регистрации должна открываться отдельно, без шапки и сайдбара.
+  if (!authLoading && !user && currentPage === ('auth' as any)) {
+    return <AuthPage />;
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary">
 
@@ -304,8 +315,6 @@ const App: React.FC = () => {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.25 }}
                 >
-
-                  {currentPage === ('auth' as any) && <AuthPage />}
 
                   {currentPage === 'market' && (
                     <MarketPage
