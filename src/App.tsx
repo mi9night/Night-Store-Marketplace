@@ -176,11 +176,23 @@ const App: React.FC = () => {
       config: { presence: { key: user.id } },
     });
 
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
-      }
-    });
+    const emitOnlineUsers = () => {
+      const state = channel.presenceState();
+      const ids = new Set<string>();
+      Object.values(state).flat().forEach((p: any) => {
+        if (p.user_id) ids.add(p.user_id);
+      });
+      window.dispatchEvent(new CustomEvent('online-users-sync', { detail: Array.from(ids) }));
+    };
+
+    channel
+      .on('presence', { event: 'sync' }, emitOnlineUsers)
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+          emitOnlineUsers();
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);

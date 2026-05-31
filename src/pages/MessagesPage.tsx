@@ -302,29 +302,14 @@ const MessagesPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
+    const onOnlineSync = (event: Event) => {
+      const ids = (event as CustomEvent<string[]>).detail || [];
+      setOnlineIds(new Set(ids));
+    };
 
-    const channel = supabase.channel('online-users', {
-      config: { presence: { key: `messages-${user.id}` } },
-    });
-
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const ids = new Set<string>();
-      Object.values(state).flat().forEach((p: any) => {
-        if (p.user_id) ids.add(p.user_id);
-      });
-      setOnlineIds(ids);
-    });
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
-      }
-    });
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
+    window.addEventListener('online-users-sync', onOnlineSync);
+    return () => window.removeEventListener('online-users-sync', onOnlineSync);
+  }, []);
 
   const appendFiles = (files: File[]) => {
     let cur = totalSize;
