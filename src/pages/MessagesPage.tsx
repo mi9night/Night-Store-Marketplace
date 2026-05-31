@@ -608,8 +608,12 @@ const MessagesPage: React.FC = () => {
                 </button>
                 <button onClick={() => openUser(active.partner_id)} className="flex-1 text-left hover:text-purple-300 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{active.partner_name}</p>
-                  <p className={`text-[10px] ${onlineIds.has(active.partner_id) ? 'text-green-400' : 'text-text-secondary'}`}>
-                    {onlineIds.has(active.partner_id) ? 'Онлайн' : 'Открыть профиль →'}
+                  <p className="text-[10px] text-text-secondary flex items-center gap-1.5">
+                    {onlineIds.has(active.partner_id) && <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />}
+                    <span className={onlineIds.has(active.partner_id) ? 'text-green-400' : 'text-text-secondary'}>
+                      {onlineIds.has(active.partner_id) ? 'Онлайн' : 'Не в сети'}
+                    </span>
+                    <span className="text-text-secondary">· Открыть профиль →</span>
                   </p>
                 </button>
               </div>
