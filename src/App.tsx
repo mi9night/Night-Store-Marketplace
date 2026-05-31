@@ -363,7 +363,7 @@ const App: React.FC = () => {
                     />
                   )}
 
-                  {currentPage === 'settings' && requireAuth(
+                  {currentPage === 'settings' && (
                     <SettingsPage
                       onNavigate={(page: any, payload?: any) => {
                         if (page === 'product' && payload?.id) handleOpenAccount(payload.id);
